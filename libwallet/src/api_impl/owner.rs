@@ -393,7 +393,7 @@ where
 	let parent_key_id = w.parent_key_id();
 	if !update_outputs(w, false) {
 		return Err(ErrorKind::TransactionCancellationError(
-			"Can't contact running Grin node. Not Cancelling.",
+			"Can't contact running MWC node. Not Cancelling.",
 		))?;
 	}
 	tx::cancel_tx(&mut *w, &parent_key_id, tx_id, tx_slate_id)

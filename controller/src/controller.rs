@@ -46,7 +46,7 @@ use easy_jsonrpc::{Handler, MaybeReply};
 
 lazy_static! {
 	pub static ref GRIN_OWNER_BASIC_REALM: HeaderValue =
-		HeaderValue::from_str("Basic realm=GrinOwnerAPI").unwrap();
+		HeaderValue::from_str("Basic realm=MWC-Owner-API").unwrap();
 }
 
 /// Instantiate wallet Owner API for a single-use (command line) call
@@ -96,7 +96,7 @@ where
 	let mut router = Router::new();
 	if api_secret.is_some() {
 		let api_basic_auth =
-			"Basic ".to_string() + &to_base64(&("grin:".to_string() + &api_secret.unwrap()));
+			"Basic ".to_string() + &to_base64(&("mwc:".to_string() + &api_secret.unwrap()));
 		let basic_auth_middleware = Arc::new(BasicAuthMiddleware::new(
 			api_basic_auth,
 			&GRIN_OWNER_BASIC_REALM,
@@ -363,7 +363,7 @@ where
 			let mut slate = match result {
 				Ok(s) => {
 					info!(
-						"Tx created: {} grin to {} (strategy '{}')",
+						"Tx created: {} mwc to {} (strategy '{}')",
 						core::amount_to_hr_string(args.amount, false),
 						&args.dest,
 						args.selection_strategy_is_use_all,

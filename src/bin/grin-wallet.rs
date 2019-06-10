@@ -38,7 +38,7 @@ pub mod built_info {
 pub fn info_strings() -> (String, String) {
 	(
 		format!(
-			"This is Grin Wallet version {}{}, built for {} by {}.",
+			"This is MWC Wallet version {}{}, built for {} by {}.",
 			built_info::PKG_VERSION,
 			built_info::GIT_VERSION.map_or_else(|| "".to_owned(), |v| format!(" (git {})", v)),
 			built_info::TARGET,
@@ -66,7 +66,7 @@ fn main() {
 }
 
 fn real_main() -> i32 {
-	let yml = load_yaml!("grin-wallet.yml");
+	let yml = load_yaml!("mwc-wallet.yml");
 	let args = App::from_yaml(yml).get_matches();
 
 	let chain_type = if args.is_present("floonet") {
@@ -97,7 +97,7 @@ fn real_main() -> i32 {
 	if !cmd::seed_exists(w.members.as_ref().unwrap().wallet.clone()) {
 		if "init" == args.subcommand().0 || "recover" == args.subcommand().0 {
 		} else {
-			println!("Wallet seed file doesn't exist. Run `grin-wallet init` first");
+			println!("Wallet seed file doesn't exist. Run `mwc-wallet init` first");
 			exit(1);
 		}
 	}

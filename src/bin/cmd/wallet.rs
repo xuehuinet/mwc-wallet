@@ -55,13 +55,13 @@ pub fn wallet_command(wallet_args: &ArgMatches<'_>, config: GlobalWalletConfig) 
 	match node_client.clone().chain_height() {
 		Ok(h) => {
 			if h >= 262080 {
-				let err_str = "This version of grin-wallet is obsolete as of block 252080. Please download v2.0.0 from https://github.com/mimblewimble/grin-wallet/releases";
+				let err_str = "This version of mwc-wallet is obsolete as of block 252080. Please download v2.0.0 from https://github.com/cgilliard/mwc-wallet/releases";
 				error!("{}", err_str);
 				println!();
 				println!("***************");
 				println!("{}", err_str);
 				println!("***************");
-				println!("(You can still view your balances by disconnecting from the grin node, however you will not be able to transact until you upgrade)");
+				println!("(You can still view your balances by disconnecting from the mwc node, however you will not be able to transact until you upgrade)");
 				println!();
 				return 1;
 			}
