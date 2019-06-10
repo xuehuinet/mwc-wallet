@@ -141,7 +141,7 @@ impl WalletSeed {
 		if !Path::new(&wallet_config.data_file_dir).exists() {
 			return Err(ErrorKind::WalletDoesntExist(
 				wallet_config.data_file_dir.clone(),
-				"To create a new wallet from a recovery phrase, use 'grin-wallet init -r'"
+				"To create a new wallet from a recovery phrase, use 'mwc-wallet init -r'"
 					.to_owned(),
 			))?;
 		}
@@ -216,8 +216,8 @@ impl WalletSeed {
 			Ok(wallet_seed)
 		} else {
 			error!(
-				"wallet seed file {} could not be opened (grin wallet init). \
-				 Run \"grin wallet init\" to initialize a new wallet.",
+				"wallet seed file {} could not be opened (mwc-wallet init). \
+				 Run \"mwc-wallet init\" to initialize a new wallet.",
 				seed_file_path
 			);
 			Err(ErrorKind::WalletSeedDoesntExist)?

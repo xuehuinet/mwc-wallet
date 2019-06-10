@@ -279,7 +279,7 @@ pub fn send(
 			let mut slate = match result {
 				Ok(s) => {
 					info!(
-						"Tx created: {} grin to {} (strategy '{}')",
+						"Tx created: {} mwc to {} (strategy '{}')",
 						core::amount_to_hr_string(args.amount, false),
 						args.dest,
 						args.selection_strategy,
@@ -514,7 +514,7 @@ pub fn process_invoice(
 			let mut slate = match result {
 				Ok(s) => {
 					info!(
-						"Invoice processed: {} grin to {} (strategy '{}')",
+						"Invoice processed: {} mwc to {} (strategy '{}')",
 						core::amount_to_hr_string(slate.amount, false),
 						args.dest,
 						args.selection_strategy,
