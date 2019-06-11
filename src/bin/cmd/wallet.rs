@@ -44,32 +44,10 @@ pub fn wallet_command(wallet_args: &ArgMatches<'_>, config: GlobalWalletConfig) 
 	// just get defaults from the global config
 	let wallet_config = config.members.unwrap().wallet;
 
-	// TODO: Very temporary code to obsolete grin wallet for the first hard fork
-	// All tx operations call get_chain_height as a first order of business,
-	// so this is the most non-intrusive place to put this
 	let mut node_client = HTTPNodeClient::new(&wallet_config.check_node_api_http_addr, None);
 	let global_wallet_args = wallet_args::parse_global_args(&wallet_config, &wallet_args)
 		.expect("Can't read configuration file");
 	node_client.set_node_api_secret(global_wallet_args.node_api_secret.clone());
-
-	match node_client.clone().chain_height() {
-		Ok(h) => {
-			if h >= 262080 {
-				let err_str = "This version of mwc-wallet is obsolete as of block 252080. Please download v2.0.0 from https://github.com/cgilliard/mwc-wallet/releases";
-				error!("{}", err_str);
-				println!();
-				println!("***************");
-				println!("{}", err_str);
-				println!("***************");
-				println!("(You can still view your balances by disconnecting from the mwc node, however you will not be able to transact until you upgrade)");
-				println!();
-				return 1;
-			}
-		}
-		// just continue if can't connect to node, as user won't be able to do
-		// anything meaninful anyhow
-		Err(_) => {}
-	}
 
 	let res = wallet_args::wallet_command(wallet_args, wallet_config, node_client);
 
