@@ -222,7 +222,7 @@ mod wallet_tests {
 			Ok(())
 		})?;
 
-		let mut bh = 10u64;
+		let mut bh = 11u64;
 		let _ = test_framework::award_blocks_to_wallet(&chain, wallet1.clone(), bh as usize, false);
 
 		let very_long_message = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef\
@@ -255,7 +255,7 @@ mod wallet_tests {
 			&file_name,
 			"-g",
 			very_long_message,
-			"10",
+			"0.4",
 		];
 		execute_command(&app, test_dir, "wallet1", &client1, arg_vec)?;
 
@@ -314,7 +314,7 @@ mod wallet_tests {
 			api.set_active_account("account_1")?;
 			let (_, wallet1_info) = api.retrieve_summary_info(true, 1)?;
 			assert_eq!(wallet1_info.last_confirmed_height, bh);
-			assert_eq!(wallet1_info.amount_currently_spendable, 10_000_000_000);
+			assert_eq!(wallet1_info.amount_currently_spendable, 400_000_000);
 			Ok(())
 		})?;
 
@@ -334,7 +334,7 @@ mod wallet_tests {
 			"Love, Yeast, Smallest",
 			"-s",
 			"smallest",
-			"10",
+			"0.4",
 		];
 		execute_command(&app, test_dir, "wallet1", &client1, arg_vec)?;
 
@@ -392,7 +392,7 @@ mod wallet_tests {
 			"3",
 			"-s",
 			"smallest",
-			"10",
+			"0.4",
 		];
 		execute_command(&app, test_dir, "wallet1", &client1, arg_vec)?;
 		bh += 1;
@@ -422,7 +422,7 @@ mod wallet_tests {
 			&file_name,
 			"-g",
 			"Ain't sending",
-			"10",
+			"0.4",
 		];
 		execute_command(&app, test_dir, "wallet1", &client1, arg_vec)?;
 
@@ -443,7 +443,7 @@ mod wallet_tests {
 			&file_name,
 			"-g",
 			"Ain't sending 2",
-			"10",
+			"0.4",
 		];
 		execute_command(&app, test_dir, "wallet1", &client1, arg_vec)?;
 
@@ -455,7 +455,7 @@ mod wallet_tests {
 			"mining",
 			"cancel",
 			"-i",
-			"26",
+			"27",
 		];
 		execute_command(&app, test_dir, "wallet1", &client1, arg_vec)?;
 
@@ -470,7 +470,7 @@ mod wallet_tests {
 			&file_name,
 			"-g",
 			"Please give me your precious mwcs. Love, Satoshi",
-			"65",
+			"2.6",
 		];
 		execute_command(&app, test_dir, "wallet2", &client2, arg_vec)?;
 		let output_file_name = format!("{}/invoice.slate.paid", test_dir);

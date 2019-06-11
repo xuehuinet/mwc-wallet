@@ -628,7 +628,7 @@ pub fn run_doctest_foreign(
 	}
 
 	if init_invoice_tx {
-		let amount = 60_000_000_000;
+		let amount = 2_380_952_380;
 		let mut slate = {
 			let mut w = wallet2.lock();
 			w.open_with_credentials().unwrap();
@@ -658,7 +658,7 @@ pub fn run_doctest_foreign(
 	}
 
 	if init_tx {
-		let amount = 60_000_000_000;
+		let amount = 2_380_952_380;
 		let mut w = wallet1.lock();
 		w.open_with_credentials().unwrap();
 		let args = InitTxArgs {
