@@ -66,53 +66,53 @@ pub trait ForeignRpc {
 	fn check_version(&self) -> Result<VersionInfo, ErrorKind>;
 
 	/**
-	Networked version of [Foreign::build_coinbase](struct.Foreign.html#method.build_coinbase).
+	  Networked version of [Foreign::build_coinbase](struct.Foreign.html#method.build_coinbase).
 
-	# Json rpc example
+	  # Json rpc example
 
-	```
-	# grin_wallet_api::doctest_helper_json_rpc_foreign_assert_response!(
-	# r#"
-	{
-		"jsonrpc": "2.0",
-		"method": "build_coinbase",
-		"id": 1,
-		"params": [
-			{
-				"fees": 0,
-				"height": 0,
-				"key_id": null
-			}
-		]
+	  ```
+	  # grin_wallet_api::doctest_helper_json_rpc_foreign_assert_response!(
+	  # r#"
+	  {
+		  "jsonrpc": "2.0",
+		  "method": "build_coinbase",
+		  "id": 1,
+		  "params": [
+			  {
+				  "fees": 0,
+				  "height": 0,
+				  "key_id": null
+			  }
+		  ]
+	  }
+	  # "#
+	  # ,
+	  # r#"
+	  {
+	"id": 1,
+	"jsonrpc": "2.0",
+	"result": {
+	  "Ok": {
+		"kernel": {
+		  "excess": "095987fa1274901ab624386e9f76b39c6c27a6f5d11782bb06e3a55361d925e418",
+		  "excess_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b49e2040e02da3d79a3bd694d522754f118a064d62f076e87a161059222141c2c",
+		  "features": "Coinbase",
+		  "fee": "0",
+		  "lock_height": "0"
+		},
+		"key_id": "0300000000000000000000000400000000",
+		"output": {
+		  "commit": "08f9451ff0b17a7d3b905efacc1b51ded6a77dc17aedd4959d46f6509c3298b8c7",
+		  "features": "Coinbase",
+		  "proof": "31ccbaa4c59281a8fc30ac8dda167c898ab0817fa985e29fce6a3a03c16431dd28cd931aea6b45ddb045064d687edbb5ce3b69336c7d281668c8c9a5ff7309f804c2074ebe3c0da64bd0df21563ba983c877de49c2389e549d70068c180e467bb036ac9d34e771295f143df49b01b5af3ed0e71220ec25ee6dfd2d9fdcd0acaa07edf168e66f1331ff5f3e55b50458e2a5087c43888026c50b5cc6e91abf04c8d117a5d04d1c0ec4f61ba41505baec3413d9048ee822b8d3b2832c18625a3b7779411cf3585ce3ec0e54ddc76ccd2ba92568a987a1838d578c17b2649f3524ecf690dfc5374f9a13822f1113d823c882a46ba6baf0a53032646939bf45b22d83854e383ed555c7345886f5cd53040814b219c2156035a8d3673392c806d0d89f52e13e0f3359a68a3d838b5d2752486f3841406ba49c17b705de0d3bb1c786924cc86b4c2386475498b52dfe70cc0564360cd94c0d7a78a10bebc747041fe817e514034e885109f8ca21898b61fd9b956fa90fb3a3eeaa8b183331edc8d0505d8e8b26ee93b2aea6ba4a58cdb02ca8cca3d3ee1b23bc2c42fe630c4ac2bc2a5d100f12127f0266f8d5f1bd98ef0a1d0e0b985618e6dd8eccd32bd7c9a9932687fe8a39aacb0710975271dd5003236668f87415fddfc5b7da2e3ca784f24f84b8d9a192179aab5718b96f72cc9f8bff59794c794e235258f42e757d532b15df9d2d8159ae3991a9ddbd1bff871df12aab6073a673a5e4dde408f4973bcb8f83da7e436051e25ee6b11de1aa8f8caad74272bbc864c8082f96fde8fecd65b6cf1d74163063592f5355c65f8ffb424d4ad3ad81045dbab6474859fd2ac804b7d25481b9be9f34fa4abe2968a15149ce136641ded952a01f5268378b0d611e1683aa15ae5c810f1f2cc858b023674253552f0d2635f9d33016e21460e6403a211ed623c2be"
+		}
+	  }
 	}
-	# "#
-	# ,
-	# r#"
-	{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "result": {
-    "Ok": {
-      "kernel": {
-        "excess": "095987fa1274901ab624386e9f76b39c6c27a6f5d11782bb06e3a55361d925e418",
-        "excess_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b49e2040e02da3d79a3bd694d522754f118a064d62f076e87a161059222141c2c",
-        "features": "Coinbase",
-        "fee": "0",
-        "lock_height": "0"
-      },
-      "key_id": "0300000000000000000000000400000000",
-      "output": {
-        "commit": "08f9451ff0b17a7d3b905efacc1b51ded6a77dc17aedd4959d46f6509c3298b8c7",
-        "features": "Coinbase",
-        "proof": "31ccbaa4c59281a8fc30ac8dda167c898ab0817fa985e29fce6a3a03c16431dd28cd931aea6b45ddb045064d687edbb5ce3b69336c7d281668c8c9a5ff7309f804c2074ebe3c0da64bd0df21563ba983c877de49c2389e549d70068c180e467bb036ac9d34e771295f143df49b01b5af3ed0e71220ec25ee6dfd2d9fdcd0acaa07edf168e66f1331ff5f3e55b50458e2a5087c43888026c50b5cc6e91abf04c8d117a5d04d1c0ec4f61ba41505baec3413d9048ee822b8d3b2832c18625a3b7779411cf3585ce3ec0e54ddc76ccd2ba92568a987a1838d578c17b2649f3524ecf690dfc5374f9a13822f1113d823c882a46ba6baf0a53032646939bf45b22d83854e383ed555c7345886f5cd53040814b219c2156035a8d3673392c806d0d89f52e13e0f3359a68a3d838b5d2752486f3841406ba49c17b705de0d3bb1c786924cc86b4c2386475498b52dfe70cc0564360cd94c0d7a78a10bebc747041fe817e514034e885109f8ca21898b61fd9b956fa90fb3a3eeaa8b183331edc8d0505d8e8b26ee93b2aea6ba4a58cdb02ca8cca3d3ee1b23bc2c42fe630c4ac2bc2a5d100f12127f0266f8d5f1bd98ef0a1d0e0b985618e6dd8eccd32bd7c9a9932687fe8a39aacb0710975271dd5003236668f87415fddfc5b7da2e3ca784f24f84b8d9a192179aab5718b96f72cc9f8bff59794c794e235258f42e757d532b15df9d2d8159ae3991a9ddbd1bff871df12aab6073a673a5e4dde408f4973bcb8f83da7e436051e25ee6b11de1aa8f8caad74272bbc864c8082f96fde8fecd65b6cf1d74163063592f5355c65f8ffb424d4ad3ad81045dbab6474859fd2ac804b7d25481b9be9f34fa4abe2968a15149ce136641ded952a01f5268378b0d611e1683aa15ae5c810f1f2cc858b023674253552f0d2635f9d33016e21460e6403a211ed623c2be"
-      }
-    }
-  }
-	}
-	# "#
-	# , 4, false, false);
-	```
-	*/
+	  }
+	  # "#
+	  # , 4, false, false);
+	  ```
+	  */
 	fn build_coinbase(&self, block_fees: &BlockFees) -> Result<CbData, ErrorKind>;
 
 	/**

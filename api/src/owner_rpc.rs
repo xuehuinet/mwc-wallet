@@ -127,7 +127,7 @@ pub trait OwnerRpc {
 
 	/**
 	Networked version of [Owner::retrieve_outputs](struct.Owner.html#method.retrieve_outputs).
-        */
+		*/
 
 	fn retrieve_outputs(
 		&self,
@@ -138,7 +138,7 @@ pub trait OwnerRpc {
 
 	/**
 	Networked version of [Owner::retrieve_txs](struct.Owner.html#method.retrieve_txs).
-        */
+		*/
 
 	fn retrieve_txs(
 		&self,
@@ -192,10 +192,9 @@ pub trait OwnerRpc {
 		minimum_confirmations: u64,
 	) -> Result<(bool, WalletInfo), ErrorKind>;
 
-
-        /**
-               Networked version of [Owner::init_send_tx](struct.Owner.html#method.init_send_tx).
-        */
+	/**
+		   Networked version of [Owner::init_send_tx](struct.Owner.html#method.init_send_tx).
+	*/
 	fn init_send_tx(&self, args: InitTxArgs) -> Result<Slate, ErrorKind>;
 
 	/**
@@ -526,8 +525,8 @@ pub trait OwnerRpc {
 	 */
 	fn cancel_tx(&self, tx_id: Option<u32>, tx_slate_id: Option<Uuid>) -> Result<(), ErrorKind>;
 
-        /**
-         */
+	/**
+	 */
 	fn get_stored_tx(&self, tx: &TxLogEntry) -> Result<Option<Transaction>, ErrorKind>;
 
 	/**
