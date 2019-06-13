@@ -331,12 +331,15 @@ fn two_wallets_one_seed_impl(test_dir: &str) -> Result<(), libwallet::Error> {
 	});
 
 	// few values to keep things shorter
-	let _reward = core::consensus::MWC_FIRST_GROUP_REWARD(0);
+	let _reward = core::consensus::MWC_FIRST_GROUP_REWARD;
 	let cm = global::coinbase_maturity() as usize; // assume all testing precedes soft fork height
 
 	// Do some mining
 	let mut bh = 20u64;
-	let base_amount = consensus::GRIN_BASE;
+
+        // note we are dividing by 26 because our block reward is over 25X smaller than grin. Locked coins
+        // require this division.
+        let base_amount = consensus::GRIN_BASE / 26;
 	let _ = test_framework::award_blocks_to_wallet(&chain, miner.clone(), bh as usize, false);
 
 	// send some funds to wallets 1
