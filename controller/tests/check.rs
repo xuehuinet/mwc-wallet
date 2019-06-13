@@ -337,9 +337,9 @@ fn two_wallets_one_seed_impl(test_dir: &str) -> Result<(), libwallet::Error> {
 	// Do some mining
 	let mut bh = 20u64;
 
-        // note we are dividing by 26 because our block reward is over 25X smaller than grin. Locked coins
-        // require this division.
-        let base_amount = consensus::GRIN_BASE / 26;
+	// note we are dividing by 26 because our block reward is over 25X smaller than grin. Locked coins
+	// require this division.
+	let base_amount = consensus::GRIN_BASE / 26;
 	let _ = test_framework::award_blocks_to_wallet(&chain, miner.clone(), bh as usize, false);
 
 	// send some funds to wallets 1
