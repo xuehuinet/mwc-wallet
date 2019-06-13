@@ -292,12 +292,12 @@ pub trait OwnerRpc {
 				{
 					"amount_awaiting_confirmation": "0",
 					"amount_awaiting_finalization": "0",
-					"amount_currently_spendable": "60000000000",
-					"amount_immature": "180000000000",
+					"amount_currently_spendable": "2380952380",
+					"amount_immature": "7142857140",
 					"amount_locked": "0",
 					"last_confirmed_height": "4",
 					"minimum_confirmations": "1",
-					"total": "240000000000"
+					"total": "9523809520"
 				}
 			]
 		}
