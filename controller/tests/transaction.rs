@@ -95,7 +95,7 @@ fn basic_transaction_api(test_dir: &str) -> Result<(), libwallet::Error> {
 
 	// assert wallet contents
 	// and a single use api for a send command
-	let amount = core::consensus::MWC_FIRST_GROUP_REWARD;
+	let amount = reward;
 	let mut slate = Slate::blank(1);
 	wallet::controller::owner_single_use(wallet1.clone(), |sender_api| {
 		// note this will increment the block count as part of the transaction "Posting"
@@ -224,7 +224,7 @@ fn basic_transaction_api(test_dir: &str) -> Result<(), libwallet::Error> {
 		assert!(wallet1_refreshed);
 		assert_eq!(
 			wallet1_info.total,
-			amount * wallet1_info.last_confirmed_height - amount
+			reward * wallet1_info.last_confirmed_height - amount
 		);
 		assert_eq!(
 			wallet1_info.amount_currently_spendable,
@@ -262,7 +262,7 @@ fn basic_transaction_api(test_dir: &str) -> Result<(), libwallet::Error> {
 			..Default::default()
 		};
 		let est = sender_api.init_send_tx(init_args)?;
-		assert_eq!(est.amount, core::consensus::MWC_FIRST_GROUP_REWARD * 10);
+		assert_eq!(est.amount, 10 * reward);
 		assert_eq!(est.fee, 4_000_000);
 
 		let init_args = InitTxArgs {
@@ -276,7 +276,7 @@ fn basic_transaction_api(test_dir: &str) -> Result<(), libwallet::Error> {
 			..Default::default()
 		};
 		let est = sender_api.init_send_tx(init_args)?;
-		assert_eq!(est.amount, 3 * core::consensus::MWC_FIRST_GROUP_REWARD);
+		assert_eq!(est.amount, 3 * reward);
 		assert_eq!(est.fee, 6_000_000);
 
 		Ok(())
@@ -381,7 +381,7 @@ fn tx_rollback(test_dir: &str) -> Result<(), libwallet::Error> {
 									  // mine a few blocks
 	let _ = test_framework::award_blocks_to_wallet(&chain, wallet1.clone(), 5, false);
 
-	let amount = core::consensus::MWC_FIRST_GROUP_REWARD / 2;
+	let amount = reward / 2;
 	let mut slate = Slate::blank(1);
 	wallet::controller::owner_single_use(wallet1.clone(), |sender_api| {
 		// note this will increment the block count as part of the transaction "Posting"
