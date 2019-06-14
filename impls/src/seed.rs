@@ -13,9 +13,11 @@
 // limitations under the License.
 
 use std::fs::{self, File};
+use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::path::MAIN_SEPARATOR;
+use term;
 
 use crate::blake2;
 use rand::{thread_rng, Rng};
@@ -155,12 +157,24 @@ impl WalletSeed {
 		Ok(())
 	}
 
-	pub fn show_recovery_phrase(&self) -> Result<(), Error> {
+	pub fn show_recovery_phrase(&self, wait_for_user: bool) -> Result<(), Error> {
 		println!("Your recovery phrase is:");
 		println!();
 		println!("{}", self.to_mnemonic()?);
 		println!();
 		println!("Please back-up these words in a non-digital format.");
+
+		if wait_for_user {
+			let mut t = term::stdout().unwrap();
+			t.fg(term::color::BRIGHT_GREEN).unwrap();
+			t.attr(term::Attr::Bold).unwrap();
+			writeln!(t, "{}", "Press ENTER when you have done so").unwrap();
+			t.reset().unwrap();
+			let mut line = String::new();
+			io::stdout().flush().unwrap();
+			io::stdin().read_line(&mut line).unwrap();
+		}
+
 		Ok(())
 	}
 
@@ -169,6 +183,7 @@ impl WalletSeed {
 		seed_length: usize,
 		recovery_phrase: Option<util::ZeroingString>,
 		password: &str,
+		wait_for_user: bool,
 	) -> Result<WalletSeed, Error> {
 		// create directory if it doesn't exist
 		fs::create_dir_all(&wallet_config.data_file_dir).context(ErrorKind::IO)?;
@@ -188,10 +203,10 @@ impl WalletSeed {
 
 		let enc_seed = EncryptedWalletSeed::from_seed(&seed, password)?;
 		let enc_seed_json = serde_json::to_string_pretty(&enc_seed).context(ErrorKind::Format)?;
+		seed.show_recovery_phrase(wait_for_user)?;
 		let mut file = File::create(seed_file_path).context(ErrorKind::IO)?;
 		file.write_all(&enc_seed_json.as_bytes())
 			.context(ErrorKind::IO)?;
-		seed.show_recovery_phrase()?;
 		Ok(seed)
 	}
 

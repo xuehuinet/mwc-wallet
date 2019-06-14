@@ -24,7 +24,7 @@ use std::time::Duration;
 
 pub fn _init_wallet_seed(wallet_config: WalletConfig, password: &str) {
 	if let Err(_) = WalletSeed::from_file(&wallet_config, password) {
-		WalletSeed::init_file(&wallet_config, 32, None, password)
+		WalletSeed::init_file(&wallet_config, 32, None, password, false)
 			.expect("Failed to create wallet seed file.");
 	};
 }
@@ -55,7 +55,7 @@ pub fn wallet_command(wallet_args: &ArgMatches<'_>, config: GlobalWalletConfig) 
 	thread::sleep(Duration::from_millis(100));
 
 	if let Err(e) = res {
-		println!("Wallet command failed: {}", e);
+		println!("Command failed: {}", e);
 		1
 	} else {
 		println!(
