@@ -64,6 +64,7 @@ pub fn init(g_args: &GlobalArgs, args: InitArgs) -> Result<(), Error> {
 		args.list_length,
 		args.recovery_phrase,
 		&args.password,
+		false,
 	)?;
 	info!("Wallet seed file created");
 	let client_n = HTTPNodeClient::new(
@@ -95,7 +96,7 @@ pub fn recover(config: &WalletConfig, args: RecoverArgs) -> Result<(), Error> {
 			error!("Error loading wallet seed (check password): {}", e);
 			return Err(e.into());
 		}
-		let _ = res.unwrap().show_recovery_phrase();
+		let _ = res.unwrap().show_recovery_phrase(false);
 	} else {
 		let res = WalletSeed::recover_from_phrase(
 			&config,
