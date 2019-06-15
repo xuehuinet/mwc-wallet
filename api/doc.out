@@ -1,0 +1,1880 @@
+
+running 47 tests
+test src/foreign.rs - foreign::Foreign<W, C, K>::new (line 75) ... ok
+test src/foreign.rs - foreign::Foreign<W, C, K>::verify_slate_messages (line 222) ... ok
+test src/foreign.rs - foreign::Foreign<W, C, K>::check_version (line 133) ... ok
+test src/foreign.rs - foreign::Foreign<W, C, K>::build_coinbase (line 176) ... ok
+test src/foreign_rpc.rs - foreign_rpc::ForeignRpc::check_version (line 35) ... ok
+test src/foreign.rs - foreign::Foreign<W, C, K>::receive_tx (line 286) ... ok
+test src/foreign.rs - foreign::Foreign<W, C, K>::finalize_invoice_tx (line 339) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::accounts (line 150) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::create_account_path (line 192) ... ok
+test src/foreign_rpc.rs - foreign_rpc::ForeignRpc::build_coinbase (line 72) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::check_repair (line 1034) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::cancel_tx (line 835) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::finalize_tx (line 717) ... ok
+test src/foreign_rpc.rs - foreign_rpc::ForeignRpc::verify_slate_messages (line 122) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::new (line 83) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::get_stored_tx (line 887) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::issue_invoice_tx (line 548) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::init_send_tx (line 462) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::node_height (line 1079) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::process_invoice_tx (line 599) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::post_tx (line 774) ... ok
+test src/foreign_rpc.rs - foreign_rpc::ForeignRpc::finalize_invoice_tx (line 215) ... FAILED
+test src/owner.rs - owner::Owner<W, C, K>::restore (line 983) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::retrieve_outputs (line 277) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::retrieve_summary_info (line 389) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::retrieve_txs (line 329) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::set_active_account (line 232) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::tx_lock_outputs (line 659) ... ok
+test src/owner.rs - owner::Owner<W, C, K>::verify_slate_messages (line 928) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::accounts (line 37) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::check_repair (line 1181) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::create_account_path (line 72) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::cancel_tx (line 950) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::init_send_tx (line 322) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::retrieve_outputs (line 129) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::issue_invoice_tx (line 412) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::retrieve_txs (line 200) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::get_stored_tx (line 978) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::finalize_tx (line 720) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::node_height (line 1210) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::restore (line 1152) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::post_tx (line 882) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::process_invoice_tx (line 492) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::retrieve_summary_info (line 277) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::set_active_account (line 102) ... ok
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::tx_lock_outputs (line 640) ... FAILED
+test src/owner_rpc.rs - owner_rpc::OwnerRpc::verify_slate_messages (line 1073) ... FAILED
+
+failures:
+
+---- src/foreign_rpc.rs - foreign_rpc::ForeignRpc::finalize_invoice_tx (line 215) stdout ----
+thread 'src/foreign_rpc.rs - foreign_rpc::ForeignRpc::finalize_invoice_tx (line 215)' panicked at 'test executable failed:
+2019-06-13T10:55:13.469187-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:13.483149-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/.mwc/lmdb is 1048576
+2019-06-13T10:55:13.486535-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:13.489293-04:00 INFO grin_chain::chain - init: saved genesis: 6425e5de91c8
+2019-06-13T10:55:13.489953-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [6425e5de91c8]
+2019-06-13T10:55:13.490060-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [6425e5de91c8]
+2019-06-13T10:55:13.490146-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [6425e5de91c8]
+2019-06-13T10:55:13.490532-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:13.501383-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:13.501854-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:13.502405-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:13.605019-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:13.608437-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:13.609038-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:13.609559-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet2/wallet.seed
+2019-06-13T10:55:13.714964-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:13.857484-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:13.857618-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:14.572593-04:00 DEBUG grin_chain::pipe - pipe: process_block d5d4a1f8e729 at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:14.573834-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to d5d4a1f8e729 at 1
+2019-06-13T10:55:14.641838-04:00 DEBUG grin_chain::pipe - body tail d5d4a1f8e729 @ 1
+2019-06-13T10:55:14.642003-04:00 DEBUG grin_chain::pipe - pipe: head updated to d5d4a1f8e729 at 1
+2019-06-13T10:55:14.649010-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header d5d4a1f8e729 at 1
+2019-06-13T10:55:14.649224-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:14.649404-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:14.654072-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:14.701069-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:14.701207-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:14.703706-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:14.706914-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:14.826113-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:14.844137-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:15.011389-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:15.011589-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:15.631070-04:00 DEBUG grin_chain::pipe - pipe: process_block fcb9001e63f3 at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:15.631926-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to fcb9001e63f3 at 2
+2019-06-13T10:55:15.699900-04:00 DEBUG grin_chain::pipe - pipe: head updated to fcb9001e63f3 at 2
+2019-06-13T10:55:15.700761-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header fcb9001e63f3 at 2
+2019-06-13T10:55:15.700946-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:15.701178-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:15.706617-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:15.765457-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:15.765540-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:15.768638-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:15.768803-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:15.876587-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:15.890405-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:16.031699-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:16.031827-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:16.588634-04:00 DEBUG grin_chain::pipe - pipe: process_block 792a7fb877a3 at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:16.612536-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 792a7fb877a3 at 3
+2019-06-13T10:55:16.676885-04:00 DEBUG grin_chain::pipe - pipe: head updated to 792a7fb877a3 at 3
+2019-06-13T10:55:16.678370-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 792a7fb877a3 at 3
+2019-06-13T10:55:16.682641-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:16.682949-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:16.689697-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:16.739974-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:16.740063-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:16.744980-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:16.745181-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:16.853805-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:16.867638-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:17.023931-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:17.024093-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:17.425588-04:00 DEBUG grin_chain::pipe - pipe: process_block 863185b31bc3 at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:17.428850-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 863185b31bc3 at 4
+2019-06-13T10:55:17.493794-04:00 DEBUG grin_chain::pipe - pipe: head updated to 863185b31bc3 at 4
+2019-06-13T10:55:17.494669-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 863185b31bc3 at 4
+2019-06-13T10:55:17.494864-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:17.495293-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:17.504099-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:17.560083-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:17.560171-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:17.580598-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:17.580806-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:17.722371-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:17.738479-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:17.872669-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000400000000), 0300000000000000000000000400000000
+2019-06-13T10:55:17.872790-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 5, key_id: Some(Identifier(0300000000000000000000000400000000)) }
+2019-06-13T10:55:18.281960-04:00 DEBUG grin_chain::pipe - pipe: process_block 7e253dac81d9 at 5 [in/out/kern: 0/1/1]
+2019-06-13T10:55:18.283514-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 7e253dac81d9 at 5
+2019-06-13T10:55:18.384681-04:00 DEBUG grin_chain::pipe - pipe: head updated to 7e253dac81d9 at 5
+2019-06-13T10:55:18.392314-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 7e253dac81d9 at 5
+2019-06-13T10:55:18.392454-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 9, output 8, kernel 8
+2019-06-13T10:55:18.392864-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 10, output 8, rproof 8, kernel 8 mmrs, took 0s
+2019-06-13T10:55:18.399142-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:18.456922-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 5 rangeproofs
+2019-06-13T10:55:18.457002-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 rangeproofs, pmmr size 8, took 0s
+2019-06-13T10:55:18.464569-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 kernel signatures, pmmr size 8, took 0s
+2019-06-13T10:55:18.464721-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:18.577953-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:18.598826-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet2/wallet.seed
+2019-06-13T10:55:18.738904-04:00 DEBUG grin_core::libtx::build - Building output: 2380952380, Commitment(09ad4046a4b7e2d1db56a2703eeff22d0a70b80d9e7e415f7c8ebaf6a0ced03c6f)
+2019-06-13T10:55:19.124445-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet1/wallet.seed
+2019-06-13T10:55:19.233278-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:19.246122-04:00 DEBUG grin_core::libtx::build - Building input (spending coinbase): 2380952380, 0300000000000000000000000000000000
+2019-06-13T10:55:19.246241-04:00 DEBUG grin_core::libtx::build - Building input (spending coinbase): 2380952380, 0300000000000000000000000100000000
+2019-06-13T10:55:19.246331-04:00 DEBUG grin_wallet_libwallet::internal::selection - Building change outputs: total change: 2373952380 (1 outputs)
+2019-06-13T10:55:19.349481-04:00 DEBUG grin_core::libtx::build - Building output: 2373952380, Commitment(08e4f651f54a963d1e9dbbf58ee687c5b5d7e464ea02b9cbbbef52397e257626a2)
+INIT INVOICE SLATE
+{
+  "version_info": {
+    "version": 2,
+    "orig_version": 2,
+    "block_header_version": 1
+  },
+  "num_participants": 2,
+  "id": "0436430c-2b02-624c-2032-570501212b00",
+  "tx": {
+    "offset": "d202964900000000d302964900000000d402964900000000d502964900000000",
+    "body": {
+      "inputs": [
+        {
+          "features": "Coinbase",
+          "commit": "098778ce2243fa34e5876c8cb7f6dbbbd6a5649c1561973a807a6811941c12363c"
+        },
+        {
+          "features": "Coinbase",
+          "commit": "0910c1752100733bae49e877286835aab76d5856ef8139b6c6e3f51798aa461b03"
+        }
+      ],
+      "outputs": [
+        {
+          "features": "Plain",
+          "commit": "08e4f651f54a963d1e9dbbf58ee687c5b5d7e464ea02b9cbbbef52397e257626a2",
+          "proof": "870a5f7d065af887bf14caffc600c420c6dee6267a5aaecec83da00a79c4dd7d6634047001adff78d6cb21e6d41a655be264c7cad97ea3ba38937f2fb84d367d024e3ea92708c2206f6caf270c7891edcb5c0e8bb5847c4dc0bdafb15feb490911fa42d90d0a6b86d86a64c65b0d008df223b379e07536e1fb2ae8c2235c9f017a71e85328f561ebdbd572961885e09f6ff91d9e7e2892c66c4c18b1e2f90ebd04215d68cd30f30b1021a08f641aa2f6df3239d2e5286325db6f04a345ffd52387a5db3e5179dbce35c6b9646c98deff9851687f1eed22f463e681cebefa3e22aa9697ced0f10e8fcf58173f61b84653021c1457a2e158bfaa12e3b6ca937401377d03bae00fe44e0d4657edc917c2d29fecf8a1affc5a42745323e952422346384e6abc695a8080caf311d8218e7853be2f6787eaa93836f6471810abc585609170c217b1cb1e3372db8cbd377108e00ff8682d0d8cad368de67c78021ae273739e025714a15e6375c3385cbc58911f6465a82776fe0d3d263ab07c372ee8e46977cf650f0e4189fe7a16abca21477da6e5ddff5e5d0db9fc54adacdf095d61e7ded698906ba120d19c6b30d011a67f2333116abad04dcfad958d5af172b4b8a0ae23ead318242fec6d58fb7c2c2011f50fceecabb0291b1c5a4d5a691c65d04d7c1b2127bca1587f4255cc3d2d6e024909b83bd5e86017a8a380a239493975efecb7b5d24b07446df3f693d5a9a8e2b556dc5eac0fc8bb538af8fec1d5ddde0d1086ac3289f4ba34d847c2858fcffb82af0a24b4555257333c0bcc6584db1556eb362492c4a0e6863c73e4d82a019ef2c069f31b08eede282a47fdb0fca32a3001b60c7120a18f42531b9554d3589872e55502cd6c2bb713be69235e7fedce531acaeb9ae4b60f0e651ae120cbce5e15f15d926bd03800b87d0f93ebe88fa9204e2e"
+        },
+        {
+          "features": "Plain",
+          "commit": "09ad4046a4b7e2d1db56a2703eeff22d0a70b80d9e7e415f7c8ebaf6a0ced03c6f",
+          "proof": "893f5336bd274c6f2965cffbd0277d9bb9e45677e7acd7c2c89e20fef3edac0703a9c6514e1893f206f60622ba7ed88253855e8ab581450c846be3a5bdcb63030da0d55597fefa9aaf47f2380f8cb4d4a023c4889ccfcdabbafe70c5ed4b6d465d23a0dbeb0ae533ca4944662b00f1513ffe7a9b54f66d1426a81c8982fb067ff1114434287736564419c5d009d3e33dfe89ffb538afaec3d1697b281808a0d045ab173572f5f5a1df2ee29689b3466390c4ed90f88a8f2a0f561b925bc5dda5f17e7f38939c69f92e47cdbe0f0d50cc542f692794d69dffd9c0313dd93f3199862c9482b1d7e1d351c00c5094be1d1b0954ecce9442b0fb0ec7242d658951434a92f94be3b36f0b55df04e3b9cc6fe00366fe11ab415907ec080aea5951eb3542e86334199499dd1adf212e4f5d77003239ab318c443f18114a0916de737420cc5c916ec8d4cb6532ddb2b4a630791c6fcc8a90768db624ba6cd856b148a5a7789e00863958af193da4eef9f4ba8873bd46768d89550a945a33649e3d9df463d6d360a6b3f0ba59a0185a0d8844cb1b1c842f2e66a167e580d348f848b209902a5389d15fbd588e225a4fdd342fb0eaf1b0daf8293b1b97553a611ffd628752fcb38499bfc054377aaef3c6b5c7a5d9bfa52513b8d8c8c93f46fc8a999734dfb325e0d18413fb18d1bb6713e6393c705105835e46d0a3c31c19a5da1453f9e8f2efb5a6760d1167139bc9cbb9ea15449f39cb60202d706066741b7419637e533fca72c8c49aba946248dbfc1d60758fcccfd3e4a7d54c7e011fb7905aab3511b7d730b475e0e31fbfec097e026da65ea3e7e41399955c22ca31e6edc1c58903ff2ef834e08b50525647978b580c37c2b7995ac90b64846eb3954e5723446791c5139984269f42cb64e13ec20e14894d163bd32743a3d341c5d46c8fecf54b0b595abf"
+        }
+      ],
+      "kernels": [
+        {
+          "features": "Plain",
+          "fee": "7000000",
+          "lock_height": "0",
+          "excess": "000000000000000000000000000000000000000000000000000000000000000000",
+          "excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ]
+    }
+  },
+  "amount": "2380952380",
+  "fee": "7000000",
+  "height": "5",
+  "lock_height": "0",
+  "participant_data": [
+    {
+      "id": "1",
+      "public_blind_excess": "03fac7a47fa49dfa40200a24e63c2e91eb587e3715e821f0dd9bcc896e76656368",
+      "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+      "part_sig": null,
+      "message": null,
+      "message_sig": null
+    },
+    {
+      "id": "0",
+      "public_blind_excess": "039cc49da0e813079e7e2fa6e8f280e7a0b63c77e308f95c4f48e111ea1e16d91e",
+      "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+      "part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b29017adbc4231c98ba3244173756c8e1e0b831e17a7465a48f3eaac60fd057aa",
+      "message": null,
+      "message_sig": null
+    }
+  ]
+}
+2019-06-13T10:55:19.965560-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp6BpPH8/wallet2/wallet.seed
+
+thread 'main' panicked at '(left != right) 
+left: {
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "Err": {
+      "LibTX": {
+        "Signature": "Signature validation error"
+      }
+    }
+  }
+}
+right: {
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "Ok": {
+      "amount": "2380952380",
+      "fee": "7000000",
+      "height": "5",
+      "id": "0436430c-2b02-624c-2032-570501212b00",
+      "lock_height": "0",
+      "num_participants": 2,
+      "participant_data": [
+        {
+          "id": "1",
+          "message": null,
+          "message_sig": null,
+          "part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841bc9ea21b259d61e4de177d9ef8ab475dfab0ec7299009a7fea61010f963f2e6c0",
+          "public_blind_excess": "033bbe2a419ea2e9d6810a8d66552e709d1783ca50759a44dbaf63fc79c0164c4c",
+          "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+        },
+        {
+          "id": "0",
+          "message": null,
+          "message_sig": null,
+          "part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b1840d69ed5f33bc9b424422903d5d1d3e9b914143bcbe3b7ed32d8f15fcccce3",
+          "public_blind_excess": "029f12f9f8c5489a18904de7cd46dc3384b79369d4cbc17cd74b299da8c2cf7445",
+          "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+        }
+      ],
+      "tx": {
+        "body": {
+          "inputs": [
+            {
+              "commit": "087df32304c5d4ae8b2af0bc31e700019d722910ef87dd4eec3197b80b207e3045",
+              "features": "Coinbase"
+            },
+            {
+              "commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7",
+              "features": "Coinbase"
+            }
+          ],
+          "kernels": [
+            {
+              "excess": "09bac6083b05a32a9d9b37710c70dd0a1ef9329fde0848558976b6f1b81d80ceed",
+              "excess_sig": "66074d25a751c4743342c90ad8ead9454daa00d9b9aed29bca321036d16c4b4da0e9c180a26b88565afcd269a7ac98f896c8db3dcbd48ab69443e8eac3beb3a4",
+              "features": "Plain",
+              "fee": "7000000",
+              "lock_height": "0"
+            }
+          ],
+          "outputs": [
+            {
+              "commit": "099b48cfb1f80a2347dc89818449e68e76a3c6817a532a8e9ef2b4a5ccf4363850",
+              "features": "Plain",
+              "proof": "7ebcd2ed9bf5fb29854033ba3d0e720613bdf7dfacc586d2f6084c1cde0a2b72e955d4ce625916701dc7c347132f40d0f102a34e801d745ee54b49b765d08aae0bb801c60403e57cafade3b4b174e795b633ab9e402b5b1b6e1243fd10bbcf9368a75cb6a6c375c7bdf02da9e03b7f210df45d942e6fba2729cd512a372e6ed91a1b5c9c22831febea843e3f85adcf198f39ac9f7b73b70c60bfb474aa69878ea8d1d32fef30166b59caacaec3fd024de29a90f1587e08d2c36b3d5c560cabf658e212e0a40a4129b3e5c35557058def5551f4eb395759597ba808b3c34eac3bfb9716e4480d7931c5789c538463ec75be0eb807c894047fda6cbcd22682d3c6d3823cb330f090a2099e3510a3706b57d46c95224394d7f1c0a20d99cc314b8f1d9d02668e2e435f62e1194de0be6a1f50f72ed777ed51c8819f527a94918d1aa8df6461e98ed4c2b18210de50fbcf8c3df210bfe326d41f1dc0ad748cb0320ae28401c85ab4f7dcb99d88a052e95dc85b76d22b36cabd60e06ab84bb7e4ddfdab9c9730c8a986583237ed1ecbb323ee8e79b8cadca4b438b7c09531670b471dda6a2eb3e747916c88ce7d9d8e1b7f61660eeb9e5a13c60e4dfe89d1177d81d6f6570fda85158e646a15f1e8b9e977494dc19a339aab2e0e478670d80092d6ba37646e60714ef64eb4a3d37fe15f8f38b59114af34b235489eed3f69b7781c5fe496eb43ffe245c14bd740f745844a38cf0d904347aaa2b64f51add18822dac009d8b63fa3e4c9b1fa72187f9a4acba1ab315daa1b04c9a41f3be846ac420b37990e6c947a16cc9d5c0671b292bf77d7d8b8974d2ad3afae95ba7772c37432840f53a007f31e0195f3abdf100c4477723cc6c6d5da14894a73dfac342833731036487488fdade7b9d556c06f26173b6b67598d3769447ce2828d71dd45ac5af436c6b0"
+            },
+            {
+              "commit": "0812276cc788e6870612296d926cba9f0e7b9810670710b5a6e6f1ba006d395774",
+              "features": "Plain",
+              "proof": "dcff6175390c602bfa92c2ffd1a9b2d84dcc9ea941f6f317bdd0f875244ef23e696fd17c71df79760ce5ce1a96aab1d15dd057358dc835e972febeb86d50ccec0dad7cfe0246d742eb753cf7b88c045d15bc7123f8cf7155647ccf663fca92a83c9a65d0ed756ea7ebffd2cac90c380a102ed9caaa355d175ed0bf58d3ac2f5e909d6c447dfc6b605e04925c2b17c33ebd1908c965a5541ea5d2ed45a0958e6402f89d7a56df1992e036d836e74017e73ccad5cb3a82b8e139e309792a31b15f3ffd72ed033253428c156c2b9799458a25c1da65b719780a22de7fe7f437ae2fccd22cf7ea357ab5aa66a5ef7d71fb0dc64aa0b5761f68278062bb39bb296c787e4cabc5e2a2933a416ce1c9a9696160386449c437e9120f7bb26e5b0e74d1f2e7d5bcd7aafb2a92b87d1548f1f911fb06af7bd6cc13cee29f7c9cb79021aed18186272af0e9d189ec107c81a8a3aeb4782b0d950e4881aa51b776bb6844b25bce97035b48a9bdb2aea3608687bcdd479d4fa998b5a839ff88558e4a29dff0ed13b55900abb5d439b70793d902ae9ad34587b18c919f6b875c91d14deeb1c373f5e76570d59a6549758f655f1128a54f162dfe8868e1587028e26ad91e528c5ae7ee9335fa58fb59022b5de29d80f0764a9917390d46db899acc6a5b416e25ecc9dccb7153646addcc81cadb5f0078febc7e05d7735aba494f39ef05697bbcc9b47b2ccc79595d75fc13c80678b5e237edce58d731f34c05b1ddcaa649acf2d865bbbc3ceda10508bcdd29d0496744644bf1c3516f6687dfeef5649c7dff90627d642739a59d91a8d1d0c4dc55d74a949e1074427664b467992c9e0f7d3af9d6ea79513e8946ddc0d356bac49878e64e6a95b0a30214214faf2ce317fa622ff3266b32a816e10a18e6d789a5da1f23e67b4f970a68a7bcd9e18825ee274b0483896a40"
+            }
+          ]
+        },
+        "offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+      },
+      "version_info": {
+        "block_header_version": 1,
+        "orig_version": 2,
+        "version": 2
+      }
+    }
+  }
+}', src/foreign_rpc.rs:4:1
+stack backtrace:
+   0:        0x1069ead03 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x1069e6952 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x1069e9cc6 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x1069e9a6f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x1069ea43f - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x1069e9f6c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x1069e9ec0 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x1061df756 - rust_out::main::h19287f9e3b324627
+   8:        0x1061decf9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+   9:        0x1069e9dd7 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  10:        0x1069ed0be - __rust_maybe_catch_panic
+  11:        0x1069ea7fd - std::rt::lang_start_internal::h4c054360e442146c
+  12:        0x1061dece1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  13:        0x1061df8f1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::cancel_tx (line 950) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::cancel_tx (line 950)' panicked at 'test executable failed:
+2019-06-13T10:55:27.854592-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:27.864596-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/.mwc/lmdb is 1048576
+2019-06-13T10:55:27.868501-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:27.871283-04:00 INFO grin_chain::chain - init: saved genesis: 47236fd1d8c3
+2019-06-13T10:55:27.871945-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [47236fd1d8c3]
+2019-06-13T10:55:27.872062-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [47236fd1d8c3]
+2019-06-13T10:55:27.872164-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [47236fd1d8c3]
+2019-06-13T10:55:27.872628-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:27.884018-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:27.884588-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:27.885176-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:27.986894-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:27.990191-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:27.990762-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:27.991257-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet2/wallet.seed
+2019-06-13T10:55:28.094460-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:28.225849-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:28.225976-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:28.922131-04:00 DEBUG grin_chain::pipe - pipe: process_block 72ebe3030d2c at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:28.923331-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 72ebe3030d2c at 1
+2019-06-13T10:55:28.979297-04:00 DEBUG grin_chain::pipe - body tail 72ebe3030d2c @ 1
+2019-06-13T10:55:28.979453-04:00 DEBUG grin_chain::pipe - pipe: head updated to 72ebe3030d2c at 1
+2019-06-13T10:55:28.980161-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 72ebe3030d2c at 1
+2019-06-13T10:55:28.980365-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:28.980574-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:28.987380-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:29.022966-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:29.023051-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:29.025454-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:29.025613-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:29.132394-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:29.151523-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:29.307437-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:29.307629-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:29.775423-04:00 DEBUG grin_chain::pipe - pipe: process_block d9f5b0ef22ea at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:29.777047-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to d9f5b0ef22ea at 2
+2019-06-13T10:55:29.833729-04:00 DEBUG grin_chain::pipe - pipe: head updated to d9f5b0ef22ea at 2
+2019-06-13T10:55:29.834474-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header d9f5b0ef22ea at 2
+2019-06-13T10:55:29.834635-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:29.834863-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:29.840622-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:29.881274-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:29.881352-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:29.885423-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:29.885573-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:30.002028-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:30.017185-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:30.157565-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:30.157746-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:30.659579-04:00 DEBUG grin_chain::pipe - pipe: process_block 0565311b39f1 at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:30.661049-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 0565311b39f1 at 3
+2019-06-13T10:55:30.723353-04:00 DEBUG grin_chain::pipe - pipe: head updated to 0565311b39f1 at 3
+2019-06-13T10:55:30.724120-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 0565311b39f1 at 3
+2019-06-13T10:55:30.724297-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:30.724574-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:30.730816-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:30.796256-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:30.796337-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:30.801325-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:30.801474-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:30.939502-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:30.952517-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:31.109029-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:31.109160-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:31.543328-04:00 DEBUG grin_chain::pipe - pipe: process_block c6c6d65d5720 at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:31.548113-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to c6c6d65d5720 at 4
+2019-06-13T10:55:31.610756-04:00 DEBUG grin_chain::pipe - pipe: head updated to c6c6d65d5720 at 4
+2019-06-13T10:55:31.611539-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header c6c6d65d5720 at 4
+2019-06-13T10:55:31.611716-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:31.612149-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:31.619245-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:31.677536-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:31.677622-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:31.686856-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:31.687027-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:31.796099-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:31.811040-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:31.958389-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000400000000), 0300000000000000000000000400000000
+2019-06-13T10:55:31.958511-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 5, key_id: Some(Identifier(0300000000000000000000000400000000)) }
+2019-06-13T10:55:32.390634-04:00 DEBUG grin_chain::pipe - pipe: process_block fe5c08ad2a9c at 5 [in/out/kern: 0/1/1]
+2019-06-13T10:55:32.392670-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to fe5c08ad2a9c at 5
+2019-06-13T10:55:32.472665-04:00 DEBUG grin_chain::pipe - pipe: head updated to fe5c08ad2a9c at 5
+2019-06-13T10:55:32.473523-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header fe5c08ad2a9c at 5
+2019-06-13T10:55:32.473696-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 9, output 8, kernel 8
+2019-06-13T10:55:32.474166-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 10, output 8, rproof 8, kernel 8 mmrs, took 0s
+2019-06-13T10:55:32.481624-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:32.546888-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 5 rangeproofs
+2019-06-13T10:55:32.546999-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 rangeproofs, pmmr size 8, took 0s
+2019-06-13T10:55:32.556952-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 kernel signatures, pmmr size 8, took 0s
+2019-06-13T10:55:32.557137-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:32.676399-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:32.689720-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpJJxEte/wallet1/wallet.seed
+2019-06-13T10:55:32.811624-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { inner: stack backtrace:
+   0: backtrace::backtrace::trace_unsynchronized::h4094d436209ed4f2 (0x103e2722d)
+   1: backtrace::backtrace::trace::ha5a9b0b1c2aaf10f (0x103e271b3)
+   2: backtrace::capture::Backtrace::create::hcac2004f2924cbc4 (0x103e191f7)
+   3: backtrace::capture::Backtrace::new_unresolved::ha237dfcbd35d73b5 (0x103e19178)
+   4: failure::backtrace::internal::InternalBacktrace::new::h990e3b2cc195e643 (0x103e16a70)
+   5: failure::backtrace::Backtrace::new::hb7a7e4ece932f21f (0x103e1792f)
+   6: failure::context::Context<D>::new::h0edfc99a2241a725 (0x103404d02)
+   7: <grin_wallet_libwallet::error::Error as core::convert::From<grin_wallet_libwallet::error::ErrorKind>>::from::h0ab6ccd46278ef3b (0x1034524ca)
+   8: grin_wallet_libwallet::internal::selection::select_coins_and_fee::h668a65027536231b (0x103104941)
+   9: grin_wallet_libwallet::internal::selection::select_send_tx::h1e9745cc68b92174 (0x103101341)
+  10: grin_wallet_libwallet::internal::selection::build_send_tx::hca6d2242b30e6315 (0x103100428)
+  11: grin_wallet_libwallet::internal::tx::add_inputs_to_slate::h2800d5b4c9a99546 (0x103224003)
+  12: grin_wallet_libwallet::api_impl::owner::init_send_tx::h5630c7526f9ce836 (0x103227c3a)
+  13: grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff (0x1031fe972)
+  14: rust_out::main::h19287f9e3b324627 (0x1030de547)
+  15: std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6 (0x1030ddcba)
+  16: std::panicking::try::do_call::h1252fc9a2ff235eb (0x103e62198)
+  17: ___rust_maybe_catch_panic (0x103e6a41f)
+  18: std::rt::lang_start_internal::h4c054360e442146c (0x103e62bbe)
+  19: std::rt::lang_start::h07ff9ad2a5b9143d (0x1030ddca2)
+  20: _main (0x1030de8b2)
+
+Not enough funds. Required: 60.003000000, Available: 4.761904760 }', src/libcore/result.rs:997:5
+stack backtrace:
+   0:        0x103e638f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x103e5ed02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x103e62086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x103e61e2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x103e627ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x103e6232c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x103e62218 - rust_begin_unwind
+   7:        0x103e7c891 - core::panicking::panic_fmt::hdf67eedb88644e1e
+   8:        0x1032a886e - core::result::unwrap_failed::h40cdc6057a0ab56e
+   9:        0x103135c8c - core::result::Result<T,E>::unwrap::h2138e1798b1d69b3
+  10:        0x1031fe986 - grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff
+  11:        0x1030de546 - rust_out::main::h19287f9e3b324627
+  12:        0x1030ddcb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+  13:        0x103e62197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  14:        0x103e6a41e - __rust_maybe_catch_panic
+  15:        0x103e62bbd - std::rt::lang_start_internal::h4c054360e442146c
+  16:        0x1030ddca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  17:        0x1030de8b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::init_send_tx (line 322) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::init_send_tx (line 322)' panicked at 'test executable failed:
+2019-06-13T10:55:30.158612-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:30.173521-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/.mwc/lmdb is 1048576
+2019-06-13T10:55:30.177148-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:30.180023-04:00 INFO grin_chain::chain - init: saved genesis: be7ff41c9745
+2019-06-13T10:55:30.180847-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [be7ff41c9745]
+2019-06-13T10:55:30.181007-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [be7ff41c9745]
+2019-06-13T10:55:30.181106-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [be7ff41c9745]
+2019-06-13T10:55:30.181553-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:30.192816-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:30.193388-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:30.193934-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:30.300401-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:30.303678-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:30.304237-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:30.304712-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet2/wallet.seed
+2019-06-13T10:55:30.408260-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:30.568321-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:30.568601-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:31.335055-04:00 DEBUG grin_chain::pipe - pipe: process_block bb763ef51451 at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:31.336483-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to bb763ef51451 at 1
+2019-06-13T10:55:31.398016-04:00 DEBUG grin_chain::pipe - body tail bb763ef51451 @ 1
+2019-06-13T10:55:31.398206-04:00 DEBUG grin_chain::pipe - pipe: head updated to bb763ef51451 at 1
+2019-06-13T10:55:31.399942-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header bb763ef51451 at 1
+2019-06-13T10:55:31.400140-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:31.400389-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:31.406072-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:31.450412-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:31.450495-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:31.452359-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:31.452528-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:31.565381-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:31.578852-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:31.729583-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:31.729708-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:32.153272-04:00 DEBUG grin_chain::pipe - pipe: process_block 54831fad590a at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:32.154585-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 54831fad590a at 2
+2019-06-13T10:55:32.214287-04:00 DEBUG grin_chain::pipe - pipe: head updated to 54831fad590a at 2
+2019-06-13T10:55:32.215025-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 54831fad590a at 2
+2019-06-13T10:55:32.215200-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:32.215424-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:32.220919-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:32.261298-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:32.261383-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:32.264775-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:32.264958-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:32.368287-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:32.383099-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:32.549205-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:32.549355-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:32.986838-04:00 DEBUG grin_chain::pipe - pipe: process_block 17c92dd3690d at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:32.988203-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 17c92dd3690d at 3
+2019-06-13T10:55:33.048294-04:00 DEBUG grin_chain::pipe - pipe: head updated to 17c92dd3690d at 3
+2019-06-13T10:55:33.049233-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 17c92dd3690d at 3
+2019-06-13T10:55:33.049477-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:33.049853-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:33.056164-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:33.100926-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:33.101009-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:33.106372-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:33.106518-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:33.209377-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:33.224750-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:33.363083-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:33.363231-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:33.843725-04:00 DEBUG grin_chain::pipe - pipe: process_block 4bba2814e315 at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:33.845126-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 4bba2814e315 at 4
+2019-06-13T10:55:33.907936-04:00 DEBUG grin_chain::pipe - pipe: head updated to 4bba2814e315 at 4
+2019-06-13T10:55:33.908720-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 4bba2814e315 at 4
+2019-06-13T10:55:33.908884-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:33.909372-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:33.915521-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:33.974036-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:33.974139-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:33.979963-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:33.980249-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:34.085936-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:34.103340-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpwxvG17/wallet1/wallet.seed
+2019-06-13T10:55:34.215549-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:34.229216-04:00 DEBUG grin_core::libtx::build - Building input (spending coinbase): 2380952380, 0300000000000000000000000000000000
+2019-06-13T10:55:34.229447-04:00 DEBUG grin_wallet_libwallet::internal::selection - Building change outputs: total change: 1772952380 (1 outputs)
+2019-06-13T10:55:34.291379-04:00 DEBUG grin_core::libtx::build - Building output: 1772952380, Commitment(099cdeba47b496dde9f55928930106a91443e8a1e79e8b77bd642718b2bac56b83)
+
+thread 'main' panicked at '(left != right) 
+left: {
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "Ok": {
+      "amount": "600000000",
+      "fee": "8000000",
+      "height": "4",
+      "id": "0436430c-2b02-624c-2032-570501212b00",
+      "lock_height": "0",
+      "num_participants": 2,
+      "participant_data": [
+        {
+          "id": "0",
+          "message": "my message",
+          "message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b65f47a446e00a9e356c0867326edd084398ec50e086445fb0df7794dabdf54ce",
+          "part_sig": null,
+          "public_blind_excess": "021f0896504e94e196ae2207135f905237e8ad76e39fda5b6563230542c5d2e4c5",
+          "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+        }
+      ],
+      "tx": {
+        "body": {
+          "inputs": [
+            {
+              "commit": "0910c1752100733bae49e877286835aab76d5856ef8139b6c6e3f51798aa461b03",
+              "features": "Coinbase"
+            }
+          ],
+          "kernels": [
+            {
+              "excess": "000000000000000000000000000000000000000000000000000000000000000000",
+              "excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "features": "Plain",
+              "fee": "8000000",
+              "lock_height": "0"
+            }
+          ],
+          "outputs": [
+            {
+              "commit": "099cdeba47b496dde9f55928930106a91443e8a1e79e8b77bd642718b2bac56b83",
+              "features": "Plain",
+              "proof": "c46c603c8c2ab52685961f2908512486cbf5feaad213a41545409bc09e904c1af4c9b9380b477b3c10f11fd6c2eaf45d408e5c4d911f82bf19a55616f8d4d86602fdf8c9cc3263f9bfe634ba7c8d10d1189f78673f71d8a2bc02ee3470348dc654195610d411b482502a3c230898e7a8b2a26db2b78b9e18b89d028123115cb075e002c29d29ee8101d78e7597c4aadd5e63981ad398538524486c9d4d478dab7a1f2bb91dc0fd8238490efe59237117d0406f24ca4324da2e402f5f90fac011b33442044268bed4bdc5e2dd38f5e8b3b4f07bfe0ff9af380c6d6a39da034d584edf5ebdd8b54235e0f93965658e6ff5ddc1680077066e3f0e8f28331ccfcab9ad1728796e6627e6b3b992307d957508188baa3bfbfa43971390bc0bc0adbcfdb04ffe73c2d2bdbc05de5d8ae0f852281a3a43b9934ff1448b51f467e2cfb4c141c0e64dbc954f927d182ef5e7380f624cfb81fc2e4230bf68d5f3486c240ffe363b00a5e5974bb3e2ad51b326d93fb4b46a5d94ef230e1195f971bcbca82f3f3ff8267ead70c17b0c73bdc5c4654e220a29bb8097a7ab0dd5298850e09d297faa05b5cba96b617e9c5b704c3a8a535e36734cdda81c1061aaa724e4554c10b38edccf8409b4a728b727e451b229620c531ed74342813ac6a077a16a3844bb1f9afac1f7f8846670db0370aee835647bad945d0a5dc89c568ab44f8a8d977c5035030ce5fccf51f9abe136740f8aba99ec0820f62fd3c572f392b11625fc0cdab518768abbe8ac1c95ba702b99b58692b5dad8191ba5ba24cb7405c9a0ee5b292090c4a6e08f530b92336f2f57c1b69ee7563a262176890859c4260f6646ee5fbc0dea8eea6a8b5cd0c375141e38079c981a23ecaf34c78cbf515f232c774a51999df627d24717911f1edaaf9bcd8000860e805200121cf9a6722a8142c721a69f9173"
+            }
+          ]
+        },
+        "offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+      },
+      "version_info": {
+        "block_header_version": 1,
+        "orig_version": 2,
+        "version": 2
+      }
+    }
+  }
+}
+right: {
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "Ok": {
+      "amount": "600000000",
+      "fee": "8000000",
+      "height": "4",
+      "id": "0436430c-2b02-624c-2032-570501212b00",
+      "lock_height": "0",
+      "num_participants": 2,
+      "participant_data": [
+        {
+          "id": "0",
+          "message": "my message",
+          "message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b1d4c1358be398f801eb90d933774b5218fa7e769b11c4c640402253353656f75",
+          "part_sig": null,
+          "public_blind_excess": "034b4df2f0558b73ea72a1ca5c4ab20217c66bbe0829056fca7abe76888e9349ee",
+          "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+        }
+      ],
+      "tx": {
+        "body": {
+          "inputs": [
+            {
+              "commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7",
+              "features": "Coinbase"
+            }
+          ],
+          "kernels": [
+            {
+              "excess": "000000000000000000000000000000000000000000000000000000000000000000",
+              "excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "features": "Plain",
+              "fee": "8000000",
+              "lock_height": "0"
+            }
+          ],
+          "outputs": [
+            {
+              "commit": "094be57c91787fc2033d5d97fae099f1a6ddb37ea48370f1a138f09524c767fdd3",
+              "features": "Plain",
+              "proof": "2a42e9e902b70ce44e1fccb14de87ee0a97100bddf12c6bead1b9c5f4eb60300f29c13094fa12ffeee238fb4532b18f6b61cf51b23c1c7e1ad2e41560dc27edc0a2b9e647a0b3e4e806fced5b65e61d0f1f5197d3e2285c632d359e27b6b9206b2caffea4f67e0c7a2812e7a22c134b98cf89bd43d9f28b8bec25cce037a0ac5b1ae8f667e54e1250813a5263004486b4465ad4e641ab2b535736ea26535a11013564f08f483b7dab1c2bcc3ee38eadf2f7850eff7e3459a4bbabf9f0cf6c50d0c0a4120565cd4a2ce3e354c11721cd695760a24c70e0d5a0dfc3c5dcd51dfad6de2c237a682f36dc0b271f21bb3655e5333016aaa42c2efa1446e5f3c0a79ec417c4d30f77556951cb0f05dbfafb82d9f95951a9ea241fda2a6388f73ace036b98acce079f0e4feebccc96290a86dcc89118a901210b245f2d114cf94396e4dbb461e82aa26a0581389707957968c7cdc466213bb1cd417db207ef40c05842ab67a01a9b96eb1430ebc26e795bb491258d326d5174ad549401059e41782121e506744af8af9d8e493644a87d613600888541cbbe538c625883f3eb4aa3102c5cfcc25de8e97af8927619ce6a731b3b8462d51d993066b935b0648d2344ad72e4fd70f347fbd81041042e5ea31cc7b2e3156a920b80ecba487b950ca32ca95fae85b759c936246ecf441a9fdd95e8fee932d6782cdec686064018c857efc47fb4b2a122600d5fdd79af2486f44df7e629184e1c573bc0a9b3feb40b190ef2861a1ab45e2ac2201b9cd42e495deea247269820ed32389a2810ad6c0f9a296d2a2d9c54089fed50b7f5ecfcd33ab9954360e1d7f5598c32128cfcf2a1d8bf14616818da8a5343bfa88f0eedf392e9d4ab1ace1b60324129cd4852c2e27813a9cf71a6ae6229a4fcecc1a756b3e664c5f50af333082616815a3bec8fc0b75b8e4e767d719"
+            }
+          ]
+        },
+        "offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+      },
+      "version_info": {
+        "block_header_version": 1,
+        "orig_version": 2,
+        "version": 2
+      }
+    }
+  }
+}', src/owner_rpc.rs:4:1
+stack backtrace:
+   0:        0x1093868f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x109381d02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x109385086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x109384e2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x1093857ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10938532c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x109385280 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10860171d - rust_out::main::h19287f9e3b324627
+   8:        0x108600cb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+   9:        0x109385197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  10:        0x10938d41e - __rust_maybe_catch_panic
+  11:        0x109385bbd - std::rt::lang_start_internal::h4c054360e442146c
+  12:        0x108600ca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  13:        0x1086018b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::get_stored_tx (line 978) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::get_stored_tx (line 978)' panicked at 'test executable failed:
+2019-06-13T10:55:29.212877-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:29.238636-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/.mwc/lmdb is 1048576
+2019-06-13T10:55:29.244747-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:29.247569-04:00 INFO grin_chain::chain - init: saved genesis: 5a6452548e08
+2019-06-13T10:55:29.248178-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [5a6452548e08]
+2019-06-13T10:55:29.248286-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [5a6452548e08]
+2019-06-13T10:55:29.248379-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [5a6452548e08]
+2019-06-13T10:55:29.248815-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:29.260534-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:29.261137-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:29.261706-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:29.371973-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:29.375281-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:29.375784-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:29.376261-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet2/wallet.seed
+2019-06-13T10:55:29.489236-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:29.632599-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:29.632729-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:30.386760-04:00 DEBUG grin_chain::pipe - pipe: process_block 6786da631c54 at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:30.388053-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 6786da631c54 at 1
+2019-06-13T10:55:30.462352-04:00 DEBUG grin_chain::pipe - body tail 6786da631c54 @ 1
+2019-06-13T10:55:30.462579-04:00 DEBUG grin_chain::pipe - pipe: head updated to 6786da631c54 at 1
+2019-06-13T10:55:30.463365-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 6786da631c54 at 1
+2019-06-13T10:55:30.463551-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:30.463729-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:30.469115-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:30.503753-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:30.503835-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:30.505908-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:30.506083-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:30.655199-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:30.665167-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:30.823458-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:30.823598-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:31.297297-04:00 DEBUG grin_chain::pipe - pipe: process_block b60aa9b8d167 at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:31.298521-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to b60aa9b8d167 at 2
+2019-06-13T10:55:31.362021-04:00 DEBUG grin_chain::pipe - pipe: head updated to b60aa9b8d167 at 2
+2019-06-13T10:55:31.362887-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header b60aa9b8d167 at 2
+2019-06-13T10:55:31.363064-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:31.363308-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:31.369042-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:31.415390-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:31.415471-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:31.418741-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:31.418892-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:31.537255-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:31.550745-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:31.701308-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:31.701430-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:32.157771-04:00 DEBUG grin_chain::pipe - pipe: process_block c3683e082af2 at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:32.159490-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to c3683e082af2 at 3
+2019-06-13T10:55:32.218155-04:00 DEBUG grin_chain::pipe - pipe: head updated to c3683e082af2 at 3
+2019-06-13T10:55:32.218921-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header c3683e082af2 at 3
+2019-06-13T10:55:32.219083-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:32.219424-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:32.226800-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:32.274040-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:32.274122-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:32.279077-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:32.279229-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:32.381860-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:32.395099-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:32.557940-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:32.558063-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:32.991878-04:00 DEBUG grin_chain::pipe - pipe: process_block b3c2e5109636 at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:32.993230-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to b3c2e5109636 at 4
+2019-06-13T10:55:33.060605-04:00 DEBUG grin_chain::pipe - pipe: head updated to b3c2e5109636 at 4
+2019-06-13T10:55:33.061393-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header b3c2e5109636 at 4
+2019-06-13T10:55:33.061565-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:33.062015-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:33.069025-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:33.126415-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:33.126504-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:33.132132-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:33.132284-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:33.236877-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:33.250358-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:33.389835-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000400000000), 0300000000000000000000000400000000
+2019-06-13T10:55:33.389962-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 5, key_id: Some(Identifier(0300000000000000000000000400000000)) }
+2019-06-13T10:55:33.864883-04:00 DEBUG grin_chain::pipe - pipe: process_block f20e0dc0c3c9 at 5 [in/out/kern: 0/1/1]
+2019-06-13T10:55:33.866362-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to f20e0dc0c3c9 at 5
+2019-06-13T10:55:33.927274-04:00 DEBUG grin_chain::pipe - pipe: head updated to f20e0dc0c3c9 at 5
+2019-06-13T10:55:33.928011-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header f20e0dc0c3c9 at 5
+2019-06-13T10:55:33.928182-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 9, output 8, kernel 8
+2019-06-13T10:55:33.928646-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 10, output 8, rproof 8, kernel 8 mmrs, took 0s
+2019-06-13T10:55:33.936117-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:33.998453-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 5 rangeproofs
+2019-06-13T10:55:33.998548-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 rangeproofs, pmmr size 8, took 0s
+2019-06-13T10:55:34.005724-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 kernel signatures, pmmr size 8, took 0s
+2019-06-13T10:55:34.005886-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:34.108762-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:34.123671-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTlfuRI/wallet1/wallet.seed
+2019-06-13T10:55:34.237901-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { inner: stack backtrace:
+   0: backtrace::backtrace::trace_unsynchronized::h4094d436209ed4f2 (0x101d5622d)
+   1: backtrace::backtrace::trace::ha5a9b0b1c2aaf10f (0x101d561b3)
+   2: backtrace::capture::Backtrace::create::hcac2004f2924cbc4 (0x101d481f7)
+   3: backtrace::capture::Backtrace::new_unresolved::ha237dfcbd35d73b5 (0x101d48178)
+   4: failure::backtrace::internal::InternalBacktrace::new::h990e3b2cc195e643 (0x101d45a70)
+   5: failure::backtrace::Backtrace::new::hb7a7e4ece932f21f (0x101d4692f)
+   6: failure::context::Context<D>::new::h0edfc99a2241a725 (0x101333d02)
+   7: <grin_wallet_libwallet::error::Error as core::convert::From<grin_wallet_libwallet::error::ErrorKind>>::from::h0ab6ccd46278ef3b (0x1013814ca)
+   8: grin_wallet_libwallet::internal::selection::select_coins_and_fee::h668a65027536231b (0x101033941)
+   9: grin_wallet_libwallet::internal::selection::select_send_tx::h1e9745cc68b92174 (0x101030341)
+  10: grin_wallet_libwallet::internal::selection::build_send_tx::hca6d2242b30e6315 (0x10102f428)
+  11: grin_wallet_libwallet::internal::tx::add_inputs_to_slate::h2800d5b4c9a99546 (0x101153003)
+  12: grin_wallet_libwallet::api_impl::owner::init_send_tx::h5630c7526f9ce836 (0x101156c3a)
+  13: grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff (0x10112d972)
+  14: rust_out::main::h19287f9e3b324627 (0x10100d547)
+  15: std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6 (0x10100ccba)
+  16: std::panicking::try::do_call::h1252fc9a2ff235eb (0x101d91198)
+  17: ___rust_maybe_catch_panic (0x101d9941f)
+  18: std::rt::lang_start_internal::h4c054360e442146c (0x101d91bbe)
+  19: std::rt::lang_start::h07ff9ad2a5b9143d (0x10100cca2)
+  20: _main (0x10100d8b2)
+
+Not enough funds. Required: 60.003000000, Available: 4.761904760 }', src/libcore/result.rs:997:5
+stack backtrace:
+   0:        0x101d928f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x101d8dd02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x101d91086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x101d90e2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x101d917ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x101d9132c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x101d91218 - rust_begin_unwind
+   7:        0x101dab891 - core::panicking::panic_fmt::hdf67eedb88644e1e
+   8:        0x1011d786e - core::result::unwrap_failed::h40cdc6057a0ab56e
+   9:        0x101064c8c - core::result::Result<T,E>::unwrap::h2138e1798b1d69b3
+  10:        0x10112d986 - grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff
+  11:        0x10100d546 - rust_out::main::h19287f9e3b324627
+  12:        0x10100ccb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+  13:        0x101d91197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  14:        0x101d9941e - __rust_maybe_catch_panic
+  15:        0x101d91bbd - std::rt::lang_start_internal::h4c054360e442146c
+  16:        0x10100cca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  17:        0x10100d8b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::finalize_tx (line 720) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::finalize_tx (line 720)' panicked at 'test executable failed:
+2019-06-13T10:55:29.194437-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:29.219667-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/.mwc/lmdb is 1048576
+2019-06-13T10:55:29.223240-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:29.225988-04:00 INFO grin_chain::chain - init: saved genesis: 5a6452548e08
+2019-06-13T10:55:29.226603-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [5a6452548e08]
+2019-06-13T10:55:29.226703-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [5a6452548e08]
+2019-06-13T10:55:29.226794-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [5a6452548e08]
+2019-06-13T10:55:29.227240-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:29.238613-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:29.239136-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:29.239600-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:29.348987-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:29.354099-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:29.354664-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:29.355235-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet2/wallet.seed
+2019-06-13T10:55:29.470837-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:29.613134-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:29.613267-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:30.325777-04:00 DEBUG grin_chain::pipe - pipe: process_block 3829315c3b29 at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:30.327144-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 3829315c3b29 at 1
+2019-06-13T10:55:30.396285-04:00 DEBUG grin_chain::pipe - body tail 3829315c3b29 @ 1
+2019-06-13T10:55:30.396594-04:00 DEBUG grin_chain::pipe - pipe: head updated to 3829315c3b29 at 1
+2019-06-13T10:55:30.397353-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 3829315c3b29 at 1
+2019-06-13T10:55:30.397610-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:30.397860-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:30.405078-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:30.455069-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:30.455344-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:30.457495-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:30.457643-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:30.592669-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:30.608491-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:30.765539-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:30.766202-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:31.228735-04:00 DEBUG grin_chain::pipe - pipe: process_block a1704e52127a at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:31.229967-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to a1704e52127a at 2
+2019-06-13T10:55:31.307189-04:00 DEBUG grin_chain::pipe - pipe: head updated to a1704e52127a at 2
+2019-06-13T10:55:31.315322-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header a1704e52127a at 2
+2019-06-13T10:55:31.315521-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:31.315754-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:31.321900-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:31.363402-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:31.363481-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:31.366740-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:31.366906-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:31.476669-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:31.491649-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:31.651130-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:31.651287-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:32.082475-04:00 DEBUG grin_chain::pipe - pipe: process_block 1ea49df5a935 at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:32.083844-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 1ea49df5a935 at 3
+2019-06-13T10:55:32.151193-04:00 DEBUG grin_chain::pipe - pipe: head updated to 1ea49df5a935 at 3
+2019-06-13T10:55:32.151986-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 1ea49df5a935 at 3
+2019-06-13T10:55:32.152153-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:32.152451-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:32.159750-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:32.208387-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:32.208469-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:32.213057-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:32.213413-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:32.323281-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:32.339001-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:32.488289-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:32.488417-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:32.932808-04:00 DEBUG grin_chain::pipe - pipe: process_block d1bcc180ad30 at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:32.934551-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to d1bcc180ad30 at 4
+2019-06-13T10:55:32.989642-04:00 DEBUG grin_chain::pipe - pipe: head updated to d1bcc180ad30 at 4
+2019-06-13T10:55:32.991154-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header d1bcc180ad30 at 4
+2019-06-13T10:55:32.991367-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:32.991788-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:32.998257-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:33.051296-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:33.051379-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:33.058220-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:33.058363-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:33.160660-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:33.174607-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:33.313710-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000400000000), 0300000000000000000000000400000000
+2019-06-13T10:55:33.313836-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 5, key_id: Some(Identifier(0300000000000000000000000400000000)) }
+2019-06-13T10:55:33.777359-04:00 DEBUG grin_chain::pipe - pipe: process_block f2bd10db3f92 at 5 [in/out/kern: 0/1/1]
+2019-06-13T10:55:33.778819-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to f2bd10db3f92 at 5
+2019-06-13T10:55:33.834219-04:00 DEBUG grin_chain::pipe - pipe: head updated to f2bd10db3f92 at 5
+2019-06-13T10:55:33.835198-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header f2bd10db3f92 at 5
+2019-06-13T10:55:33.835396-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 9, output 8, kernel 8
+2019-06-13T10:55:33.835846-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 10, output 8, rproof 8, kernel 8 mmrs, took 0s
+2019-06-13T10:55:33.842681-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:33.903900-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 5 rangeproofs
+2019-06-13T10:55:33.904016-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 rangeproofs, pmmr size 8, took 0s
+2019-06-13T10:55:33.911680-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 kernel signatures, pmmr size 8, took 0s
+2019-06-13T10:55:33.911879-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:34.016639-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:34.034429-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpTa653G/wallet1/wallet.seed
+2019-06-13T10:55:34.143433-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { inner: stack backtrace:
+   0: backtrace::backtrace::trace_unsynchronized::h4094d436209ed4f2 (0x102f3e22d)
+   1: backtrace::backtrace::trace::ha5a9b0b1c2aaf10f (0x102f3e1b3)
+   2: backtrace::capture::Backtrace::create::hcac2004f2924cbc4 (0x102f301f7)
+   3: backtrace::capture::Backtrace::new_unresolved::ha237dfcbd35d73b5 (0x102f30178)
+   4: failure::backtrace::internal::InternalBacktrace::new::h990e3b2cc195e643 (0x102f2da70)
+   5: failure::backtrace::Backtrace::new::hb7a7e4ece932f21f (0x102f2e92f)
+   6: failure::context::Context<D>::new::h0edfc99a2241a725 (0x10251bd02)
+   7: <grin_wallet_libwallet::error::Error as core::convert::From<grin_wallet_libwallet::error::ErrorKind>>::from::h0ab6ccd46278ef3b (0x1025694ca)
+   8: grin_wallet_libwallet::internal::selection::select_coins_and_fee::h668a65027536231b (0x10221b941)
+   9: grin_wallet_libwallet::internal::selection::select_send_tx::h1e9745cc68b92174 (0x102218341)
+  10: grin_wallet_libwallet::internal::selection::build_send_tx::hca6d2242b30e6315 (0x102217428)
+  11: grin_wallet_libwallet::internal::tx::add_inputs_to_slate::h2800d5b4c9a99546 (0x10233b003)
+  12: grin_wallet_libwallet::api_impl::owner::init_send_tx::h5630c7526f9ce836 (0x10233ec3a)
+  13: grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff (0x102315972)
+  14: rust_out::main::h19287f9e3b324627 (0x1021f5547)
+  15: std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6 (0x1021f4cba)
+  16: std::panicking::try::do_call::h1252fc9a2ff235eb (0x102f79198)
+  17: ___rust_maybe_catch_panic (0x102f8141f)
+  18: std::rt::lang_start_internal::h4c054360e442146c (0x102f79bbe)
+  19: std::rt::lang_start::h07ff9ad2a5b9143d (0x1021f4ca2)
+  20: _main (0x1021f58b2)
+
+Not enough funds. Required: 60.003000000, Available: 4.761904760 }', src/libcore/result.rs:997:5
+stack backtrace:
+   0:        0x102f7a8f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x102f75d02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x102f79086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x102f78e2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x102f797ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x102f7932c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x102f79218 - rust_begin_unwind
+   7:        0x102f93891 - core::panicking::panic_fmt::hdf67eedb88644e1e
+   8:        0x1023bf86e - core::result::unwrap_failed::h40cdc6057a0ab56e
+   9:        0x10224cc8c - core::result::Result<T,E>::unwrap::h2138e1798b1d69b3
+  10:        0x102315986 - grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff
+  11:        0x1021f5546 - rust_out::main::h19287f9e3b324627
+  12:        0x1021f4cb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+  13:        0x102f79197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  14:        0x102f8141e - __rust_maybe_catch_panic
+  15:        0x102f79bbd - std::rt::lang_start_internal::h4c054360e442146c
+  16:        0x1021f4ca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  17:        0x1021f58b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::post_tx (line 882) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::post_tx (line 882)' panicked at 'test executable failed:
+2019-06-13T10:55:34.737808-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:34.761259-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/.mwc/lmdb is 1048576
+2019-06-13T10:55:34.764745-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:34.767653-04:00 INFO grin_chain::chain - init: saved genesis: 24a7e67aed70
+2019-06-13T10:55:34.768316-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [24a7e67aed70]
+2019-06-13T10:55:34.768427-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [24a7e67aed70]
+2019-06-13T10:55:34.768524-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [24a7e67aed70]
+2019-06-13T10:55:34.768983-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:34.779902-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:34.780558-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:34.781128-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:34.883623-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:34.886874-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:34.887355-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:34.887896-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet2/wallet.seed
+2019-06-13T10:55:34.994495-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:35.136135-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:35.136269-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:35.908721-04:00 DEBUG grin_chain::pipe - pipe: process_block 77a9f6847659 at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:35.910032-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 77a9f6847659 at 1
+2019-06-13T10:55:35.962730-04:00 DEBUG grin_chain::pipe - body tail 77a9f6847659 @ 1
+2019-06-13T10:55:35.962923-04:00 DEBUG grin_chain::pipe - pipe: head updated to 77a9f6847659 at 1
+2019-06-13T10:55:35.963695-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 77a9f6847659 at 1
+2019-06-13T10:55:35.963903-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:35.964079-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:35.969315-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:36.018645-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:36.018725-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:36.020364-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:36.020514-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:36.145434-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:36.158823-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:36.299850-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:36.300008-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:36.788767-04:00 DEBUG grin_chain::pipe - pipe: process_block d427089b9d06 at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:36.789949-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to d427089b9d06 at 2
+2019-06-13T10:55:36.858030-04:00 DEBUG grin_chain::pipe - pipe: head updated to d427089b9d06 at 2
+2019-06-13T10:55:36.858841-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header d427089b9d06 at 2
+2019-06-13T10:55:36.859129-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:36.859395-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:36.866139-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:36.911924-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:36.912008-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:36.914894-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:36.915075-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:37.023463-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:37.038775-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:37.180405-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:37.180566-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:37.608365-04:00 DEBUG grin_chain::pipe - pipe: process_block f992d7e7b8c4 at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:37.609642-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to f992d7e7b8c4 at 3
+2019-06-13T10:55:37.665111-04:00 DEBUG grin_chain::pipe - pipe: head updated to f992d7e7b8c4 at 3
+2019-06-13T10:55:37.666009-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header f992d7e7b8c4 at 3
+2019-06-13T10:55:37.666200-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:37.666492-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:37.672210-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:37.725600-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:37.725712-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:37.729633-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:37.729818-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:37.838433-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:37.853473-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:37.993199-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:37.993325-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:38.400326-04:00 DEBUG grin_chain::pipe - pipe: process_block a08ce40cb98f at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:38.401691-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to a08ce40cb98f at 4
+2019-06-13T10:55:38.462722-04:00 DEBUG grin_chain::pipe - pipe: head updated to a08ce40cb98f at 4
+2019-06-13T10:55:38.463496-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header a08ce40cb98f at 4
+2019-06-13T10:55:38.463731-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:38.464166-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:38.471331-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:38.536723-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:38.536808-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:38.542741-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:38.542898-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:38.670400-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:38.684481-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:38.836723-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000400000000), 0300000000000000000000000400000000
+2019-06-13T10:55:38.836866-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 5, key_id: Some(Identifier(0300000000000000000000000400000000)) }
+2019-06-13T10:55:39.234877-04:00 DEBUG grin_chain::pipe - pipe: process_block 290bca6e0d19 at 5 [in/out/kern: 0/1/1]
+2019-06-13T10:55:39.236408-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 290bca6e0d19 at 5
+2019-06-13T10:55:39.290229-04:00 DEBUG grin_chain::pipe - pipe: head updated to 290bca6e0d19 at 5
+2019-06-13T10:55:39.291006-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 290bca6e0d19 at 5
+2019-06-13T10:55:39.291185-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 9, output 8, kernel 8
+2019-06-13T10:55:39.291634-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 10, output 8, rproof 8, kernel 8 mmrs, took 0s
+2019-06-13T10:55:39.298399-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:39.351930-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 5 rangeproofs
+2019-06-13T10:55:39.352012-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 rangeproofs, pmmr size 8, took 0s
+2019-06-13T10:55:39.359354-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 kernel signatures, pmmr size 8, took 0s
+2019-06-13T10:55:39.359528-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:39.452715-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:39.474270-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8daBdX/wallet1/wallet.seed
+2019-06-13T10:55:39.578415-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { inner: stack backtrace:
+   0: backtrace::backtrace::trace_unsynchronized::h4094d436209ed4f2 (0x10188d22d)
+   1: backtrace::backtrace::trace::ha5a9b0b1c2aaf10f (0x10188d1b3)
+   2: backtrace::capture::Backtrace::create::hcac2004f2924cbc4 (0x10187f1f7)
+   3: backtrace::capture::Backtrace::new_unresolved::ha237dfcbd35d73b5 (0x10187f178)
+   4: failure::backtrace::internal::InternalBacktrace::new::h990e3b2cc195e643 (0x10187ca70)
+   5: failure::backtrace::Backtrace::new::hb7a7e4ece932f21f (0x10187d92f)
+   6: failure::context::Context<D>::new::h0edfc99a2241a725 (0x100e6ad02)
+   7: <grin_wallet_libwallet::error::Error as core::convert::From<grin_wallet_libwallet::error::ErrorKind>>::from::h0ab6ccd46278ef3b (0x100eb84ca)
+   8: grin_wallet_libwallet::internal::selection::select_coins_and_fee::h668a65027536231b (0x100b6a941)
+   9: grin_wallet_libwallet::internal::selection::select_send_tx::h1e9745cc68b92174 (0x100b67341)
+  10: grin_wallet_libwallet::internal::selection::build_send_tx::hca6d2242b30e6315 (0x100b66428)
+  11: grin_wallet_libwallet::internal::tx::add_inputs_to_slate::h2800d5b4c9a99546 (0x100c8a003)
+  12: grin_wallet_libwallet::api_impl::owner::init_send_tx::h5630c7526f9ce836 (0x100c8dc3a)
+  13: grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff (0x100c64972)
+  14: rust_out::main::h19287f9e3b324627 (0x100b44547)
+  15: std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6 (0x100b43cba)
+  16: std::panicking::try::do_call::h1252fc9a2ff235eb (0x1018c8198)
+  17: ___rust_maybe_catch_panic (0x1018d041f)
+  18: std::rt::lang_start_internal::h4c054360e442146c (0x1018c8bbe)
+  19: std::rt::lang_start::h07ff9ad2a5b9143d (0x100b43ca2)
+  20: _main (0x100b448b2)
+
+Not enough funds. Required: 60.003000000, Available: 4.761904760 }', src/libcore/result.rs:997:5
+stack backtrace:
+   0:        0x1018c98f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x1018c4d02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x1018c8086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x1018c7e2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x1018c87ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x1018c832c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x1018c8218 - rust_begin_unwind
+   7:        0x1018e2891 - core::panicking::panic_fmt::hdf67eedb88644e1e
+   8:        0x100d0e86e - core::result::unwrap_failed::h40cdc6057a0ab56e
+   9:        0x100b9bc8c - core::result::Result<T,E>::unwrap::h2138e1798b1d69b3
+  10:        0x100c64986 - grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff
+  11:        0x100b44546 - rust_out::main::h19287f9e3b324627
+  12:        0x100b43cb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+  13:        0x1018c8197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  14:        0x1018d041e - __rust_maybe_catch_panic
+  15:        0x1018c8bbd - std::rt::lang_start_internal::h4c054360e442146c
+  16:        0x100b43ca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  17:        0x100b448b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::process_invoice_tx (line 492) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::process_invoice_tx (line 492)' panicked at 'test executable failed:
+2019-06-13T10:55:37.406789-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:37.416938-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/.mwc/lmdb is 1048576
+2019-06-13T10:55:37.420465-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:37.422996-04:00 INFO grin_chain::chain - init: saved genesis: 6de62e7327e3
+2019-06-13T10:55:37.423614-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [6de62e7327e3]
+2019-06-13T10:55:37.423741-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [6de62e7327e3]
+2019-06-13T10:55:37.423852-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [6de62e7327e3]
+2019-06-13T10:55:37.424366-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:37.436166-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:37.436720-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:37.437247-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:37.539541-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:37.542840-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:37.543427-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:37.543936-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet2/wallet.seed
+2019-06-13T10:55:37.649660-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:37.789121-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:37.789285-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:38.467577-04:00 DEBUG grin_chain::pipe - pipe: process_block 91a061579c08 at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:38.468799-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 91a061579c08 at 1
+2019-06-13T10:55:38.527987-04:00 DEBUG grin_chain::pipe - body tail 91a061579c08 @ 1
+2019-06-13T10:55:38.528171-04:00 DEBUG grin_chain::pipe - pipe: head updated to 91a061579c08 at 1
+2019-06-13T10:55:38.528931-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 91a061579c08 at 1
+2019-06-13T10:55:38.529117-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:38.529289-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:38.534321-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:38.572219-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:38.572360-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:38.575579-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:38.575769-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:38.698792-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:38.711613-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:38.862038-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:38.862165-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:39.271884-04:00 DEBUG grin_chain::pipe - pipe: process_block 055b1f765e2c at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:39.273269-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 055b1f765e2c at 2
+2019-06-13T10:55:39.324064-04:00 DEBUG grin_chain::pipe - pipe: head updated to 055b1f765e2c at 2
+2019-06-13T10:55:39.324811-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 055b1f765e2c at 2
+2019-06-13T10:55:39.325172-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:39.325404-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:39.331140-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:39.370051-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:39.370155-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:39.372244-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:39.372422-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:39.467167-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:39.490830-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:39.612917-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:39.613040-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:39.969858-04:00 DEBUG grin_chain::pipe - pipe: process_block c697343d49bc at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:39.971178-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to c697343d49bc at 3
+2019-06-13T10:55:40.043163-04:00 DEBUG grin_chain::pipe - pipe: head updated to c697343d49bc at 3
+2019-06-13T10:55:40.049170-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header c697343d49bc at 3
+2019-06-13T10:55:40.049423-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:40.049863-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:40.056880-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:40.101123-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:40.101223-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:40.106128-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:40.106630-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:40.183676-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:40.197464-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:40.305850-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:40.305952-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:40.611966-04:00 DEBUG grin_chain::pipe - pipe: process_block ba47b772e470 at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:40.613058-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to ba47b772e470 at 4
+2019-06-13T10:55:40.650901-04:00 DEBUG grin_chain::pipe - pipe: head updated to ba47b772e470 at 4
+2019-06-13T10:55:40.651505-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header ba47b772e470 at 4
+2019-06-13T10:55:40.651631-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:40.651920-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:40.655590-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:40.701639-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:40.701705-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:40.705261-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:40.705371-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:40.775617-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:40.793808-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpIrDMWR/wallet1/wallet.seed
+2019-06-13T10:55:40.882997-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+
+thread 'main' panicked at '(left != right) 
+left: {
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "Err": {
+      "NotEnoughFunds": {
+        "available": 2380952380,
+        "available_disp": "2.380952380",
+        "needed": 6004000000,
+        "needed_disp": "6.004000000"
+      }
+    }
+  }
+}
+right: {
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "Ok": {
+      "amount": "6000000000",
+      "fee": "8000000",
+      "height": "4",
+      "id": "0436430c-2b02-624c-2032-570501212b00",
+      "lock_height": "0",
+      "num_participants": 2,
+      "participant_data": [
+        {
+          "id": "1",
+          "message": "Please give me your grins",
+          "message_sig": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078fd2599ab38942986602e943f684a85992893a6d34367dc7cc2b403a5dcfcdbcd9",
+          "part_sig": null,
+          "public_blind_excess": "028e95921cc0d5be5922362265d352c9bdabe51a9e1502a3f0d4a10387f1893f40",
+          "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+        },
+        {
+          "id": "0",
+          "message": "Ok, here are your grins",
+          "message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841be91ae0f6b50fabc39eefa28118cccdd8fbf5b5afe96972630450f47b72433646",
+          "part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b619d40fb6a6fb60449ef9727aeb782e7a5b50fdbfd2d735b49ccc55b477cd319",
+          "public_blind_excess": "0309e22f2adaa9b81f51414b775b86acd096e17794eb8159bfcfef27caa4bf5c90",
+          "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+        }
+      ],
+      "tx": {
+        "body": {
+          "inputs": [
+            {
+              "commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7",
+              "features": "Coinbase"
+            }
+          ],
+          "kernels": [
+            {
+              "excess": "000000000000000000000000000000000000000000000000000000000000000000",
+              "excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+              "features": "Plain",
+              "fee": "8000000",
+              "lock_height": "0"
+            }
+          ],
+          "outputs": [
+            {
+              "commit": "09cf47204446c326e361a1a92f34b174deff732daaedb80d7339fbe3db5ca2f6ba",
+              "features": "Plain",
+              "proof": "8f511614315626b5f39224482351d766f5a8ef136262befc050d839be8479b0a13470cd88f4436346d213d83847a4055c6e0ac63681556470349a1aab47034a3015eb64d8163955998e2dd4165dd24386b1e279974b05deb5d46ba2bc321f7000c0784f8f10690605ffe717119d045e02b141ed12d8fc6d20930483a8af889ef533495eb442fcff36d98ebc104f13fc645c28431b3296e4a11f7c991ff97f9abbc2f8886762d7f29fdacb31d52c6850e6ccf5386117d89e8ea4ca3071c56c218dd5d3bcd65f6c06ed9f51f848507ca1d594f41796d1cf99f68a5c3f0c5dd9873602284cff31269b102fcc6c68607565faaf0adb04ed4ff3ea5d41f3b5235ac6cb90e4046c808c9c48c27172c891b20085c56a99913ef47fd8b3dc4920cef50534b9319a7cefe0df10a0206a634ac837e11da92df83ff58b1a14de81313400988aa48b946fcbe1b81f0e79e13f7c6c639b1c10983b424bda08d0ce593a20f1f47e0aa01473e7144f116b76d9ebc60599053d8f1542d60747793d99064e51fce8f8866390325d48d6e8e3bbdbc1822c864303451525c6cb4c6902f105a70134186fb32110d8192fc2528a9483fc8a4001f4bdeab1dd7b3d1ccb9ae2e746a78013ef74043f0b2436f0ca49627af1768b7c791c669bd331fd18c16ef88ad0a29861db70f2f76f3e74fde5accb91b73573e31333333223693d6fbc786e740c085e4fc6e7bde0a3f54e9703f816c54f012d3b1f41ec4d253d9337af61e7f1f1383bd929421ac346e3d2771dfee0b60503b33938e7c83eb37af3b6bf66041a3519a2b4cb557b34e3b9afcf95524f9a011425a34d32e7b6e9f255291094930acae26e8f7a1e4e6bc405d0f88e919f354f3ba85356a34f1aba5f7da1fad88e2692f4129cc1fb80a2122b2d996c6ccf7f08d8248e511d92af9ce49039de728848a2dc74101f4e94a"
+            },
+            {
+              "commit": "094be57c91787fc2033d5d97fae099f1a6ddb37ea48370f1a138f09524c767fdd3",
+              "features": "Plain",
+              "proof": "2a42e9e902b70ce44e1fccb14de87ee0a97100bddf12c6bead1b9c5f4eb60300f29c13094fa12ffeee238fb4532b18f6b61cf51b23c1c7e1ad2e41560dc27edc0a2b9e647a0b3e4e806fced5b65e61d0f1f5197d3e2285c632d359e27b6b9206b2caffea4f67e0c7a2812e7a22c134b98cf89bd43d9f28b8bec25cce037a0ac5b1ae8f667e54e1250813a5263004486b4465ad4e641ab2b535736ea26535a11013564f08f483b7dab1c2bcc3ee38eadf2f7850eff7e3459a4bbabf9f0cf6c50d0c0a4120565cd4a2ce3e354c11721cd695760a24c70e0d5a0dfc3c5dcd51dfad6de2c237a682f36dc0b271f21bb3655e5333016aaa42c2efa1446e5f3c0a79ec417c4d30f77556951cb0f05dbfafb82d9f95951a9ea241fda2a6388f73ace036b98acce079f0e4feebccc96290a86dcc89118a901210b245f2d114cf94396e4dbb461e82aa26a0581389707957968c7cdc466213bb1cd417db207ef40c05842ab67a01a9b96eb1430ebc26e795bb491258d326d5174ad549401059e41782121e506744af8af9d8e493644a87d613600888541cbbe538c625883f3eb4aa3102c5cfcc25de8e97af8927619ce6a731b3b8462d51d993066b935b0648d2344ad72e4fd70f347fbd81041042e5ea31cc7b2e3156a920b80ecba487b950ca32ca95fae85b759c936246ecf441a9fdd95e8fee932d6782cdec686064018c857efc47fb4b2a122600d5fdd79af2486f44df7e629184e1c573bc0a9b3feb40b190ef2861a1ab45e2ac2201b9cd42e495deea247269820ed32389a2810ad6c0f9a296d2a2d9c54089fed50b7f5ecfcd33ab9954360e1d7f5598c32128cfcf2a1d8bf14616818da8a5343bfa88f0eedf392e9d4ab1ace1b60324129cd4852c2e27813a9cf71a6ae6229a4fcecc1a756b3e664c5f50af333082616815a3bec8fc0b75b8e4e767d719"
+            }
+          ]
+        },
+        "offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+      },
+      "version_info": {
+        "block_header_version": 1,
+        "orig_version": 2,
+        "version": 2
+      }
+    }
+  }
+}', src/owner_rpc.rs:4:1
+stack backtrace:
+   0:        0x10be7d8f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10be78d02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10be7c086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10be7be2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10be7c7ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10be7c32c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10be7c280 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b0f871d - rust_out::main::h19287f9e3b324627
+   8:        0x10b0f7cb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+   9:        0x10be7c197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  10:        0x10be8441e - __rust_maybe_catch_panic
+  11:        0x10be7cbbd - std::rt::lang_start_internal::h4c054360e442146c
+  12:        0x10b0f7ca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  13:        0x10b0f88b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::tx_lock_outputs (line 640) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::tx_lock_outputs (line 640)' panicked at 'test executable failed:
+2019-06-13T10:55:40.094900-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:40.105463-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/.mwc/lmdb is 1048576
+2019-06-13T10:55:40.110215-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:40.112800-04:00 INFO grin_chain::chain - init: saved genesis: 0356e5e4041c
+2019-06-13T10:55:40.113415-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [0356e5e4041c]
+2019-06-13T10:55:40.113522-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [0356e5e4041c]
+2019-06-13T10:55:40.113618-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [0356e5e4041c]
+2019-06-13T10:55:40.114034-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:40.124569-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:40.125121-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:40.125659-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:40.199601-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:40.202215-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:40.202651-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:40.203031-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet2/wallet.seed
+2019-06-13T10:55:40.272460-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:40.367156-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:40.367251-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:40.869961-04:00 DEBUG grin_chain::pipe - pipe: process_block 958d68c15f18 at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:40.871234-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 958d68c15f18 at 1
+2019-06-13T10:55:40.904562-04:00 DEBUG grin_chain::pipe - body tail 958d68c15f18 @ 1
+2019-06-13T10:55:40.904710-04:00 DEBUG grin_chain::pipe - pipe: head updated to 958d68c15f18 at 1
+2019-06-13T10:55:40.905400-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 958d68c15f18 at 1
+2019-06-13T10:55:40.905580-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:40.905762-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:40.910717-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:40.936198-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:40.936260-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:40.937239-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:40.937349-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:41.008808-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:41.023556-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:41.099645-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:41.099767-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:41.328037-04:00 DEBUG grin_chain::pipe - pipe: process_block 91740b3bb88c at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:41.328846-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 91740b3bb88c at 2
+2019-06-13T10:55:41.360382-04:00 DEBUG grin_chain::pipe - pipe: head updated to 91740b3bb88c at 2
+2019-06-13T10:55:41.360962-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 91740b3bb88c at 2
+2019-06-13T10:55:41.361093-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:41.361252-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:41.364308-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:41.388-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:41.388063-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:41.389839-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:41.389955-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:41.451265-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:41.465772-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:41.555874-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:41.555968-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:41.786581-04:00 DEBUG grin_chain::pipe - pipe: process_block edf26d596628 at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:41.787468-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to edf26d596628 at 3
+2019-06-13T10:55:41.821001-04:00 DEBUG grin_chain::pipe - pipe: head updated to edf26d596628 at 3
+2019-06-13T10:55:41.821601-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header edf26d596628 at 3
+2019-06-13T10:55:41.821722-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:41.821912-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:41.825312-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:41.851749-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:41.851810-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:41.854642-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:41.854772-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:41.914375-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:41.927050-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:42.003419-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:42.003512-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:42.228906-04:00 DEBUG grin_chain::pipe - pipe: process_block 03b4f1d1f52f at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:42.229798-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 03b4f1d1f52f at 4
+2019-06-13T10:55:42.261243-04:00 DEBUG grin_chain::pipe - pipe: head updated to 03b4f1d1f52f at 4
+2019-06-13T10:55:42.261809-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 03b4f1d1f52f at 4
+2019-06-13T10:55:42.261922-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:42.262200-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:42.265704-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:42.295153-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:42.295205-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:42.298516-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:42.298620-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:42.352990-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:42.366801-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:42.440474-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000400000000), 0300000000000000000000000400000000
+2019-06-13T10:55:42.440567-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 5, key_id: Some(Identifier(0300000000000000000000000400000000)) }
+2019-06-13T10:55:42.661062-04:00 DEBUG grin_chain::pipe - pipe: process_block 1ba8abf613fb at 5 [in/out/kern: 0/1/1]
+2019-06-13T10:55:42.661985-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 1ba8abf613fb at 5
+2019-06-13T10:55:42.693121-04:00 DEBUG grin_chain::pipe - pipe: head updated to 1ba8abf613fb at 5
+2019-06-13T10:55:42.693757-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 1ba8abf613fb at 5
+2019-06-13T10:55:42.693904-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 9, output 8, kernel 8
+2019-06-13T10:55:42.694210-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 10, output 8, rproof 8, kernel 8 mmrs, took 0s
+2019-06-13T10:55:42.698004-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:42.731421-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 5 rangeproofs
+2019-06-13T10:55:42.731487-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 rangeproofs, pmmr size 8, took 0s
+2019-06-13T10:55:42.735594-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 kernel signatures, pmmr size 8, took 0s
+2019-06-13T10:55:42.735695-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:42.790501-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:42.804451-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmpfjwlWb/wallet1/wallet.seed
+2019-06-13T10:55:42.871873-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { inner: stack backtrace:
+   0: backtrace::backtrace::trace_unsynchronized::h4094d436209ed4f2 (0x11011a22d)
+   1: backtrace::backtrace::trace::ha5a9b0b1c2aaf10f (0x11011a1b3)
+   2: backtrace::capture::Backtrace::create::hcac2004f2924cbc4 (0x11010c1f7)
+   3: backtrace::capture::Backtrace::new_unresolved::ha237dfcbd35d73b5 (0x11010c178)
+   4: failure::backtrace::internal::InternalBacktrace::new::h990e3b2cc195e643 (0x110109a70)
+   5: failure::backtrace::Backtrace::new::hb7a7e4ece932f21f (0x11010a92f)
+   6: failure::context::Context<D>::new::h0edfc99a2241a725 (0x10f6f7d02)
+   7: <grin_wallet_libwallet::error::Error as core::convert::From<grin_wallet_libwallet::error::ErrorKind>>::from::h0ab6ccd46278ef3b (0x10f7454ca)
+   8: grin_wallet_libwallet::internal::selection::select_coins_and_fee::h668a65027536231b (0x10f3f7941)
+   9: grin_wallet_libwallet::internal::selection::select_send_tx::h1e9745cc68b92174 (0x10f3f4341)
+  10: grin_wallet_libwallet::internal::selection::build_send_tx::hca6d2242b30e6315 (0x10f3f3428)
+  11: grin_wallet_libwallet::internal::tx::add_inputs_to_slate::h2800d5b4c9a99546 (0x10f517003)
+  12: grin_wallet_libwallet::api_impl::owner::init_send_tx::h5630c7526f9ce836 (0x10f51ac3a)
+  13: grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff (0x10f4f1972)
+  14: rust_out::main::h19287f9e3b324627 (0x10f3d1547)
+  15: std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6 (0x10f3d0cba)
+  16: std::panicking::try::do_call::h1252fc9a2ff235eb (0x110155198)
+  17: ___rust_maybe_catch_panic (0x11015d41f)
+  18: std::rt::lang_start_internal::h4c054360e442146c (0x110155bbe)
+  19: std::rt::lang_start::h07ff9ad2a5b9143d (0x10f3d0ca2)
+  20: _main (0x10f3d18b2)
+
+Not enough funds. Required: 60.003000000, Available: 4.761904760 }', src/libcore/result.rs:997:5
+stack backtrace:
+   0:        0x1101568f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x110151d02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x110155086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x110154e2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x1101557ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x11015532c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x110155218 - rust_begin_unwind
+   7:        0x11016f891 - core::panicking::panic_fmt::hdf67eedb88644e1e
+   8:        0x10f59b86e - core::result::unwrap_failed::h40cdc6057a0ab56e
+   9:        0x10f428c8c - core::result::Result<T,E>::unwrap::h2138e1798b1d69b3
+  10:        0x10f4f1986 - grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff
+  11:        0x10f3d1546 - rust_out::main::h19287f9e3b324627
+  12:        0x10f3d0cb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+  13:        0x110155197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  14:        0x11015d41e - __rust_maybe_catch_panic
+  15:        0x110155bbd - std::rt::lang_start_internal::h4c054360e442146c
+  16:        0x10f3d0ca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  17:        0x10f3d18b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+---- src/owner_rpc.rs - owner_rpc::OwnerRpc::verify_slate_messages (line 1073) stdout ----
+thread 'src/owner_rpc.rs - owner_rpc::OwnerRpc::verify_slate_messages (line 1073)' panicked at 'test executable failed:
+2019-06-13T10:55:40.147756-04:00 INFO grin_util::logger - log4rs is initialized, stdout level: Debug, min. level: Debug
+2019-06-13T10:55:40.158185-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/.mwc/lmdb is 1048576
+2019-06-13T10:55:40.161533-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:40.164134-04:00 INFO grin_chain::chain - init: saved genesis: 0356e5e4041c
+2019-06-13T10:55:40.164765-04:00 DEBUG grin_chain::chain - init: head: 3 @ 0 [0356e5e4041c]
+2019-06-13T10:55:40.164871-04:00 DEBUG grin_chain::chain - init: header_head: 3 @ 0 [0356e5e4041c]
+2019-06-13T10:55:40.164966-04:00 DEBUG grin_chain::chain - init: sync_head: 3 @ 0 [0356e5e4041c]
+2019-06-13T10:55:40.165394-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+Your recovery phrase is:
+
+fat twenty mean degree forget shell check candy immense awful flame next during february bulb bike sun wink theory day kiwi embrace peace lunch
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:40.174590-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/db/lmdb is 1048576
+2019-06-13T10:55:40.174991-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:40.175543-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:40.254016-04:00 WARN grin_wallet_impls::seed - Generating wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet2/wallet.seed
+Your recovery phrase is:
+
+hour kingdom ripple lunch razor inquiry coyote clay stamp mean sell finish magic kid tiny wage stand panther inside settle feed song hole exile
+
+Please back-up these words in a non-digital format.
+2019-06-13T10:55:40.256919-04:00 DEBUG grin_store::lmdb - DB Mapsize for /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet2/db/lmdb is 1048576
+2019-06-13T10:55:40.257442-04:00 INFO grin_store::lmdb - Resized database from 1048576 to 134217728
+2019-06-13T10:55:40.257881-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet2/wallet.seed
+2019-06-13T10:55:40.327160-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:40.421040-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000000000000), 0300000000000000000000000000000000
+2019-06-13T10:55:40.421144-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 1, key_id: Some(Identifier(0300000000000000000000000000000000)) }
+2019-06-13T10:55:40.923505-04:00 DEBUG grin_chain::pipe - pipe: process_block abaf6cfe5fdf at 1 [in/out/kern: 0/1/1]
+2019-06-13T10:55:40.924413-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to abaf6cfe5fdf at 1
+2019-06-13T10:55:40.961808-04:00 DEBUG grin_chain::pipe - body tail abaf6cfe5fdf @ 1
+2019-06-13T10:55:40.961929-04:00 DEBUG grin_chain::pipe - pipe: head updated to abaf6cfe5fdf at 1
+2019-06-13T10:55:40.962513-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header abaf6cfe5fdf at 1
+2019-06-13T10:55:40.962637-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 2, output 1, kernel 1
+2019-06-13T10:55:40.962762-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 3, output 1, rproof 1, kernel 1 mmrs, took 0s
+2019-06-13T10:55:40.965713-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:40.986268-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 1 rangeproofs
+2019-06-13T10:55:40.986334-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 rangeproofs, pmmr size 1, took 0s
+2019-06-13T10:55:40.987348-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 1 kernel signatures, pmmr size 1, took 0s
+2019-06-13T10:55:40.987467-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:41.045847-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:41.059543-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:41.140250-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000100000000), 0300000000000000000000000100000000
+2019-06-13T10:55:41.140354-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 2, key_id: Some(Identifier(0300000000000000000000000100000000)) }
+2019-06-13T10:55:41.364377-04:00 DEBUG grin_chain::pipe - pipe: process_block 1a970b69a14b at 2 [in/out/kern: 0/1/1]
+2019-06-13T10:55:41.365198-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 1a970b69a14b at 2
+2019-06-13T10:55:41.396499-04:00 DEBUG grin_chain::pipe - pipe: head updated to 1a970b69a14b at 2
+2019-06-13T10:55:41.397082-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 1a970b69a14b at 2
+2019-06-13T10:55:41.397205-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 4, output 3, kernel 3
+2019-06-13T10:55:41.397361-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 4, output 3, rproof 3, kernel 3 mmrs, took 0s
+2019-06-13T10:55:41.400608-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:41.431419-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 2 rangeproofs
+2019-06-13T10:55:41.431479-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 rangeproofs, pmmr size 3, took 0s
+2019-06-13T10:55:41.433312-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 2 kernel signatures, pmmr size 3, took 0s
+2019-06-13T10:55:41.433418-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:41.490917-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:41.505197-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:41.599032-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000200000000), 0300000000000000000000000200000000
+2019-06-13T10:55:41.599122-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 3, key_id: Some(Identifier(0300000000000000000000000200000000)) }
+2019-06-13T10:55:41.839601-04:00 DEBUG grin_chain::pipe - pipe: process_block 049f829dfc32 at 3 [in/out/kern: 0/1/1]
+2019-06-13T10:55:41.840470-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 049f829dfc32 at 3
+2019-06-13T10:55:41.871869-04:00 DEBUG grin_chain::pipe - pipe: head updated to 049f829dfc32 at 3
+2019-06-13T10:55:41.872463-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 049f829dfc32 at 3
+2019-06-13T10:55:41.872588-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 5, output 4, kernel 4
+2019-06-13T10:55:41.872770-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 7, output 4, rproof 4, kernel 4 mmrs, took 0s
+2019-06-13T10:55:41.876631-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:41.903948-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 3 rangeproofs
+2019-06-13T10:55:41.904011-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 rangeproofs, pmmr size 4, took 0s
+2019-06-13T10:55:41.906691-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 3 kernel signatures, pmmr size 4, took 0s
+2019-06-13T10:55:41.906799-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:41.963110-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:41.977146-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:42.055851-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000300000000), 0300000000000000000000000300000000
+2019-06-13T10:55:42.055949-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 4, key_id: Some(Identifier(0300000000000000000000000300000000)) }
+2019-06-13T10:55:42.280754-04:00 DEBUG grin_chain::pipe - pipe: process_block 2ba5054b0725 at 4 [in/out/kern: 0/1/1]
+2019-06-13T10:55:42.281721-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 2ba5054b0725 at 4
+2019-06-13T10:55:42.312766-04:00 DEBUG grin_chain::pipe - pipe: head updated to 2ba5054b0725 at 4
+2019-06-13T10:55:42.313402-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 2ba5054b0725 at 4
+2019-06-13T10:55:42.313521-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 8, output 7, kernel 7
+2019-06-13T10:55:42.313782-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 8, output 7, rproof 7, kernel 7 mmrs, took 0s
+2019-06-13T10:55:42.317199-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:42.346606-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 4 rangeproofs
+2019-06-13T10:55:42.346665-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 rangeproofs, pmmr size 7, took 0s
+2019-06-13T10:55:42.350090-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 4 kernel signatures, pmmr size 7, took 0s
+2019-06-13T10:55:42.350199-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:42.404591-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:42.419239-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:42.494987-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: built candidate output - Identifier(0300000000000000000000000400000000), 0300000000000000000000000400000000
+2019-06-13T10:55:42.495077-04:00 DEBUG grin_wallet_libwallet::internal::updater - receive_coinbase: BlockFees { fees: 0, height: 5, key_id: Some(Identifier(0300000000000000000000000400000000)) }
+2019-06-13T10:55:42.706806-04:00 DEBUG grin_chain::pipe - pipe: process_block 85f17b09b020 at 5 [in/out/kern: 0/1/1]
+2019-06-13T10:55:42.707813-04:00 DEBUG grin_chain::pipe - pipe: header_head updated to 85f17b09b020 at 5
+2019-06-13T10:55:42.738485-04:00 DEBUG grin_chain::pipe - pipe: head updated to 85f17b09b020 at 5
+2019-06-13T10:55:42.739077-04:00 DEBUG grin_chain::txhashset::txhashset - Rewind to header 85f17b09b020 at 5
+2019-06-13T10:55:42.739201-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: rewind_to_pos: header 9, output 8, kernel 8
+2019-06-13T10:55:42.739521-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated the header 10, output 8, rproof 8, kernel 8 mmrs, took 0s
+2019-06-13T10:55:42.743285-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: validated total kernel sums, took 0s
+2019-06-13T10:55:42.776388-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verify_rangeproofs: verified 5 rangeproofs
+2019-06-13T10:55:42.776449-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 rangeproofs, pmmr size 8, took 0s
+2019-06-13T10:55:42.780771-04:00 DEBUG grin_chain::txhashset::txhashset - txhashset: verified 5 kernel signatures, pmmr size 8, took 0s
+2019-06-13T10:55:42.780890-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:42.835591-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+2019-06-13T10:55:42.849485-04:00 DEBUG grin_wallet_impls::seed - Using wallet seed file at: /var/folders/3j/5bvg1fqd0ql0wftl1yhxc7800000gn/T/.tmp8m00n2/wallet1/wallet.seed
+2019-06-13T10:55:42.916900-04:00 DEBUG grin_wallet_libwallet::internal::updater - Refreshing wallet outputs
+
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { inner: stack backtrace:
+   0: backtrace::backtrace::trace_unsynchronized::h4094d436209ed4f2 (0x106e0222d)
+   1: backtrace::backtrace::trace::ha5a9b0b1c2aaf10f (0x106e021b3)
+   2: backtrace::capture::Backtrace::create::hcac2004f2924cbc4 (0x106df41f7)
+   3: backtrace::capture::Backtrace::new_unresolved::ha237dfcbd35d73b5 (0x106df4178)
+   4: failure::backtrace::internal::InternalBacktrace::new::h990e3b2cc195e643 (0x106df1a70)
+   5: failure::backtrace::Backtrace::new::hb7a7e4ece932f21f (0x106df292f)
+   6: failure::context::Context<D>::new::h0edfc99a2241a725 (0x1063dfd02)
+   7: <grin_wallet_libwallet::error::Error as core::convert::From<grin_wallet_libwallet::error::ErrorKind>>::from::h0ab6ccd46278ef3b (0x10642d4ca)
+   8: grin_wallet_libwallet::internal::selection::select_coins_and_fee::h668a65027536231b (0x1060df941)
+   9: grin_wallet_libwallet::internal::selection::select_send_tx::h1e9745cc68b92174 (0x1060dc341)
+  10: grin_wallet_libwallet::internal::selection::build_send_tx::hca6d2242b30e6315 (0x1060db428)
+  11: grin_wallet_libwallet::internal::tx::add_inputs_to_slate::h2800d5b4c9a99546 (0x1061ff003)
+  12: grin_wallet_libwallet::api_impl::owner::init_send_tx::h5630c7526f9ce836 (0x106202c3a)
+  13: grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff (0x1061d9972)
+  14: rust_out::main::h19287f9e3b324627 (0x1060b9547)
+  15: std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6 (0x1060b8cba)
+  16: std::panicking::try::do_call::h1252fc9a2ff235eb (0x106e3d198)
+  17: ___rust_maybe_catch_panic (0x106e4541f)
+  18: std::rt::lang_start_internal::h4c054360e442146c (0x106e3dbbe)
+  19: std::rt::lang_start::h07ff9ad2a5b9143d (0x1060b8ca2)
+  20: _main (0x1060b98b2)
+
+Not enough funds. Required: 60.003000000, Available: 4.761904760 }', src/libcore/result.rs:997:5
+stack backtrace:
+   0:        0x106e3e8f3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x106e39d02 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x106e3d086 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x106e3ce2f - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x106e3d7ff - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x106e3d32c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x106e3d218 - rust_begin_unwind
+   7:        0x106e57891 - core::panicking::panic_fmt::hdf67eedb88644e1e
+   8:        0x10628386e - core::result::unwrap_failed::h40cdc6057a0ab56e
+   9:        0x106110c8c - core::result::Result<T,E>::unwrap::h2138e1798b1d69b3
+  10:        0x1061d9986 - grin_wallet_api::owner_rpc::run_doctest_owner::hcb27f080c50d7dff
+  11:        0x1060b9546 - rust_out::main::h19287f9e3b324627
+  12:        0x1060b8cb9 - std::rt::lang_start::{{closure}}::h68d2a02aa3873ac6
+  13:        0x106e3d197 - std::panicking::try::do_call::h1252fc9a2ff235eb
+  14:        0x106e4541e - __rust_maybe_catch_panic
+  15:        0x106e3dbbd - std::rt::lang_start_internal::h4c054360e442146c
+  16:        0x1060b8ca1 - std::rt::lang_start::h07ff9ad2a5b9143d
+  17:        0x1060b98b1 - main
+
+', src/librustdoc/test.rs:332:17
+stack backtrace:
+   0:        0x10fb387d3 - std::sys::unix::backtrace::tracing::imp::unwind_backtrace::hf2949dcf16da83bd
+   1:        0x10fb30d32 - std::sys_common::backtrace::_print::h4b87ed6ba0cd5304
+   2:        0x10fb34d76 - std::panicking::default_hook::{{closure}}::hde39fed432870543
+   3:        0x10fb34abf - std::panicking::default_hook::hfce8820d41dbdcbf
+   4:        0x10fb354ef - std::panicking::rust_panic_with_hook::hfcf2d0777bc6c409
+   5:        0x10fb3501c - std::panicking::continue_panic_fmt::h4d668741ea600293
+   6:        0x10fb34f70 - std::panicking::begin_panic_fmt::h1334cc5c63aa208c
+   7:        0x10b5fe057 - rustdoc::test::run_test::h5dbe7e2b1c2a4609
+   8:        0x10b5d8523 - core::ops::function::FnOnce::call_once{{vtable.shim}}::h919f3dc8dbbea74d
+   9:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  10:        0x10f019ead - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::h17d9743583675bb8
+  11:        0x10fb449ce - __rust_maybe_catch_panic
+  12:        0x10f033896 - test::run_test::run_test_inner::{{closure}}::hd52d31826266fbeb
+  13:        0x10f00e7e4 - std::sys_common::backtrace::__rust_begin_short_backtrace::hb0422ce146caf483
+  14:        0x10f012f34 - std::panicking::try::do_call::ha4ab41fef5cd16fa
+  15:        0x10fb449ce - __rust_maybe_catch_panic
+  16:        0x10f012d51 - std::thread::Builder::spawn_unchecked::{{closure}}::h1316d05ec6051651
+  17:        0x10fb1750d - <alloc::boxed::Box<F> as core::ops::function::FnOnce<A>>::call_once::hf8766009c029bc09
+  18:        0x10fb4388d - std::sys::unix::thread::Thread::new::thread_start::hfdef4649a42cf26c
+  19:     0x7fff6de4033c - _pthread_body
+  20:     0x7fff6de432a6 - _pthread_start
+
+
+failures:
+    src/foreign_rpc.rs - foreign_rpc::ForeignRpc::finalize_invoice_tx (line 215)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::cancel_tx (line 950)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::finalize_tx (line 720)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::get_stored_tx (line 978)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::init_send_tx (line 322)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::post_tx (line 882)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::process_invoice_tx (line 492)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::retrieve_outputs (line 129)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::retrieve_txs (line 200)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::tx_lock_outputs (line 640)
+    src/owner_rpc.rs - owner_rpc::OwnerRpc::verify_slate_messages (line 1073)
+
+test result: FAILED. 36 passed; 11 failed; 0 ignored; 0 measured; 0 filtered out
+
