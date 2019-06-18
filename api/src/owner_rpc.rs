@@ -15,6 +15,7 @@
 //! JSON-RPC Stub generation for the Owner API
 use uuid::Uuid;
 
+use crate::core::consensus;
 use crate::core::core::Transaction;
 use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::{
@@ -127,8 +128,68 @@ pub trait OwnerRpc {
 
 	/**
 	Networked version of [Owner::retrieve_outputs](struct.Owner.html#method.retrieve_outputs).
-		*/
 
+	# Json rpc example
+
+	```
+	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"method": "retrieve_outputs",
+		"params": [false, true, null],
+		"id": 1
+	}
+	# "#
+	# ,
+	# r#"
+	{
+		"id": 1,
+		"jsonrpc": "2.0",
+		"result": {
+			"Ok": [
+				true,
+				[
+					{
+						"commit": "0910c1752100733bae49e877286835aab76d5856ef8139b6c6e3f51798aa461b03",
+						"output": {
+							"commit": "0910c1752100733bae49e877286835aab76d5856ef8139b6c6e3f51798aa461b03",
+							"height": "1",
+							"is_coinbase": true,
+							"key_id": "0300000000000000000000000000000000",
+							"lock_height": "4",
+							"mmr_index": null,
+							"n_child": 0,
+							"root_key_id": "0200000000000000000000000000000000",
+							"status": "Unspent",
+							"tx_log_entry": 0,
+							"value": "2380952380"
+						}
+					},
+					{
+						"commit": "098778ce2243fa34e5876c8cb7f6dbbbd6a5649c1561973a807a6811941c12363c",
+						"output": {
+							"commit": "098778ce2243fa34e5876c8cb7f6dbbbd6a5649c1561973a807a6811941c12363c",
+							"height": "2",
+							"is_coinbase": true,
+							"key_id": "0300000000000000000000000100000000",
+							"lock_height": "5",
+							"mmr_index": null,
+							"n_child": 1,
+							"root_key_id": "0200000000000000000000000000000000",
+							"status": "Unspent",
+							"tx_log_entry": 1,
+							"value": "2380952380"
+						}
+					}
+				]
+			]
+		}
+	}
+	# "#
+	# , 2, false, false, false);
+	```
+	*/
 	fn retrieve_outputs(
 		&self,
 		include_spent: bool,
@@ -138,7 +199,68 @@ pub trait OwnerRpc {
 
 	/**
 	Networked version of [Owner::retrieve_txs](struct.Owner.html#method.retrieve_txs).
-		*/
+
+	# Json rpc example
+
+	```
+		# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+		# r#"
+		{
+			"jsonrpc": "2.0",
+			"method": "retrieve_txs",
+			"params": [true, null, null],
+			"id": 1
+		}
+		# "#
+		# ,
+		# r#"
+		{
+		"id": 1,
+		"jsonrpc": "2.0",
+	  "result": {
+		"Ok": [
+		  true,
+		  [
+			{
+			  "amount_credited": "2380952380",
+			  "amount_debited": "0",
+			  "confirmation_ts": "2019-01-15T16:01:26Z",
+			  "confirmed": true,
+			  "creation_ts": "2019-01-15T16:01:26Z",
+			  "fee": null,
+			  "id": 0,
+			  "messages": null,
+			  "num_inputs": 0,
+			  "num_outputs": 1,
+			  "parent_key_id": "0200000000000000000000000000000000",
+			  "stored_tx": null,
+			  "tx_slate_id": null,
+			  "tx_type": "ConfirmedCoinbase"
+			},
+			{
+			  "amount_credited": "2380952380",
+			  "amount_debited": "0",
+			  "confirmation_ts": "2019-01-15T16:01:26Z",
+			  "confirmed": true,
+			  "creation_ts": "2019-01-15T16:01:26Z",
+			  "fee": null,
+			  "id": 1,
+			  "messages": null,
+			  "num_inputs": 0,
+			  "num_outputs": 1,
+			  "parent_key_id": "0200000000000000000000000000000000",
+			  "stored_tx": null,
+			  "tx_slate_id": null,
+			  "tx_type": "ConfirmedCoinbase"
+			}
+		  ]
+		]
+	  }
+	}
+	# "#
+	# , 2, false, false, false);
+	```
+	*/
 
 	fn retrieve_txs(
 		&self,
@@ -193,8 +315,93 @@ pub trait OwnerRpc {
 	) -> Result<(bool, WalletInfo), ErrorKind>;
 
 	/**
-		   Networked version of [Owner::init_send_tx](struct.Owner.html#method.init_send_tx).
+		Networked version of [Owner::init_send_tx](struct.Owner.html#method.init_send_tx).
+
+	```
+		# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+		# r#"
+		{
+			"jsonrpc": "2.0",
+			"method": "init_send_tx",
+			"params": {
+				"args": {
+					"src_acct_name": null,
+					"amount": "238095238",
+					"minimum_confirmations": 2,
+					"max_outputs": 500,
+					"num_change_outputs": 1,
+					"selection_strategy_is_use_all": true,
+					"message": "my message",
+					"target_slate_version": null,
+					"send_args": null
+				}
+			},
+			"id": 1
+		}
+		# "#
+		# ,
+		# r#"
+		{
+	  "id": 1,
+	  "jsonrpc": "2.0",
+	  "result": {
+		"Ok": {
+		  "amount": "238095238",
+		  "fee": "8000000",
+		  "height": "4",
+		  "id": "0436430c-2b02-624c-2032-570501212b00",
+		  "lock_height": "0",
+		  "num_participants": 2,
+		  "participant_data": [
+			{
+			  "id": "0",
+			  "message": "my message",
+			  "message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841bf930a02506358773d80ff0db28eed80011820fd9194f2b637654c3ff9954b902",
+			  "part_sig": null,
+			  "public_blind_excess": "035d41ba6fe7bc0b1ef9c8940bf3e685beb2743d7ecdb8b28d3b82a5e00dc81abb",
+			  "public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+			}
+		  ],
+		  "tx": {
+			"body": {
+			  "inputs": [
+				{
+				  "commit": "0910c1752100733bae49e877286835aab76d5856ef8139b6c6e3f51798aa461b03",
+				  "features": "Coinbase"
+				}
+			  ],
+			  "kernels": [
+				{
+				  "excess": "000000000000000000000000000000000000000000000000000000000000000000",
+				  "excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+				  "features": "Plain",
+				  "fee": "8000000",
+				  "lock_height": "0"
+				}
+			  ],
+			  "outputs": [
+				{
+				  "commit": "09960ac9a81f2503474d5ec1ed6cf005c112acd549cc74cf0c4158420df3c9222d",
+				  "features": "Plain",
+				  "proof": "8de22c32996e8db4d594229413801cdc8ca7839109ddcb335bec420fef80d1654d4ccc3180e066c1b93a9e86f7be3bd02919072489b64b50cede20ea6a802c7d0af3ce88cbf2505298dde3dc5119c12fbf156b3ab3e8456a9cd59ab5dc0328cab40610a23a19896f155724e22808b0a5453e5462ca9704df8d91f22150824f45b9f353949c553d74a9d7816a917f9e3c790f6ed4f56b7cca47036a70588d8ba7ebe1b1ca73c79d8aebd41122a6a8745ace166c3b2d3ec37a4193c5223caeb9b9858cd90827ce4bb1f373680aacd94041bbbd53108fbef49a2b44f81deb626830bd69dae6b1d9eaa1bc8aa5dd68102c101263b9d6f886165c2fbebb6c60fcbe7f035c87dfe6a2736d925ef9144535e65b9b78db143840e3c496355d86baa590cd9dbbd8c1610a0233d66a808fe9f57e32f2e9ae63e7a7b2f51559446e7923ff29c55a1c38741e51339f9a47e76993969c15bd03ff557d118b77c47d29768279b0051601a53c3584bba4ffeb88cef2af553ab90fec0a7f9a0e832e7e2b9f3017daad165b96d6a0caa785229ba2c411a309f4e98c1083783b2c8556387826f4d4e6225f8c4f67494527f04e286d8a1330ef02b424ac1e27b71942e511c19aeb01684ae79a137062452d2f6db27524f61c11b3d3d654e4734c7a4f062652ee84b055b94d50535e303fe44e119b0224171b60ead0d97872ba7b041d3cbc01bfc715b760325592647f862a7f6e398f289444d3fa31d91537b010d7d4f1eea2029cacd670662dfce5ffe46acfe821986702c4bddc9e932c9bd0e53e2c1cbb5ab5baa87f216edc635b03c23af2de231ae29ea28447e2385644769ec85d3b4cfc470261ab0df17d8a7cf78fc27a068b3e7f368ec60e52d0e44479214fbaf3f9875f23716e77f7e95e072e768a665bda929f5eff3b5c300866cc1447e847122c3fe3a22c9af69039"
+				}
+			  ]
+			},
+			"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+		  },
+		  "version_info": {
+				"orig_version": 2,
+				"version": 2,
+				"block_header_version": 1
+		  }
+		}
+	  }
+	}
+		# "#
+		# ,4, false, false, false);
+	```
 	*/
+
 	fn init_send_tx(&self, args: InitTxArgs) -> Result<Slate, ErrorKind>;
 
 	/**
@@ -208,7 +415,7 @@ pub trait OwnerRpc {
 			"method": "issue_invoice_tx",
 			"params": {
 				"args": {
-					"amount": "6000000000",
+					"amount": "238095238",
 					"message": "Please give me your grins",
 					"dest_acct_name": null,
 					"target_slate_version": null
@@ -224,7 +431,7 @@ pub trait OwnerRpc {
 			"jsonrpc": "2.0",
 			"result": {
 				"Ok": {
-					"amount": "6000000000",
+					"amount": "238095238",
 					"fee": "0",
 					"height": "4",
 					"id": "0436430c-2b02-624c-2032-570501212b00",
@@ -234,7 +441,71 @@ pub trait OwnerRpc {
 						{
 							"id": "1",
 							"message": "Please give me your grins",
-							"message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841bd9bccdcf5d3a402bccc77d36346d3a899259a884f643e90266984289b39a59d2",
+							"message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b11db6920988ba88be5b304d5d04ecc3e8de5d46e060de6e1b3676aed8e38e414",
+							"part_sig": null,
+							"public_blind_excess": "03ecba84324aa018882e6259c10c2a1728d3728d2aa16d37555daa57ca14151d56",
+							"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+						}
+					],
+					"tx": {
+						"body": {
+							"inputs": [],
+							"kernels": [
+								{
+									"excess": "000000000000000000000000000000000000000000000000000000000000000000",
+									"excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+									"features": "Plain",
+									"fee": "0",
+									"lock_height": "0"
+								}
+							],
+							"outputs": [
+								{
+									"commit": "0812450fcbcab00184dee2f99a5813bcf06cc229eaeb3af28af8d3f0dd7c10fd02",
+									"features": "Plain",
+									"proof": "9b2661029447e4810281d8fd6de7ebec90c2f4a9896213127a22b207cfe696ae78d8f68a745f3790790fc8883b4fcc21ddf7ed052084a56abc2f506c2d90d4b5023b4405a6d3d87b8e27b207854abe5d6091e1c3a6bf0aa282e0443986f4e58b269a920b4535307503b12d7ceedd71a644c73f01be692478f03c71af4fe1c5b2822a5d25d8c6978a31a40351dce5f8f2a7b99f99db6ca03077a80d85b2ab3f3e24a1d3c8797701b710a8f0a4e826c182f5163d981630cc10bdb9ffe9029cfebd4d2025f11c120cadf586cb8758941dd89b9697f2828a465270bdb952c90092167cc8ed0f0ea974d1c06ca42bb173505b8678e7c30d49a3b67d2a51f3aa0b0c5e01a53dcfe862c26171f7f33c8de17174741b649f14e998097347a9bb7a9b1768cd8a14d46f08f59ff6f850a0e70398e009ef472ffa34afbf04bef134b4229d91b013236ef72563ee9c49373a6f68e1ec1af9a83fea4eca782b7a7556fca218de3323004556627c6f31f76fcfae1534a511c92656ba871c9c1ad649d4c7dfcb3cb53d027d2f5844615639aa82c62592ad0ded940738d3a4338dfd86108b090717ecd485394318497290e6cede14e87424aca80e98c8eabc96d4f72f2e60e1e9f3dcaf591cf8ba1d806bcf91be460223fa30ac7093d849d266c341431e5112ac815c3374b39128ef26dea50542b1d2463ce6a20d69af119099e11821b402dd9934aeed30e4a8ddc9622e9349140955da23596fda35f1c5c73c612b5f61cec5bf9d3898266b8e5486ee2b23febeec5b36c052db4b60c0659b822545db24f8735b884756940b67d654b037e2103c68229735f811a9074b2dcc5c76e1b62f849fc80cb1483d7718ba4217299ece8f84780bf2c8ea54f65c11650ebacd7e4ef21f88e8e9c3cd917bbbb7e34083d9e847a4407265a031496431f90ddfe1bb765ddbd461a96a0a"
+								}
+							]
+						},
+						"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+					},
+					"version_info": {
+						"orig_version": 2,
+						"version": 2,
+						"block_header_version": 1
+					}
+				}
+			}
+		}
+		# "#
+		# ,4, false, false, false);
+	```
+	*/
+
+	fn issue_invoice_tx(&self, args: IssueInvoiceTxArgs) -> Result<Slate, ErrorKind>;
+
+	/**
+		 Networked version of [Owner::process_invoice_tx](struct.Owner.html#method.process_invoice_tx).
+
+	```
+		# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+		# r#"
+		{
+			"jsonrpc": "2.0",
+			"method": "process_invoice_tx",
+			"params": [
+				{
+					"amount": "238095238",
+					"fee": "0",
+					"height": "4",
+					"id": "0436430c-2b02-624c-2032-570501212b00",
+					"lock_height": "0",
+					"num_participants": 2,
+					"participant_data": [
+						{
+							"id": "1",
+							"message": "Please give me your grins",
+							"message_sig": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078fd2599ab38942986602e943f684a85992893a6d34367dc7cc2b403a5dcfcdbcd9",
 							"part_sig": null,
 							"public_blind_excess": "028e95921cc0d5be5922362265d352c9bdabe51a9e1502a3f0d4a10387f1893f40",
 							"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
@@ -267,36 +538,405 @@ pub trait OwnerRpc {
 						"version": 2,
 						"block_header_version": 1
 					}
+				},
+				{
+					"src_acct_name": null,
+					"amount": "0",
+					"minimum_confirmations": 2,
+					"max_outputs": 500,
+					"num_change_outputs": 1,
+					"selection_strategy_is_use_all": true,
+					"message": "Ok, here are your grins",
+					"target_slate_version": null,
+					"send_args": null
+				}
+			],
+			"id": 1
+		}
+		# "#
+		# ,
+		# r#"
+		{
+		"id": 1,
+		"jsonrpc": "2.0",
+		"result": {
+			"Ok": {
+				"amount": "238095238",
+				"fee": "8000000",
+				"height": "4",
+				"id": "0436430c-2b02-624c-2032-570501212b00",
+				"lock_height": "0",
+				"num_participants": 2,
+				"participant_data": [
+					{
+						"id": "1",
+						"message": "Please give me your grins",
+						"message_sig": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078fd2599ab38942986602e943f684a85992893a6d34367dc7cc2b403a5dcfcdbcd9",
+						"part_sig": null,
+						"public_blind_excess": "028e95921cc0d5be5922362265d352c9bdabe51a9e1502a3f0d4a10387f1893f40",
+						"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+					},
+					{
+						"id": "0",
+						"message": "Ok, here are your grins",
+						"message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841bf8ccb64193a4450264205d18e47c11276b34c49a9bb2f6b3e7bbbf3cef56a66b",
+						"part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841be67c640bafcc44e1bfec609e243cd227fc280079268c3e68f8c9dd422d5294d5",
+						"public_blind_excess": "034bcd5d67601f5ff5f6600d9edf577670d6e8bbb312ae1c8f4ef2732288f48435",
+						"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+					}
+				],
+				"tx": {
+					"body": {
+						"inputs": [
+							{
+								"commit": "0910c1752100733bae49e877286835aab76d5856ef8139b6c6e3f51798aa461b03",
+								"features": "Coinbase"
+							}
+						],
+						"kernels": [
+							{
+								"excess": "000000000000000000000000000000000000000000000000000000000000000000",
+								"excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+								"features": "Plain",
+								"fee": "8000000",
+								"lock_height": "0"
+							}
+						],
+						"outputs": [
+							{
+								"commit": "09cf47204446c326e361a1a92f34b174deff732daaedb80d7339fbe3db5ca2f6ba",
+								"features": "Plain",
+								"proof": "8f511614315626b5f39224482351d766f5a8ef136262befc050d839be8479b0a13470cd88f4436346d213d83847a4055c6e0ac63681556470349a1aab47034a3015eb64d8163955998e2dd4165dd24386b1e279974b05deb5d46ba2bc321f7000c0784f8f10690605ffe717119d045e02b141ed12d8fc6d20930483a8af889ef533495eb442fcff36d98ebc104f13fc645c28431b3296e4a11f7c991ff97f9abbc2f8886762d7f29fdacb31d52c6850e6ccf5386117d89e8ea4ca3071c56c218dd5d3bcd65f6c06ed9f51f848507ca1d594f41796d1cf99f68a5c3f0c5dd9873602284cff31269b102fcc6c68607565faaf0adb04ed4ff3ea5d41f3b5235ac6cb90e4046c808c9c48c27172c891b20085c56a99913ef47fd8b3dc4920cef50534b9319a7cefe0df10a0206a634ac837e11da92df83ff58b1a14de81313400988aa48b946fcbe1b81f0e79e13f7c6c639b1c10983b424bda08d0ce593a20f1f47e0aa01473e7144f116b76d9ebc60599053d8f1542d60747793d99064e51fce8f8866390325d48d6e8e3bbdbc1822c864303451525c6cb4c6902f105a70134186fb32110d8192fc2528a9483fc8a4001f4bdeab1dd7b3d1ccb9ae2e746a78013ef74043f0b2436f0ca49627af1768b7c791c669bd331fd18c16ef88ad0a29861db70f2f76f3e74fde5accb91b73573e31333333223693d6fbc786e740c085e4fc6e7bde0a3f54e9703f816c54f012d3b1f41ec4d253d9337af61e7f1f1383bd929421ac346e3d2771dfee0b60503b33938e7c83eb37af3b6bf66041a3519a2b4cb557b34e3b9afcf95524f9a011425a34d32e7b6e9f255291094930acae26e8f7a1e4e6bc405d0f88e919f354f3ba85356a34f1aba5f7da1fad88e2692f4129cc1fb80a2122b2d996c6ccf7f08d8248e511d92af9ce49039de728848a2dc74101f4e94a"
+							},
+							{
+								"commit": "09960ac9a81f2503474d5ec1ed6cf005c112acd549cc74cf0c4158420df3c9222d",
+								"features": "Plain",
+								"proof": "8de22c32996e8db4d594229413801cdc8ca7839109ddcb335bec420fef80d1654d4ccc3180e066c1b93a9e86f7be3bd02919072489b64b50cede20ea6a802c7d0af3ce88cbf2505298dde3dc5119c12fbf156b3ab3e8456a9cd59ab5dc0328cab40610a23a19896f155724e22808b0a5453e5462ca9704df8d91f22150824f45b9f353949c553d74a9d7816a917f9e3c790f6ed4f56b7cca47036a70588d8ba7ebe1b1ca73c79d8aebd41122a6a8745ace166c3b2d3ec37a4193c5223caeb9b9858cd90827ce4bb1f373680aacd94041bbbd53108fbef49a2b44f81deb626830bd69dae6b1d9eaa1bc8aa5dd68102c101263b9d6f886165c2fbebb6c60fcbe7f035c87dfe6a2736d925ef9144535e65b9b78db143840e3c496355d86baa590cd9dbbd8c1610a0233d66a808fe9f57e32f2e9ae63e7a7b2f51559446e7923ff29c55a1c38741e51339f9a47e76993969c15bd03ff557d118b77c47d29768279b0051601a53c3584bba4ffeb88cef2af553ab90fec0a7f9a0e832e7e2b9f3017daad165b96d6a0caa785229ba2c411a309f4e98c1083783b2c8556387826f4d4e6225f8c4f67494527f04e286d8a1330ef02b424ac1e27b71942e511c19aeb01684ae79a137062452d2f6db27524f61c11b3d3d654e4734c7a4f062652ee84b055b94d50535e303fe44e119b0224171b60ead0d97872ba7b041d3cbc01bfc715b760325592647f862a7f6e398f289444d3fa31d91537b010d7d4f1eea2029cacd670662dfce5ffe46acfe821986702c4bddc9e932c9bd0e53e2c1cbb5ab5baa87f216edc635b03c23af2de231ae29ea28447e2385644769ec85d3b4cfc470261ab0df17d8a7cf78fc27a068b3e7f368ec60e52d0e44479214fbaf3f9875f23716e77f7e95e072e768a665bda929f5eff3b5c300866cc1447e847122c3fe3a22c9af69039"
+							}
+						]
+					},
+					"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+				},
+				"version_info": {
+					"orig_version": 2,
+					"version": 2,
+					"block_header_version": 1
 				}
 			}
 		}
-		# "#
-		# ,4, false, false, false);
+	}
+	# "#
+	# ,4, false, false, false);
 	```
-	*/
-
-	fn issue_invoice_tx(&self, args: IssueInvoiceTxArgs) -> Result<Slate, ErrorKind>;
-
-	/**
-		 Networked version of [Owner::process_invoice_tx](struct.Owner.html#method.process_invoice_tx).
-
 	*/
 
 	fn process_invoice_tx(&self, slate: &Slate, args: InitTxArgs) -> Result<Slate, ErrorKind>;
 
 	/**
 	Networked version of [Owner::tx_lock_outputs](struct.Owner.html#method.tx_lock_outputs).
+
+	```
+	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"method": "tx_lock_outputs",
+		"id": 1,
+		"params": [ {
+				"amount": "238095238",
+				"fee": "8000000",
+				"height": "4",
+				"id": "0436430c-2b02-624c-2032-570501212b00",
+				"lock_height": "4",
+				"num_participants": 2,
+				"participant_data": [
+				{
+					"id": "0",
+					"message": "my message",
+					"message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b1d4c1358be398f801eb90d933774b5218fa7e769b11c4c640402253353656f75",
+					"part_sig": null,
+					"public_blind_excess": "034b4df2f0558b73ea72a1ca5c4ab20217c66bbe0829056fca7abe76888e9349ee",
+					"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+				}
+				],
+				"tx": {
+					"body": {
+						"inputs": [
+						{
+							"commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7",
+							"features": "Coinbase"
+						}
+						],
+						"kernels": [
+						{
+							"excess": "000000000000000000000000000000000000000000000000000000000000000000",
+							"excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+							"features": "HeightLocked",
+							"fee": "8000000",
+							"lock_height": "4"
+						}
+						],
+						"outputs": [
+						{
+							"commit": "094be57c91787fc2033d5d97fae099f1a6ddb37ea48370f1a138f09524c767fdd3",
+							"features": "Plain",
+							"proof": "2a42e9e902b70ce44e1fccb14de87ee0a97100bddf12c6bead1b9c5f4eb60300f29c13094fa12ffeee238fb4532b18f6b61cf51b23c1c7e1ad2e41560dc27edc0a2b9e647a0b3e4e806fced5b65e61d0f1f5197d3e2285c632d359e27b6b9206b2caffea4f67e0c7a2812e7a22c134b98cf89bd43d9f28b8bec25cce037a0ac5b1ae8f667e54e1250813a5263004486b4465ad4e641ab2b535736ea26535a11013564f08f483b7dab1c2bcc3ee38eadf2f7850eff7e3459a4bbabf9f0cf6c50d0c0a4120565cd4a2ce3e354c11721cd695760a24c70e0d5a0dfc3c5dcd51dfad6de2c237a682f36dc0b271f21bb3655e5333016aaa42c2efa1446e5f3c0a79ec417c4d30f77556951cb0f05dbfafb82d9f95951a9ea241fda2a6388f73ace036b98acce079f0e4feebccc96290a86dcc89118a901210b245f2d114cf94396e4dbb461e82aa26a0581389707957968c7cdc466213bb1cd417db207ef40c05842ab67a01a9b96eb1430ebc26e795bb491258d326d5174ad549401059e41782121e506744af8af9d8e493644a87d613600888541cbbe538c625883f3eb4aa3102c5cfcc25de8e97af8927619ce6a731b3b8462d51d993066b935b0648d2344ad72e4fd70f347fbd81041042e5ea31cc7b2e3156a920b80ecba487b950ca32ca95fae85b759c936246ecf441a9fdd95e8fee932d6782cdec686064018c857efc47fb4b2a122600d5fdd79af2486f44df7e629184e1c573bc0a9b3feb40b190ef2861a1ab45e2ac2201b9cd42e495deea247269820ed32389a2810ad6c0f9a296d2a2d9c54089fed50b7f5ecfcd33ab9954360e1d7f5598c32128cfcf2a1d8bf14616818da8a5343bfa88f0eedf392e9d4ab1ace1b60324129cd4852c2e27813a9cf71a6ae6229a4fcecc1a756b3e664c5f50af333082616815a3bec8fc0b75b8e4e767d719"
+						}
+						]
+					},
+					"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+				},
+				"version_info": {
+					"orig_version": 2,
+					"version": 2,
+					"block_header_version": 1
+				}
+			},
+			0
+		]
+	}
+	# "#
+	# ,
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": {
+			"Ok": null
+		}
+	}
+	# "#
+	# ,5 ,true, false, false);
+
+	```
 	 */
 	fn tx_lock_outputs(&self, slate: Slate, participant_id: usize) -> Result<(), ErrorKind>;
 
 	/**
 	Networked version of [Owner::finalize_tx](struct.Owner.html#method.finalize_tx).
+
+	```
+	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"method": "finalize_tx",
+		"id": 1,
+		"params": [
+		{
+			"version_info": {
+				"version": 2,
+				"orig_version": 2,
+				"block_header_version": 1
+			},
+			"num_participants": 2,
+			"id": "0436430c-2b02-624c-2032-570501212b00",
+			"tx": {
+				"offset": "d202964900000000d302964900000000d402964900000000d502964900000000",
+				"body": {
+					"inputs": [
+						{
+							"features": "Coinbase",
+							"commit": "087df32304c5d4ae8b2af0bc31e700019d722910ef87dd4eec3197b80b207e3045"
+						},
+						{
+							"features": "Coinbase",
+							"commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7"
+						}
+					],
+					"outputs": [
+						{
+							"features": "Plain",
+							"commit": "099b48cfb1f80a2347dc89818449e68e76a3c6817a532a8e9ef2b4a5ccf4363850",
+							"proof": "7ebcd2ed9bf5fb29854033ba3d0e720613bdf7dfacc586d2f6084c1cde0a2b72e955d4ce625916701dc7c347132f40d0f102a34e801d745ee54b49b765d08aae0bb801c60403e57cafade3b4b174e795b633ab9e402b5b1b6e1243fd10bbcf9368a75cb6a6c375c7bdf02da9e03b7f210df45d942e6fba2729cd512a372e6ed91a1b5c9c22831febea843e3f85adcf198f39ac9f7b73b70c60bfb474aa69878ea8d1d32fef30166b59caacaec3fd024de29a90f1587e08d2c36b3d5c560cabf658e212e0a40a4129b3e5c35557058def5551f4eb395759597ba808b3c34eac3bfb9716e4480d7931c5789c538463ec75be0eb807c894047fda6cbcd22682d3c6d3823cb330f090a2099e3510a3706b57d46c95224394d7f1c0a20d99cc314b8f1d9d02668e2e435f62e1194de0be6a1f50f72ed777ed51c8819f527a94918d1aa8df6461e98ed4c2b18210de50fbcf8c3df210bfe326d41f1dc0ad748cb0320ae28401c85ab4f7dcb99d88a052e95dc85b76d22b36cabd60e06ab84bb7e4ddfdab9c9730c8a986583237ed1ecbb323ee8e79b8cadca4b438b7c09531670b471dda6a2eb3e747916c88ce7d9d8e1b7f61660eeb9e5a13c60e4dfe89d1177d81d6f6570fda85158e646a15f1e8b9e977494dc19a339aab2e0e478670d80092d6ba37646e60714ef64eb4a3d37fe15f8f38b59114af34b235489eed3f69b7781c5fe496eb43ffe245c14bd740f745844a38cf0d904347aaa2b64f51add18822dac009d8b63fa3e4c9b1fa72187f9a4acba1ab315daa1b04c9a41f3be846ac420b37990e6c947a16cc9d5c0671b292bf77d7d8b8974d2ad3afae95ba7772c37432840f53a007f31e0195f3abdf100c4477723cc6c6d5da14894a73dfac342833731036487488fdade7b9d556c06f26173b6b67598d3769447ce2828d71dd45ac5af436c6b0"
+						},
+						{
+							"features": "Plain",
+							"commit": "0812276cc788e6870612296d926cba9f0e7b9810670710b5a6e6f1ba006d395774",
+							"proof": "dcff6175390c602bfa92c2ffd1a9b2d84dcc9ea941f6f317bdd0f875244ef23e696fd17c71df79760ce5ce1a96aab1d15dd057358dc835e972febeb86d50ccec0dad7cfe0246d742eb753cf7b88c045d15bc7123f8cf7155647ccf663fca92a83c9a65d0ed756ea7ebffd2cac90c380a102ed9caaa355d175ed0bf58d3ac2f5e909d6c447dfc6b605e04925c2b17c33ebd1908c965a5541ea5d2ed45a0958e6402f89d7a56df1992e036d836e74017e73ccad5cb3a82b8e139e309792a31b15f3ffd72ed033253428c156c2b9799458a25c1da65b719780a22de7fe7f437ae2fccd22cf7ea357ab5aa66a5ef7d71fb0dc64aa0b5761f68278062bb39bb296c787e4cabc5e2a2933a416ce1c9a9696160386449c437e9120f7bb26e5b0e74d1f2e7d5bcd7aafb2a92b87d1548f1f911fb06af7bd6cc13cee29f7c9cb79021aed18186272af0e9d189ec107c81a8a3aeb4782b0d950e4881aa51b776bb6844b25bce97035b48a9bdb2aea3608687bcdd479d4fa998b5a839ff88558e4a29dff0ed13b55900abb5d439b70793d902ae9ad34587b18c919f6b875c91d14deeb1c373f5e76570d59a6549758f655f1128a54f162dfe8868e1587028e26ad91e528c5ae7ee9335fa58fb59022b5de29d80f0764a9917390d46db899acc6a5b416e25ecc9dccb7153646addcc81cadb5f0078febc7e05d7735aba494f39ef05697bbcc9b47b2ccc79595d75fc13c80678b5e237edce58d731f34c05b1ddcaa649acf2d865bbbc3ceda10508bcdd29d0496744644bf1c3516f6687dfeef5649c7dff90627d642739a59d91a8d1d0c4dc55d74a949e1074427664b467992c9e0f7d3af9d6ea79513e8946ddc0d356bac49878e64e6a95b0a30214214faf2ce317fa622ff3266b32a816e10a18e6d789a5da1f23e67b4f970a68a7bcd9e18825ee274b0483896a40"
+						}
+					],
+					"kernels": [
+						{
+							"features": "Plain",
+							"fee": "7000000",
+							"lock_height": "0",
+							"excess": "000000000000000000000000000000000000000000000000000000000000000000",
+							"excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+						}
+					]
+				}
+			},
+			"amount": "2380952380",
+			"fee": "7000000",
+			"height": "5",
+			"lock_height": "0",
+			"participant_data": [
+				{
+					"id": "0",
+					"public_blind_excess": "033ac2158fa0077f087de60c19d8e431753baa5b63b6e1477f05a2a6e7190d4592",
+					"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+					"part_sig": null,
+					"message": null,
+					"message_sig": null
+				},
+				{
+					"id": "1",
+					"public_blind_excess": "024f9bc78c984c78d6e916d3a00746aa30fa1172124c8dbc0cbddcb7b486719bc7",
+					"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+					"part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841ba9c6dd6185c2b819799700fa1a69201f96cc6dfb9ca205a0ef7c35fb81d57dac",
+					"message": null,
+					"message_sig": null
+				}
+			]
+		}
+		]
+	}
+	# "#
+	# ,
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": {
+		"Ok": {
+				"amount": "2380952380",
+				"fee": "7000000",
+				"height": "5",
+				"id": "0436430c-2b02-624c-2032-570501212b00",
+				"lock_height": "0",
+				"num_participants": 2,
+				"participant_data": [
+					{
+						"id": "0",
+						"message": null,
+						"message_sig": null,
+						"part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b38641aefa907a2fc1c051b1f73202794fffb6d422e328516a5c6b2ef41e935f8",
+						"public_blind_excess": "033ac2158fa0077f087de60c19d8e431753baa5b63b6e1477f05a2a6e7190d4592",
+						"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+					},
+					{
+						"id": "1",
+						"message": null,
+						"message_sig": null,
+						"part_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841ba9c6dd6185c2b819799700fa1a69201f96cc6dfb9ca205a0ef7c35fb81d57dac",
+						"public_blind_excess": "024f9bc78c984c78d6e916d3a00746aa30fa1172124c8dbc0cbddcb7b486719bc7",
+						"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+					}
+				],
+				"tx": {
+					"body": {
+						"inputs": [
+							{
+								"commit": "087df32304c5d4ae8b2af0bc31e700019d722910ef87dd4eec3197b80b207e3045",
+								"features": "Coinbase"
+							},
+							{
+								"commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7",
+								"features": "Coinbase"
+							}
+						],
+						"kernels": [
+							{
+								"excess": "09bac6083b05a32a9d9b37710c70dd0a1ef9329fde0848558976b6f1b81d80ceed",
+								"excess_sig": "66074d25a751c4743342c90ad8ead9454daa00d9b9aed29bca321036d16c4b4da0e9c180a26b88565afcd269a7ac98f896c8db3dcbd48ab69443e8eac3beb3a4",
+								"features": "Plain",
+								"fee": "7000000",
+								"lock_height": "0"
+							}
+						],
+						"outputs": [
+							{
+								"commit": "099b48cfb1f80a2347dc89818449e68e76a3c6817a532a8e9ef2b4a5ccf4363850",
+								"features": "Plain",
+								"proof": "7ebcd2ed9bf5fb29854033ba3d0e720613bdf7dfacc586d2f6084c1cde0a2b72e955d4ce625916701dc7c347132f40d0f102a34e801d745ee54b49b765d08aae0bb801c60403e57cafade3b4b174e795b633ab9e402b5b1b6e1243fd10bbcf9368a75cb6a6c375c7bdf02da9e03b7f210df45d942e6fba2729cd512a372e6ed91a1b5c9c22831febea843e3f85adcf198f39ac9f7b73b70c60bfb474aa69878ea8d1d32fef30166b59caacaec3fd024de29a90f1587e08d2c36b3d5c560cabf658e212e0a40a4129b3e5c35557058def5551f4eb395759597ba808b3c34eac3bfb9716e4480d7931c5789c538463ec75be0eb807c894047fda6cbcd22682d3c6d3823cb330f090a2099e3510a3706b57d46c95224394d7f1c0a20d99cc314b8f1d9d02668e2e435f62e1194de0be6a1f50f72ed777ed51c8819f527a94918d1aa8df6461e98ed4c2b18210de50fbcf8c3df210bfe326d41f1dc0ad748cb0320ae28401c85ab4f7dcb99d88a052e95dc85b76d22b36cabd60e06ab84bb7e4ddfdab9c9730c8a986583237ed1ecbb323ee8e79b8cadca4b438b7c09531670b471dda6a2eb3e747916c88ce7d9d8e1b7f61660eeb9e5a13c60e4dfe89d1177d81d6f6570fda85158e646a15f1e8b9e977494dc19a339aab2e0e478670d80092d6ba37646e60714ef64eb4a3d37fe15f8f38b59114af34b235489eed3f69b7781c5fe496eb43ffe245c14bd740f745844a38cf0d904347aaa2b64f51add18822dac009d8b63fa3e4c9b1fa72187f9a4acba1ab315daa1b04c9a41f3be846ac420b37990e6c947a16cc9d5c0671b292bf77d7d8b8974d2ad3afae95ba7772c37432840f53a007f31e0195f3abdf100c4477723cc6c6d5da14894a73dfac342833731036487488fdade7b9d556c06f26173b6b67598d3769447ce2828d71dd45ac5af436c6b0"
+							},
+							{
+								"commit": "0812276cc788e6870612296d926cba9f0e7b9810670710b5a6e6f1ba006d395774",
+								"features": "Plain",
+								"proof": "dcff6175390c602bfa92c2ffd1a9b2d84dcc9ea941f6f317bdd0f875244ef23e696fd17c71df79760ce5ce1a96aab1d15dd057358dc835e972febeb86d50ccec0dad7cfe0246d742eb753cf7b88c045d15bc7123f8cf7155647ccf663fca92a83c9a65d0ed756ea7ebffd2cac90c380a102ed9caaa355d175ed0bf58d3ac2f5e909d6c447dfc6b605e04925c2b17c33ebd1908c965a5541ea5d2ed45a0958e6402f89d7a56df1992e036d836e74017e73ccad5cb3a82b8e139e309792a31b15f3ffd72ed033253428c156c2b9799458a25c1da65b719780a22de7fe7f437ae2fccd22cf7ea357ab5aa66a5ef7d71fb0dc64aa0b5761f68278062bb39bb296c787e4cabc5e2a2933a416ce1c9a9696160386449c437e9120f7bb26e5b0e74d1f2e7d5bcd7aafb2a92b87d1548f1f911fb06af7bd6cc13cee29f7c9cb79021aed18186272af0e9d189ec107c81a8a3aeb4782b0d950e4881aa51b776bb6844b25bce97035b48a9bdb2aea3608687bcdd479d4fa998b5a839ff88558e4a29dff0ed13b55900abb5d439b70793d902ae9ad34587b18c919f6b875c91d14deeb1c373f5e76570d59a6549758f655f1128a54f162dfe8868e1587028e26ad91e528c5ae7ee9335fa58fb59022b5de29d80f0764a9917390d46db899acc6a5b416e25ecc9dccb7153646addcc81cadb5f0078febc7e05d7735aba494f39ef05697bbcc9b47b2ccc79595d75fc13c80678b5e237edce58d731f34c05b1ddcaa649acf2d865bbbc3ceda10508bcdd29d0496744644bf1c3516f6687dfeef5649c7dff90627d642739a59d91a8d1d0c4dc55d74a949e1074427664b467992c9e0f7d3af9d6ea79513e8946ddc0d356bac49878e64e6a95b0a30214214faf2ce317fa622ff3266b32a816e10a18e6d789a5da1f23e67b4f970a68a7bcd9e18825ee274b0483896a40"
+							}
+						]
+					},
+					"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+				},
+				"version_info": {
+					"orig_version": 2,
+					"version": 2,
+					"block_header_version": 1
+				}
+			}
+		}
+	}
+	# "#
+	# , 5, true, true, false);
+	```
 	*/
 	fn finalize_tx(&self, slate: Slate) -> Result<Slate, ErrorKind>;
 
 	/**
 	Networked version of [Owner::post_tx](struct.Owner.html#method.post_tx).
 
+	```
+	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "post_tx",
+		"params": [
+		{
+			"offset": "d202964900000000d302964900000000d402964900000000d502964900000000",
+			"body": {
+				"inputs": [
+					{
+						"features": "Coinbase",
+						"commit": "087df32304c5d4ae8b2af0bc31e700019d722910ef87dd4eec3197b80b207e3045"
+					},
+					{
+						"features": "Coinbase",
+						"commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7"
+					}
+				],
+				"outputs": [
+					{
+						"features": "Plain",
+						"commit": "099b48cfb1f80a2347dc89818449e68e76a3c6817a532a8e9ef2b4a5ccf4363850",
+						"proof": "7ebcd2ed9bf5fb29854033ba3d0e720613bdf7dfacc586d2f6084c1cde0a2b72e955d4ce625916701dc7c347132f40d0f102a34e801d745ee54b49b765d08aae0bb801c60403e57cafade3b4b174e795b633ab9e402b5b1b6e1243fd10bbcf9368a75cb6a6c375c7bdf02da9e03b7f210df45d942e6fba2729cd512a372e6ed91a1b5c9c22831febea843e3f85adcf198f39ac9f7b73b70c60bfb474aa69878ea8d1d32fef30166b59caacaec3fd024de29a90f1587e08d2c36b3d5c560cabf658e212e0a40a4129b3e5c35557058def5551f4eb395759597ba808b3c34eac3bfb9716e4480d7931c5789c538463ec75be0eb807c894047fda6cbcd22682d3c6d3823cb330f090a2099e3510a3706b57d46c95224394d7f1c0a20d99cc314b8f1d9d02668e2e435f62e1194de0be6a1f50f72ed777ed51c8819f527a94918d1aa8df6461e98ed4c2b18210de50fbcf8c3df210bfe326d41f1dc0ad748cb0320ae28401c85ab4f7dcb99d88a052e95dc85b76d22b36cabd60e06ab84bb7e4ddfdab9c9730c8a986583237ed1ecbb323ee8e79b8cadca4b438b7c09531670b471dda6a2eb3e747916c88ce7d9d8e1b7f61660eeb9e5a13c60e4dfe89d1177d81d6f6570fda85158e646a15f1e8b9e977494dc19a339aab2e0e478670d80092d6ba37646e60714ef64eb4a3d37fe15f8f38b59114af34b235489eed3f69b7781c5fe496eb43ffe245c14bd740f745844a38cf0d904347aaa2b64f51add18822dac009d8b63fa3e4c9b1fa72187f9a4acba1ab315daa1b04c9a41f3be846ac420b37990e6c947a16cc9d5c0671b292bf77d7d8b8974d2ad3afae95ba7772c37432840f53a007f31e0195f3abdf100c4477723cc6c6d5da14894a73dfac342833731036487488fdade7b9d556c06f26173b6b67598d3769447ce2828d71dd45ac5af436c6b0"
+					},
+					{
+						"features": "Plain",
+						"commit": "0812276cc788e6870612296d926cba9f0e7b9810670710b5a6e6f1ba006d395774",
+						"proof": "dcff6175390c602bfa92c2ffd1a9b2d84dcc9ea941f6f317bdd0f875244ef23e696fd17c71df79760ce5ce1a96aab1d15dd057358dc835e972febeb86d50ccec0dad7cfe0246d742eb753cf7b88c045d15bc7123f8cf7155647ccf663fca92a83c9a65d0ed756ea7ebffd2cac90c380a102ed9caaa355d175ed0bf58d3ac2f5e909d6c447dfc6b605e04925c2b17c33ebd1908c965a5541ea5d2ed45a0958e6402f89d7a56df1992e036d836e74017e73ccad5cb3a82b8e139e309792a31b15f3ffd72ed033253428c156c2b9799458a25c1da65b719780a22de7fe7f437ae2fccd22cf7ea357ab5aa66a5ef7d71fb0dc64aa0b5761f68278062bb39bb296c787e4cabc5e2a2933a416ce1c9a9696160386449c437e9120f7bb26e5b0e74d1f2e7d5bcd7aafb2a92b87d1548f1f911fb06af7bd6cc13cee29f7c9cb79021aed18186272af0e9d189ec107c81a8a3aeb4782b0d950e4881aa51b776bb6844b25bce97035b48a9bdb2aea3608687bcdd479d4fa998b5a839ff88558e4a29dff0ed13b55900abb5d439b70793d902ae9ad34587b18c919f6b875c91d14deeb1c373f5e76570d59a6549758f655f1128a54f162dfe8868e1587028e26ad91e528c5ae7ee9335fa58fb59022b5de29d80f0764a9917390d46db899acc6a5b416e25ecc9dccb7153646addcc81cadb5f0078febc7e05d7735aba494f39ef05697bbcc9b47b2ccc79595d75fc13c80678b5e237edce58d731f34c05b1ddcaa649acf2d865bbbc3ceda10508bcdd29d0496744644bf1c3516f6687dfeef5649c7dff90627d642739a59d91a8d1d0c4dc55d74a949e1074427664b467992c9e0f7d3af9d6ea79513e8946ddc0d356bac49878e64e6a95b0a30214214faf2ce317fa622ff3266b32a816e10a18e6d789a5da1f23e67b4f970a68a7bcd9e18825ee274b0483896a40"
+					}
+				],
+				"kernels": [
+					{
+						"features": "Plain",
+						"fee": "7000000",
+						"lock_height": "0",
+						"excess": "09bac6083b05a32a9d9b37710c70dd0a1ef9329fde0848558976b6f1b81d80ceed",
+						"excess_sig": "66074d25a751c4743342c90ad8ead9454daa00d9b9aed29bca321036d16c4b4da0e9c180a26b88565afcd269a7ac98f896c8db3dcbd48ab69443e8eac3beb3a4"
+					}
+				]
+			}
+		},
+		false
+		]
+	}
+	# "#
+	# ,
+	# r#"
+	{
+		"id": 1,
+		"jsonrpc": "2.0",
+		"result": {
+			"Ok": null
+		}
+	}
+	# "#
+	# , 5, true, true, true);
+	```
 	 */
 
 	fn post_tx(&self, tx: &Transaction, fluff: bool) -> Result<(), ErrorKind>;
@@ -305,16 +945,201 @@ pub trait OwnerRpc {
 	Networked version of [Owner::cancel_tx](struct.Owner.html#method.cancel_tx).
 
 
+	```
+	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"method": "cancel_tx",
+		"params": [null, "0436430c-2b02-624c-2032-570501212b00"],
+		"id": 1
+	}
+	# "#
+	# ,
+	# r#"
+	{
+		"id": 1,
+		"jsonrpc": "2.0",
+		"result": {
+			"Ok": null
+		}
+	}
+	# "#
+	# , 5, true, true, false);
+	```
 	 */
 	fn cancel_tx(&self, tx_id: Option<u32>, tx_slate_id: Option<Uuid>) -> Result<(), ErrorKind>;
 
 	/**
+	Networked version of [Owner::get_stored_tx](struct.Owner.html#method.get_stored_tx).
+
+	```
+	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"method": "get_stored_tx",
+		"id": 1,
+		"params": [
+			{
+				"amount_credited": "231095238",
+				"amount_debited": "476190476",
+				"confirmation_ts": "2019-01-15T16:01:26Z",
+				"confirmed": false,
+				"creation_ts": "2019-01-15T16:01:26Z",
+				"fee": "7000000",
+				"id": 5,
+				"messages": {
+					"messages": [
+						{
+							"id": "0",
+							"message": null,
+							"message_sig": null,
+							"public_key": "033ac2158fa0077f087de60c19d8e431753baa5b63b6e1477f05a2a6e7190d4592"
+						},
+						{
+							"id": "1",
+							"message": null,
+							"message_sig": null,
+							"public_key": "024f9bc78c984c78d6e916d3a00746aa30fa1172124c8dbc0cbddcb7b486719bc7"
+						}
+					]
+				},
+				"num_inputs": 2,
+				"num_outputs": 1,
+				"parent_key_id": "0200000000000000000000000000000000",
+				"stored_tx": "0436430c-2b02-624c-2032-570501212b00.mwctx",
+				"tx_slate_id": "0436430c-2b02-624c-2032-570501212b00",
+				"tx_type": "TxSent"
+			}
+		]
+	}
+	# "#
+	# ,
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": {
+			"Ok": {
+				"body": {
+					"inputs": [
+						{
+							"commit": "098778ce2243fa34e5876c8cb7f6dbbbd6a5649c1561973a807a6811941c12363c",
+							"features": "Coinbase"
+						},
+						{
+							"commit": "0910c1752100733bae49e877286835aab76d5856ef8139b6c6e3f51798aa461b03",
+							"features": "Coinbase"
+						}
+					],
+					"kernels": [
+						{
+							"excess": "000000000000000000000000000000000000000000000000000000000000000000",
+							"excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+							"features": "Plain",
+							"fee": "7000000",
+							"lock_height": "0"
+						}
+					],
+					"outputs": [
+						{
+							"commit": "08e4f651f54a963d1e9dbbf58ee687c5b5d7e464ea02b9cbbbef52397e257626a2",
+							"features": "Plain",
+							"proof": "870a5f7d065af887bf14caffc600c420c6dee6267a5aaecec83da00a79c4dd7d6634047001adff78d6cb21e6d41a655be264c7cad97ea3ba38937f2fb84d367d024e3ea92708c2206f6caf270c7891edcb5c0e8bb5847c4dc0bdafb15feb490911fa42d90d0a6b86d86a64c65b0d008df223b379e07536e1fb2ae8c2235c9f017a71e85328f561ebdbd572961885e09f6ff91d9e7e2892c66c4c18b1e2f90ebd04215d68cd30f30b1021a08f641aa2f6df3239d2e5286325db6f04a345ffd52387a5db3e5179dbce35c6b9646c98deff9851687f1eed22f463e681cebefa3e22aa9697ced0f10e8fcf58173f61b84653021c1457a2e158bfaa12e3b6ca937401377d03bae00fe44e0d4657edc917c2d29fecf8a1affc5a42745323e952422346384e6abc695a8080caf311d8218e7853be2f6787eaa93836f6471810abc585609170c217b1cb1e3372db8cbd377108e00ff8682d0d8cad368de67c78021ae273739e025714a15e6375c3385cbc58911f6465a82776fe0d3d263ab07c372ee8e46977cf650f0e4189fe7a16abca21477da6e5ddff5e5d0db9fc54adacdf095d61e7ded698906ba120d19c6b30d011a67f2333116abad04dcfad958d5af172b4b8a0ae23ead318242fec6d58fb7c2c2011f50fceecabb0291b1c5a4d5a691c65d04d7c1b2127bca1587f4255cc3d2d6e024909b83bd5e86017a8a380a239493975efecb7b5d24b07446df3f693d5a9a8e2b556dc5eac0fc8bb538af8fec1d5ddde0d1086ac3289f4ba34d847c2858fcffb82af0a24b4555257333c0bcc6584db1556eb362492c4a0e6863c73e4d82a019ef2c069f31b08eede282a47fdb0fca32a3001b60c7120a18f42531b9554d3589872e55502cd6c2bb713be69235e7fedce531acaeb9ae4b60f0e651ae120cbce5e15f15d926bd03800b87d0f93ebe88fa9204e2e"
+						},
+						{
+							"commit": "09ad4046a4b7e2d1db56a2703eeff22d0a70b80d9e7e415f7c8ebaf6a0ced03c6f",
+							"features": "Plain",
+							"proof": "893f5336bd274c6f2965cffbd0277d9bb9e45677e7acd7c2c89e20fef3edac0703a9c6514e1893f206f60622ba7ed88253855e8ab581450c846be3a5bdcb63030da0d55597fefa9aaf47f2380f8cb4d4a023c4889ccfcdabbafe70c5ed4b6d465d23a0dbeb0ae533ca4944662b00f1513ffe7a9b54f66d1426a81c8982fb067ff1114434287736564419c5d009d3e33dfe89ffb538afaec3d1697b281808a0d045ab173572f5f5a1df2ee29689b3466390c4ed90f88a8f2a0f561b925bc5dda5f17e7f38939c69f92e47cdbe0f0d50cc542f692794d69dffd9c0313dd93f3199862c9482b1d7e1d351c00c5094be1d1b0954ecce9442b0fb0ec7242d658951434a92f94be3b36f0b55df04e3b9cc6fe00366fe11ab415907ec080aea5951eb3542e86334199499dd1adf212e4f5d77003239ab318c443f18114a0916de737420cc5c916ec8d4cb6532ddb2b4a630791c6fcc8a90768db624ba6cd856b148a5a7789e00863958af193da4eef9f4ba8873bd46768d89550a945a33649e3d9df463d6d360a6b3f0ba59a0185a0d8844cb1b1c842f2e66a167e580d348f848b209902a5389d15fbd588e225a4fdd342fb0eaf1b0daf8293b1b97553a611ffd628752fcb38499bfc054377aaef3c6b5c7a5d9bfa52513b8d8c8c93f46fc8a999734dfb325e0d18413fb18d1bb6713e6393c705105835e46d0a3c31c19a5da1453f9e8f2efb5a6760d1167139bc9cbb9ea15449f39cb60202d706066741b7419637e533fca72c8c49aba946248dbfc1d60758fcccfd3e4a7d54c7e011fb7905aab3511b7d730b475e0e31fbfec097e026da65ea3e7e41399955c22ca31e6edc1c58903ff2ef834e08b50525647978b580c37c2b7995ac90b64846eb3954e5723446791c5139984269f42cb64e13ec20e14894d163bd32743a3d341c5d46c8fecf54b0b595abf"
+						}
+					]
+				},
+				"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+			}
+		}
+	}
+	# "#
+	# , 5, true, true, false);
+	```
 	 */
 	fn get_stored_tx(&self, tx: &TxLogEntry) -> Result<Option<Transaction>, ErrorKind>;
 
 	/**
 	Networked version of [Owner::verify_slate_messages](struct.Owner.html#method.verify_slate_messages).
 
+	```
+	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"method": "verify_slate_messages",
+		"id": 1,
+		"params": [ {
+				"amount": "238095238",
+				"fee": "8000000",
+				"height": "4",
+				"id": "0436430c-2b02-624c-2032-570501212b00",
+				"lock_height": "4",
+				"num_participants": 2,
+				"participant_data": [
+				{
+					"id": "0",
+					"message": "my message",
+					"message_sig": "8f07ddd5e9f5179cff19486034181ed76505baaad53e5d994064127b56c5841b1d4c1358be398f801eb90d933774b5218fa7e769b11c4c640402253353656f75",
+					"part_sig": null,
+					"public_blind_excess": "034b4df2f0558b73ea72a1ca5c4ab20217c66bbe0829056fca7abe76888e9349ee",
+					"public_nonce": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+				}
+				],
+				"tx": {
+					"body": {
+						"inputs": [
+						{
+							"commit": "08e1da9e6dc4d6e808a718b2f110a991dd775d65ce5ae408a4e1f002a4961aa9e7",
+							"features": "Coinbase"
+						}
+						],
+						"kernels": [
+						{
+							"excess": "000000000000000000000000000000000000000000000000000000000000000000",
+							"excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+							"features": "HeightLocked",
+							"fee": "8000000",
+							"lock_height": "4"
+						}
+						],
+						"outputs": [
+						{
+							"commit": "094be57c91787fc2033d5d97fae099f1a6ddb37ea48370f1a138f09524c767fdd3",
+							"features": "Plain",
+							"proof": "2a42e9e902b70ce44e1fccb14de87ee0a97100bddf12c6bead1b9c5f4eb60300f29c13094fa12ffeee238fb4532b18f6b61cf51b23c1c7e1ad2e41560dc27edc0a2b9e647a0b3e4e806fced5b65e61d0f1f5197d3e2285c632d359e27b6b9206b2caffea4f67e0c7a2812e7a22c134b98cf89bd43d9f28b8bec25cce037a0ac5b1ae8f667e54e1250813a5263004486b4465ad4e641ab2b535736ea26535a11013564f08f483b7dab1c2bcc3ee38eadf2f7850eff7e3459a4bbabf9f0cf6c50d0c0a4120565cd4a2ce3e354c11721cd695760a24c70e0d5a0dfc3c5dcd51dfad6de2c237a682f36dc0b271f21bb3655e5333016aaa42c2efa1446e5f3c0a79ec417c4d30f77556951cb0f05dbfafb82d9f95951a9ea241fda2a6388f73ace036b98acce079f0e4feebccc96290a86dcc89118a901210b245f2d114cf94396e4dbb461e82aa26a0581389707957968c7cdc466213bb1cd417db207ef40c05842ab67a01a9b96eb1430ebc26e795bb491258d326d5174ad549401059e41782121e506744af8af9d8e493644a87d613600888541cbbe538c625883f3eb4aa3102c5cfcc25de8e97af8927619ce6a731b3b8462d51d993066b935b0648d2344ad72e4fd70f347fbd81041042e5ea31cc7b2e3156a920b80ecba487b950ca32ca95fae85b759c936246ecf441a9fdd95e8fee932d6782cdec686064018c857efc47fb4b2a122600d5fdd79af2486f44df7e629184e1c573bc0a9b3feb40b190ef2861a1ab45e2ac2201b9cd42e495deea247269820ed32389a2810ad6c0f9a296d2a2d9c54089fed50b7f5ecfcd33ab9954360e1d7f5598c32128cfcf2a1d8bf14616818da8a5343bfa88f0eedf392e9d4ab1ace1b60324129cd4852c2e27813a9cf71a6ae6229a4fcecc1a756b3e664c5f50af333082616815a3bec8fc0b75b8e4e767d719"
+						}
+						]
+					},
+					"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
+				},
+				"version_info": {
+					"orig_version": 2,
+					"version": 2,
+					"block_header_version": 1
+				}
+			}
+		]
+	}
+	# "#
+	# ,
+	# r#"
+	{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"result": {
+			"Ok": null
+		}
+	}
+	# "#
+	# ,5 ,true, false, false);
+	```
 	*/
 	fn verify_slate_messages(&self, slate: &Slate) -> Result<(), ErrorKind>;
 
@@ -573,7 +1398,7 @@ pub fn run_doctest_owner(
 	}
 
 	if perform_tx {
-		let amount = 60_000_000_000;
+		let amount = consensus::MWC_FIRST_GROUP_REWARD;
 		let mut w = wallet1.lock();
 		w.open_with_credentials().unwrap();
 		let args = InitTxArgs {
