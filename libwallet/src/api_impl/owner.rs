@@ -412,6 +412,16 @@ where
 	w.get_stored_tx(entry)
 }
 
+/// Loads a stored transaction from a file
+pub fn load_stored_tx<T: ?Sized, C, K>(w: &T, file: &String) -> Result<Option<Transaction>, Error>
+where
+	T: WalletBackend<C, K>,
+	C: NodeClient,
+	K: Keychain,
+{
+	w.load_stored_tx(file)
+}
+
 /// Posts a transaction to the chain
 /// take a client impl instead of wallet so as not to have to lock the wallet
 pub fn post_tx<C>(client: &C, tx: &Transaction, fluff: bool) -> Result<(), Error>
