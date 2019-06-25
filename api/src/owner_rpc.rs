@@ -715,7 +715,7 @@ pub trait OwnerRpc {
 	/**
 	Networked version of [Owner::finalize_tx](struct.Owner.html#method.finalize_tx).
 
-	```
+	```rust,no_run
 	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
 	# r#"
 	{
@@ -877,7 +877,7 @@ pub trait OwnerRpc {
 	/**
 	Networked version of [Owner::post_tx](struct.Owner.html#method.post_tx).
 
-	```
+	```rust,no_run
 	# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
 	# r#"
 	{

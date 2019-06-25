@@ -359,7 +359,7 @@ pub trait ForeignRpc {
 
 	# Json rpc example
 
-	```
+	```rust,no_run
 	# grin_wallet_api::doctest_helper_json_rpc_foreign_assert_response!(
 	# r#"
 	{
