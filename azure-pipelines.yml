@@ -24,7 +24,7 @@ pr:
     include: ['*']
 
 variables:
-  RUST_BACKTRACE: '1'
+  RUST_BACKTRACE: 'FULL'
   RUST_FLAGS: '-C debug-assertions'
 
 jobs:
