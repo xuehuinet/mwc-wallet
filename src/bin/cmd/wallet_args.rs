@@ -16,6 +16,7 @@ use crate::api::TLSConfig;
 use crate::util::file::get_first_line;
 use crate::util::{Mutex, ZeroingString};
 /// Argument parsing and error handling for wallet commands
+use std::env;
 use clap::ArgMatches;
 use failure::Fail;
 use grin_wallet_config::WalletConfig;
@@ -79,14 +80,34 @@ pub fn prompt_password(password: &Option<ZeroingString>) -> ZeroingString {
 	}
 }
 
+fn getenv(key: &str) -> Result<Option<String>, ParseError> {
+    // Accessing an env var
+    let ret = match env::var(key) {
+      Ok(val) => Some(val),
+      Err(_) => None,
+    };
+    Ok(ret)
+}
+
+fn prompt_password_confirm_impl() -> ZeroingString {
+        let mut first = ZeroingString::from("first");
+        let mut second = ZeroingString::from("second");
+        while first != second {
+                first = prompt_password_stdout("Password: ");
+                second = prompt_password_stdout("Confirm Password: ");
+        }
+        first
+}
+
 fn prompt_password_confirm() -> ZeroingString {
-	let mut first = ZeroingString::from("first");
-	let mut second = ZeroingString::from("second");
-	while first != second {
-		first = prompt_password_stdout("Password: ");
-		second = prompt_password_stdout("Confirm Password: ");
-	}
-	first
+    let mwc_password = getenv("MWC_PASSWORD");
+    if mwc_password.is_ok() {
+        let mwc_password = mwc_password.unwrap();
+        if mwc_password.is_some() {
+            return ZeroingString::from(mwc_password.unwrap());
+        }
+    }
+    return prompt_password_confirm_impl();
 }
 
 fn prompt_replace_seed() -> Result<bool, ParseError> {
