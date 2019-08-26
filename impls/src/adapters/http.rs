@@ -16,6 +16,7 @@
 
 /// HTTP Wallet 'plugin' implementation
 use crate::api;
+use crate::core::global;
 use crate::libwallet::{Error, ErrorKind, Slate};
 use crate::WalletCommAdapter;
 use config::WalletConfig;
@@ -82,7 +83,14 @@ pub fn post<IN>(url: &str, api_secret: Option<String>, input: &IN) -> Result<Str
 where
 	IN: Serialize,
 {
-	let req = api::client::create_post_request(url, api_secret, input)?;
+        let chain_type = if global::is_main() {
+               global::ChainTypes::Mainnet
+        } else if global::is_floo() {
+               global::ChainTypes::Floonet
+        } else {
+               global::ChainTypes::UserTesting
+        };
+	let req = api::client::create_post_request(url, api_secret, input, chain_type)?;
 	let res = api::client::send_request(req)?;
 	Ok(res)
 }

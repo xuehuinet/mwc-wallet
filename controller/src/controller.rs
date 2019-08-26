@@ -96,7 +96,8 @@ where
 	let mut router = Router::new();
 	if api_secret.is_some() {
 		let api_basic_auth =
-			"Basic ".to_string() + &to_base64(&("mwc:".to_string() + &api_secret.unwrap()));
+			"Basic ".to_string() + &to_base64(&("mwcfloo:".to_string() + &api_secret.unwrap()));
+println!("basic_auth={}", api_basic_auth);
 		let basic_auth_middleware = Arc::new(BasicAuthMiddleware::new(
 			api_basic_auth,
 			&GRIN_OWNER_BASIC_REALM,
