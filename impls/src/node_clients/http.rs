@@ -21,8 +21,8 @@ use crate::libwallet::{NodeClient, TxWrapper};
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 
-use crate::core::global;
 use crate::api;
+use crate::core::global;
 use crate::libwallet;
 use crate::util;
 use crate::util::secp::pedersen;
@@ -73,13 +73,13 @@ impl NodeClient for HTTPNodeClient {
 		} else {
 			url = format!("{}/v1/pool/push", dest);
 		}
-                let chain_type = if global::is_main() {
-                        global::ChainTypes::Mainnet
-                } else if global::is_floo() {
-                        global::ChainTypes::Floonet
-                } else {
-                        global::ChainTypes::UserTesting
-                };
+		let chain_type = if global::is_main() {
+			global::ChainTypes::Mainnet
+		} else if global::is_floo() {
+			global::ChainTypes::Floonet
+		} else {
+			global::ChainTypes::UserTesting
+		};
 		let res = api::client::post_no_ret(url.as_str(), self.node_api_secret(), tx, chain_type);
 		if let Err(e) = res {
 			let report = format!("Posting transaction to node: {}", e);
@@ -94,13 +94,13 @@ impl NodeClient for HTTPNodeClient {
 		let addr = self.node_url();
 		let url = format!("{}/v1/chain", addr);
 
-                let chain_type = if global::is_main() {
-                        global::ChainTypes::Mainnet
-                } else if global::is_floo() {
-                        global::ChainTypes::Floonet
-                } else {
-                        global::ChainTypes::UserTesting
-                };
+		let chain_type = if global::is_main() {
+			global::ChainTypes::Mainnet
+		} else if global::is_floo() {
+			global::ChainTypes::Floonet
+		} else {
+			global::ChainTypes::UserTesting
+		};
 
 		let res = api::client::get::<api::Tip>(url.as_str(), self.node_api_secret(), chain_type);
 		match res {
@@ -133,18 +133,18 @@ impl NodeClient for HTTPNodeClient {
 		for query_chunk in query_params.chunks(200) {
 			let url = format!("{}/v1/chain/outputs/byids?{}", addr, query_chunk.join("&"),);
 
-                        let chain_type = if global::is_main() {
-                                global::ChainTypes::Mainnet
-                        } else if global::is_floo() {
-                                global::ChainTypes::Floonet
-                        } else {
-                                global::ChainTypes::UserTesting
-                        };
+			let chain_type = if global::is_main() {
+				global::ChainTypes::Mainnet
+			} else if global::is_floo() {
+				global::ChainTypes::Floonet
+			} else {
+				global::ChainTypes::UserTesting
+			};
 
 			tasks.push(api::client::get_async::<Vec<api::Output>>(
 				url.as_str(),
 				self.node_api_secret(),
-                                chain_type,
+				chain_type,
 			));
 		}
 
@@ -191,16 +191,19 @@ impl NodeClient for HTTPNodeClient {
 		let mut api_outputs: Vec<(pedersen::Commitment, pedersen::RangeProof, bool, u64, u64)> =
 			Vec::new();
 
-                let chain_type = if global::is_main() {
-                        global::ChainTypes::Mainnet
-                } else if global::is_floo() {
-                        global::ChainTypes::Floonet
-                } else {
-                        global::ChainTypes::UserTesting
-                };
+		let chain_type = if global::is_main() {
+			global::ChainTypes::Mainnet
+		} else if global::is_floo() {
+			global::ChainTypes::Floonet
+		} else {
+			global::ChainTypes::UserTesting
+		};
 
-
-		match api::client::get::<api::OutputListing>(url.as_str(), self.node_api_secret(), chain_type) {
+		match api::client::get::<api::OutputListing>(
+			url.as_str(),
+			self.node_api_secret(),
+			chain_type,
+		) {
 			Ok(o) => {
 				for out in o.outputs {
 					let is_coinbase = match out.output_type {
