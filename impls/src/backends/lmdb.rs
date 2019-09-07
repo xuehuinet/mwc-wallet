@@ -374,7 +374,7 @@ where
 		let tx_bin = util::from_hex(content).unwrap();
 		Ok(Some(
 			ser::deserialize::<Transaction>(&mut &tx_bin[..], ser::ProtocolVersion::local())
-			.unwrap(),
+				.unwrap(),
 		))
 	}
 

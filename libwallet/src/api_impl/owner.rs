@@ -442,15 +442,15 @@ where
 
 /// Loads a stored transaction from a file
 pub fn load_stored_tx<'a, T: ?Sized, C, K>(
-        w: &mut T,
+	w: &mut T,
 	file: &String,
 ) -> Result<Option<Transaction>, Error>
 where
-        T: WalletBackend<'a, C, K>,
-        C: NodeClient + 'a,
-        K: Keychain + 'a,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
-        w.load_stored_tx(file)
+	w.load_stored_tx(file)
 }
 
 /// Posts a transaction to the chain
