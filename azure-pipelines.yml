@@ -24,8 +24,8 @@ pr:
     include: ['*']
 
 variables:
-  RUST_BACKTRACE: '1'
-  RUSTFLAGS: '-C debug-assertions'
+  RUST_BACKTRACE: 'FULL'
+  RUST_FLAGS: '-C debug-assertions'
 
 jobs:
 - job: linux
@@ -46,11 +46,12 @@ jobs:
         CI_JOB: release
         PLATFORM: linux-amd64
   steps:
+    - template: '.ci/install.yml'
     - template: '.ci/test.yml'
     - template: '.ci/release.yml'
 - job: macos
   pool:
-    vmImage: macos-10.14
+    vmImage: macos-10.13
   strategy:
     matrix:
       test:
@@ -64,7 +65,7 @@ jobs:
     - template: '.ci/release.yml'
 - job: windows
   pool:
-    vmImage: windows-2019
+    vmImage: vs2017-win2016
   strategy:
     matrix:
       test:
