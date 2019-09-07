@@ -715,6 +715,26 @@ pub fn parse_txs_args(args: &ArgMatches) -> Result<command::TxsArgs, ParseError>
 	})
 }
 
+pub fn parse_submit_args(args: &ArgMatches) -> Result<command::SubmitArgs, ParseError> {
+	// input
+	let tx_file = parse_required(args, "input")?;
+
+	// validate input
+	if !Path::new(&tx_file).is_file() {
+		let msg = format!("File {} not found.", &tx_file);
+		return Err(ParseError::ArgumentError(msg));
+	}
+
+	// check fluff flag
+	let fluff = args.is_present("fluff");
+
+	Ok(command::SubmitArgs {
+		input: tx_file.to_owned(),
+		fluff: fluff,
+	})
+}
+
+
 pub fn parse_repost_args(args: &ArgMatches) -> Result<command::RepostArgs, ParseError> {
 	let tx_id = match args.value_of("id") {
 		None => None,
@@ -972,6 +992,10 @@ where
 				a,
 				wallet_config.dark_background_color_scheme.unwrap_or(true),
 			)
+		}
+		("submit", Some(args)) => {
+			let a = arg_parse!(parse_submit_args(&args));
+			command::submit(wallet, km, a)
 		}
 		("repost", Some(args)) => {
 			let a = arg_parse!(parse_repost_args(&args));
