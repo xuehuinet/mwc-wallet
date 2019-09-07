@@ -734,7 +734,6 @@ pub fn parse_submit_args(args: &ArgMatches) -> Result<command::SubmitArgs, Parse
 	})
 }
 
-
 pub fn parse_repost_args(args: &ArgMatches) -> Result<command::RepostArgs, ParseError> {
 	let tx_id = match args.value_of("id") {
 		None => None,
