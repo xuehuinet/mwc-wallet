@@ -1,10 +1,10 @@
 [package]
 name = "grin_wallet_util"
-version = "2.0.4-beta.1"
+version = "2.1.0-beta.1"
 authors = ["Grin Developers <mimblewimble@lists.launchpad.net>"]
 description = "Util, for generic utilities and to re-export grin crates"
 license = "Apache-2.0"
-repository = "https://github.com/mwcproject/mwc-wallet"
+repository = "https://github.com/mimblewimble/grin-wallet"
 keywords = [ "crypto", "grin", "mimblewimble" ]
 workspace = ".."
 edition = "2018"
@@ -17,36 +17,36 @@ toml = "0.4"
 dirs = "1.0.3"
 
 # For Release
-#grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "2.3.2" }
-#grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "2.3.2" }
-#grin_chain = { git = "https://github.com/mwcproject/mwc-node", tag = "2.3.2" }
-#grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "2.3.2" }
-#grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "2.3.2" }
-#grin_store = { git = "https://github.com/mwcproject/mwc-node", tag = "2.3.2" }
+# grin_core = "2.0.0"
+# grin_keychain = "2.0.0"
+# grin_chain = "2.0.0"
+# grin_util = "2.0.0"
+# grin_api = "2.0.0"
+# grin_store = "2.0.0"
 
 # For beta release
-#grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "v2.1.2-beta.1" }
-#grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "v2.1.2-beta.1" }
-#grin_chain = { git = "https://github.com/mwcproject/mwc-node", tag = "v2.1.2-beta.1" }
-#grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "v2.1.2-beta.1" }
-#grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "v2.1.2-beta.1" }
-#grin_store = { git = "https://github.com/mwcproject/mwc-node", tag = "v2.1.2-beta.1" }
+# grin_core = { git = "https://github.com/mimblewimble/grin", tag = "2.0.1-beta.1" }
+# grin_keychain = { git = "https://github.com/mimblewimble/grin", tag = "2.0.1-beta.1" }
+# grin_chain = { git = "https://github.com/mimblewimble/grin", tag = "2.0.1-beta.1" }
+# grin_util = { git = "https://github.com/mimblewimble/grin", tag = "2.0.1-beta.1" }
+# grin_api = { git = "https://github.com/mimblewimble/grin", tag = "2.0.1-beta.1" }
+# grin_store = { git = "https://github.com/mimblewimble/grin", tag = "2.0.1-beta.1" }
 
 # For bleeding edge
-grin_core = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_keychain = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_chain = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_util = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_store = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
+#grin_core = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+#grin_keychain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+#grin_chain = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+#grin_util = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+#grin_api = { git = "https://github.com/mimblewimble/grin", branch = "master" }
+#grin_store = { git = "https://github.com/mimblewimble/grin", branch = "master" }
 
 # For local testing
-#grin_core = { path = "../../mwc-node/core" }
-#grin_keychain = { path = "../../mwc-node/keychain" }
-#grin_chain = { path = "../../mwc-node/chain" }
-#grin_util = { path = "../../mwc-node/util" }
-#grin_api = { path = "../../mwc-node/api" }
-#grin_store = { path = "../../mwc-node/store" }
+grin_core = { path = "../../mwc-node/core", version= "2.0.1-beta.1"}
+grin_keychain = { path = "../../mwc-node/keychain", version= "2.0.1-beta.1"}
+grin_chain = { path = "../../mwc-node/chain", version= "2.0.1-beta.1"}
+grin_util = { path = "../../mwc-node/util", version= "2.0.1-beta.1"}
+grin_api = { path = "../../mwc-node/api", version= "2.0.1-beta.1"}
+grin_store = { path = "../../mwc-node/store", version= "2.0.1-beta.1"}
 
 [dev-dependencies]
 pretty_assertions = "0.5.1"

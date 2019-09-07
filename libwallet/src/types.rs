@@ -15,14 +15,16 @@
 //! Types and traits that should be provided by a wallet
 //! implementation
 
+use crate::config::WalletConfig;
 use crate::error::{Error, ErrorKind};
 use crate::grin_core::core::hash::Hash;
-use crate::grin_core::core::Transaction;
+use crate::grin_core::core::{Output, Transaction, TxKernel};
 use crate::grin_core::libtx::{aggsig, secp_ser};
-use crate::grin_core::ser;
+use crate::grin_core::{global, ser};
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::grin_util::secp::key::{PublicKey, SecretKey};
 use crate::grin_util::secp::{self, pedersen, Secp256k1};
+use crate::grin_util::{LoggingConfig, ZeroingString};
 use crate::slate::ParticipantMessages;
 use chrono::prelude::*;
 use failure::ResultExt;
@@ -33,37 +35,118 @@ use std::fmt;
 use uuid::Uuid;
 
 /// Combined trait to allow dynamic wallet dispatch
-pub trait WalletInst<C, K>: WalletBackend<C, K> + Send + Sync + 'static
+pub trait WalletInst<'a, L, C, K>: Send + Sync
 where
-	C: NodeClient,
-	K: Keychain,
+	L: WalletLCProvider<'a, C, K> + Send + Sync,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
+	/// Return the stored instance
+	fn lc_provider(&mut self) -> Result<&mut (dyn WalletLCProvider<'a, C, K> + 'a), Error>;
 }
-impl<T, C, K> WalletInst<C, K> for T
+
+/// Trait for a provider of wallet lifecycle methods
+pub trait WalletLCProvider<'a, C, K>: Send + Sync
 where
-	T: WalletBackend<C, K> + Send + Sync + 'static,
-	C: NodeClient,
-	K: Keychain,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
+	/// Sets the top level system wallet directory
+	/// default is assumed to be ~/.grin/main/wallet_data (or floonet equivalent)
+	fn set_top_level_directory(&mut self, dir: &str) -> Result<(), Error>;
+
+	/// Sets the top level system wallet directory
+	/// default is assumed to be ~/.grin/main/wallet_data (or floonet equivalent)
+	fn get_top_level_directory(&self) -> Result<String, Error>;
+
+	/// Output a grin-wallet.toml file into the current top-level system wallet directory
+	fn create_config(
+		&self,
+		chain_type: &global::ChainTypes,
+		file_name: &str,
+		wallet_config: Option<WalletConfig>,
+		logging_config: Option<LoggingConfig>,
+	) -> Result<(), Error>;
+
+	///
+	fn create_wallet(
+		&mut self,
+		name: Option<&str>,
+		mnemonic: Option<ZeroingString>,
+		mnemonic_length: usize,
+		password: ZeroingString,
+		test_mode: bool,
+	) -> Result<(), Error>;
+
+	///
+	fn open_wallet(
+		&mut self,
+		name: Option<&str>,
+		password: ZeroingString,
+		create_mask: bool,
+		use_test_rng: bool,
+	) -> Result<Option<SecretKey>, Error>;
+
+	///
+	fn close_wallet(&mut self, name: Option<&str>) -> Result<(), Error>;
+
+	/// whether a wallet exists at the given directory
+	fn wallet_exists(&self, name: Option<&str>) -> Result<bool, Error>;
+
+	/// return mnemonic of given wallet
+	fn get_mnemonic(
+		&self,
+		name: Option<&str>,
+		password: ZeroingString,
+	) -> Result<ZeroingString, Error>;
+
+	/// Check whether a provided mnemonic string is valid
+	fn validate_mnemonic(&self, mnemonic: ZeroingString) -> Result<(), Error>;
+
+	/// Recover a seed from phrase, without destroying existing data
+	/// should back up seed
+	fn recover_from_mnemonic(
+		&self,
+		mnemonic: ZeroingString,
+		password: ZeroingString,
+	) -> Result<(), Error>;
+
+	/// changes password
+	fn change_password(&self, old: String, new: String) -> Result<(), Error>;
+
+	/// deletes wallet
+	fn delete_wallet(&self, name: Option<String>, password: String) -> Result<(), Error>;
+
+	/// return wallet instance
+	fn wallet_inst(&mut self) -> Result<&mut Box<dyn WalletBackend<'a, C, K> + 'a>, Error>;
 }
 
 /// TODO:
 /// Wallets should implement this backend for their storage. All functions
 /// here expect that the wallet instance has instantiated itself or stored
 /// whatever credentials it needs
-pub trait WalletBackend<C, K>
+pub trait WalletBackend<'ck, C, K>: Send + Sync
 where
-	C: NodeClient,
-	K: Keychain,
+	C: NodeClient + 'ck,
+	K: Keychain + 'ck,
 {
-	/// Initialize with whatever stored credentials we have
-	fn open_with_credentials(&mut self) -> Result<(), Error>;
+	/// Set the keychain, which should already be initialized
+	/// Optionally return a token value used to XOR the stored
+	/// key value
+	fn set_keychain(
+		&mut self,
+		k: Box<K>,
+		mask: bool,
+		use_test_rng: bool,
+	) -> Result<Option<SecretKey>, Error>;
 
 	/// Close wallet and remove any stored credentials (TBD)
 	fn close(&mut self) -> Result<(), Error>;
 
-	/// Return the keychain being used
-	fn keychain(&mut self) -> &mut K;
+	/// Return the keychain being used. Ensure a cloned copy so it will be dropped
+	/// and zeroized by the caller
+	/// Can optionally take a mask value
+	fn keychain(&self, mask: Option<&SecretKey>) -> Result<K, Error>;
 
 	/// Return the client being used to communicate with the node
 	fn w2n_client(&mut self) -> &mut C;
@@ -71,6 +154,7 @@ where
 	/// return the commit for caching if allowed, none otherwise
 	fn calc_commit_for_cache(
 		&mut self,
+		keychain_mask: Option<&SecretKey>,
 		amount: u64,
 		id: &Identifier,
 	) -> Result<Option<String>, Error>;
@@ -97,6 +181,7 @@ where
 	/// Retrieves the private context associated with a given slate id
 	fn get_private_context(
 		&mut self,
+		keychain_mask: Option<&SecretKey>,
 		slate_id: &[u8],
 		participant_id: usize,
 	) -> Result<Context, Error>;
@@ -113,26 +198,30 @@ where
 	/// Stores a transaction
 	fn store_tx(&self, uuid: &str, tx: &Transaction) -> Result<(), Error>;
 
-	/// Load a txn from specified file
-	fn load_stored_tx(&self, path: &str) -> Result<Option<Transaction>, Error>;
-
 	/// Retrieves a stored transaction from a TxLogEntry
 	fn get_stored_tx(&self, entry: &TxLogEntry) -> Result<Option<Transaction>, Error>;
 
 	/// Create a new write batch to update or remove output data
-	fn batch<'a>(&'a mut self) -> Result<Box<dyn WalletOutputBatch<K> + 'a>, Error>;
+	fn batch<'a>(
+		&'a mut self,
+		keychain_mask: Option<&SecretKey>,
+	) -> Result<Box<dyn WalletOutputBatch<K> + 'a>, Error>;
 
 	/// Next child ID when we want to create a new output, based on current parent
-	fn next_child<'a>(&mut self) -> Result<Identifier, Error>;
+	fn next_child<'a>(&mut self, keychain_mask: Option<&SecretKey>) -> Result<Identifier, Error>;
 
 	/// last verified height of outputs directly descending from the given parent key
 	fn last_confirmed_height<'a>(&mut self) -> Result<u64, Error>;
 
 	/// Attempt to restore the contents of a wallet from seed
-	fn restore(&mut self) -> Result<(), Error>;
+	fn restore(&mut self, keychain_mask: Option<&SecretKey>) -> Result<(), Error>;
 
 	/// Attempt to check and fix wallet state
-	fn check_repair(&mut self, delete_unconfirmed: bool) -> Result<(), Error>;
+	fn check_repair(
+		&mut self,
+		keychain_mask: Option<&SecretKey>,
+		delete_unconfirmed: bool,
+	) -> Result<(), Error>;
 }
 
 /// Batch trait to update the output data backend atomically. Trying to use a
@@ -208,7 +297,7 @@ where
 
 /// Encapsulate all wallet-node communication functions. No functions within libwallet
 /// should care about communication details
-pub trait NodeClient: Sync + Send + Clone {
+pub trait NodeClient: Send + Sync + Clone {
 	/// Return the URL of the check node
 	fn node_url(&self) -> &str;
 
@@ -223,6 +312,10 @@ pub trait NodeClient: Sync + Send + Clone {
 
 	/// Posts a transaction to a grin node
 	fn post_tx(&self, tx: &TxWrapper, fluff: bool) -> Result<(), Error>;
+
+	/// Returns the api version string and block header version as reported
+	/// by the node. Result can be cached for later use
+	fn get_version_info(&mut self) -> Option<NodeVersionInfo>;
 
 	/// retrieves the current tip from the specified grin node
 	fn get_chain_height(&self) -> Result<u64, Error>;
@@ -251,6 +344,17 @@ pub trait NodeClient: Sync + Send + Clone {
 		),
 		Error,
 	>;
+}
+
+/// Node version info
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NodeVersionInfo {
+	/// Semver version string
+	pub node_version: String,
+	/// block header verson
+	pub block_header_version: u16,
+	/// Whether this version info was successfully verified from a node
+	pub verified: Option<bool>,
 }
 
 /// Information about an output that's being tracked by the wallet. Must be
@@ -716,4 +820,17 @@ impl ser::Readable for AcctPathMapping {
 pub struct TxWrapper {
 	/// hex representation of transaction
 	pub tx_hex: String,
+}
+
+/// Wrapper for reward output and kernel used when building a coinbase for a mining node.
+/// Note: Not serializable, must be converted to necesssary "versioned" representation
+/// before serializing to json to ensure compatibility with mining node.
+#[derive(Debug, Clone)]
+pub struct CbData {
+	/// Output
+	pub output: Output,
+	/// Kernel
+	pub kernel: TxKernel,
+	/// Key Id
+	pub key_id: Option<Identifier>,
 }

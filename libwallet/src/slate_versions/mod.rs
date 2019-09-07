@@ -14,15 +14,13 @@
 
 //! This module contains old slate versions and conversions to the newest slate version
 //! Used for serialization and deserialization of slates in a backwards compatible way.
-use crate::slate::Slate;
-use crate::slate_versions::v0::SlateV0;
-use crate::slate_versions::v1::SlateV1;
-use crate::slate_versions::v2::SlateV2;
+//! Versions earlier than V2 are removed for the 2.0.0 release, but versioning code
+//! remains for future needs
 
-#[allow(missing_docs)]
-pub mod v0;
-#[allow(missing_docs)]
-pub mod v1;
+use crate::slate::Slate;
+use crate::slate_versions::v2::{CoinbaseV2, SlateV2};
+use crate::types::CbData;
+
 #[allow(missing_docs)]
 pub mod v2;
 
@@ -30,30 +28,22 @@ pub mod v2;
 pub const CURRENT_SLATE_VERSION: u16 = 2;
 
 /// The grin block header this slate is intended to be compatible with
-pub const GRIN_BLOCK_HEADER_VERSION: u16 = 1;
+pub const GRIN_BLOCK_HEADER_VERSION: u16 = 2;
 
 /// Existing versions of the slate
 #[derive(EnumIter, Serialize, Deserialize, Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum SlateVersion {
-	/// V0
-	V0,
-	/// V1
-	V1,
 	/// V2 (most current)
 	V2,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 /// Versions are ordered newest to oldest so serde attempts to
 /// deserialize newer versions first, then falls back to older versions.
 pub enum VersionedSlate {
-	/// Current
+	/// Current (Grin 1.1.0 - 2.x (current))
 	V2(SlateV2),
-	/// V1 - Grin 1.0.1 - 1.0.3)
-	V1(SlateV1),
-	/// V0 - Grin 1.0.0
-	V0(SlateV0),
 }
 
 impl VersionedSlate {
@@ -61,8 +51,6 @@ impl VersionedSlate {
 	pub fn version(&self) -> SlateVersion {
 		match *self {
 			VersionedSlate::V2(_) => SlateVersion::V2,
-			VersionedSlate::V1(_) => SlateVersion::V1,
-			VersionedSlate::V0(_) => SlateVersion::V0,
 		}
 	}
 
@@ -70,17 +58,14 @@ impl VersionedSlate {
 	pub fn into_version(slate: Slate, version: SlateVersion) -> VersionedSlate {
 		match version {
 			SlateVersion::V2 => VersionedSlate::V2(slate.into()),
-			SlateVersion::V1 => {
-				let s = SlateV2::from(slate);
-				let s = SlateV1::from(s);
-				VersionedSlate::V1(s)
-			}
-			SlateVersion::V0 => {
+			// Left here as a reminder of what needs to be inserted on
+			// the release of a new slate
+			/*SlateVersion::V0 => {
 				let s = SlateV2::from(slate);
 				let s = SlateV1::from(s);
 				let s = SlateV0::from(s);
 				VersionedSlate::V0(s)
-			}
+			}*/
 		}
 	}
 }
@@ -91,18 +76,31 @@ impl From<VersionedSlate> for Slate {
 			VersionedSlate::V2(s) => {
 				let s = SlateV2::from(s);
 				Slate::from(s)
-			}
-			VersionedSlate::V1(s) => {
-				let s = SlateV1::from(s);
-				let s = SlateV2::from(s);
-				Slate::from(s)
-			}
-			VersionedSlate::V0(s) => {
-				let s = SlateV0::from(s);
-				let s = SlateV1::from(s);
-				let s = SlateV2::from(s);
-				Slate::from(s)
-			}
+			} // Again, left in as a reminder
+			  /*VersionedSlate::V0(s) => {
+				  let s = SlateV0::from(s);
+				  let s = SlateV1::from(s);
+				  let s = SlateV2::from(s);
+				  Slate::from(s)
+			  }*/
+		}
+	}
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(untagged)]
+/// Versions are ordered newest to oldest so serde attempts to
+/// deserialize newer versions first, then falls back to older versions.
+pub enum VersionedCoinbase {
+	/// Current supported coinbase version.
+	V2(CoinbaseV2),
+}
+
+impl VersionedCoinbase {
+	/// convert this coinbase data to a specific versioned representation for the json api.
+	pub fn into_version(cb: CbData, version: SlateVersion) -> VersionedCoinbase {
+		match version {
+			SlateVersion::V2 => VersionedCoinbase::V2(cb.into()),
 		}
 	}
 }
