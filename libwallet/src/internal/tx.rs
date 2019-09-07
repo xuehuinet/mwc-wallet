@@ -16,7 +16,10 @@
 
 use uuid::Uuid;
 
+use crate::grin_core::consensus::valid_header_version;
+use crate::grin_core::core::HeaderVersion;
 use crate::grin_keychain::{Identifier, Keychain};
+use crate::grin_util::secp::key::SecretKey;
 use crate::grin_util::Mutex;
 use crate::internal::{selection, updater};
 use crate::slate::Slate;
@@ -30,16 +33,16 @@ lazy_static! {
 
 /// Creates a new slate for a transaction, can be called by anyone involved in
 /// the transaction (sender(s), receiver(s))
-pub fn new_tx_slate<T: ?Sized, C, K>(
+pub fn new_tx_slate<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	amount: u64,
 	num_participants: usize,
 	use_test_rng: bool,
 ) -> Result<Slate, Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	let current_height = wallet.w2n_client().get_chain_height()?;
 	let mut slate = Slate::blank(num_participants);
@@ -54,6 +57,10 @@ where
 	slate.amount = amount;
 	slate.height = current_height;
 
+	if valid_header_version(current_height, HeaderVersion(1)) {
+		slate.version_info.block_header_version = 1;
+	}
+
 	// Set the lock_height explicitly to 0 here.
 	// This will generate a Plain kernel (rather than a HeightLocked kernel).
 	slate.lock_height = 0;
@@ -62,8 +69,9 @@ where
 }
 
 /// Estimates locked amount and fee for the transaction without creating one
-pub fn estimate_send_tx<T: ?Sized, C, K>(
+pub fn estimate_send_tx<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
 	amount: u64,
 	minimum_confirmations: u64,
 	max_outputs: usize,
@@ -78,14 +86,14 @@ pub fn estimate_send_tx<T: ?Sized, C, K>(
 	Error,
 >
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	// Get lock height
 	let current_height = wallet.w2n_client().get_chain_height()?;
 	// ensure outputs we're selecting are up to date
-	updater::refresh_outputs(wallet, parent_key_id, false)?;
+	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false)?;
 
 	// Sender selects outputs into a new slate and save our corresponding keys in
 	// a transaction context. The secret key in our transaction context will be
@@ -108,8 +116,9 @@ where
 }
 
 /// Add inputs to the slate (effectively becoming the sender)
-pub fn add_inputs_to_slate<T: ?Sized, C, K>(
+pub fn add_inputs_to_slate<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
 	slate: &mut Slate,
 	minimum_confirmations: u64,
 	max_outputs: usize,
@@ -122,12 +131,12 @@ pub fn add_inputs_to_slate<T: ?Sized, C, K>(
 	use_test_rng: bool,
 ) -> Result<Context, Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	// sender should always refresh outputs
-	updater::refresh_outputs(wallet, parent_key_id, false)?;
+	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false)?;
 
 	// Sender selects outputs into a new slate and save our corresponding keys in
 	// a transaction context. The secret key in our transaction context will be
@@ -138,6 +147,8 @@ where
 	// this process can be split up in any way
 	let mut context = selection::build_send_tx(
 		wallet,
+		&wallet.keychain(keychain_mask)?,
+		keychain_mask,
 		slate,
 		minimum_confirmations,
 		max_outputs,
@@ -151,7 +162,7 @@ where
 	// the offset in the slate's transaction kernel, and adds our public key
 	// information to the slate
 	let _ = slate.fill_round_1(
-		wallet.keychain(),
+		&wallet.keychain(keychain_mask)?,
 		&mut context.sec_key,
 		&context.sec_nonce,
 		participant_id,
@@ -162,7 +173,7 @@ where
 	if !is_initator {
 		// perform partial sig
 		let _ = slate.fill_round_2(
-			wallet.keychain(),
+			&wallet.keychain(keychain_mask)?,
 			&context.sec_key,
 			&context.sec_nonce,
 			participant_id,
@@ -173,8 +184,9 @@ where
 }
 
 /// Add receiver output to the slate
-pub fn add_output_to_slate<T: ?Sized, C, K>(
+pub fn add_output_to_slate<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
 	slate: &mut Slate,
 	parent_key_id: &Identifier,
 	participant_id: usize,
@@ -183,17 +195,22 @@ pub fn add_output_to_slate<T: ?Sized, C, K>(
 	use_test_rng: bool,
 ) -> Result<Context, Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	// create an output using the amount in the slate
-	let (_, mut context) =
-		selection::build_recipient_output(wallet, slate, parent_key_id.clone(), use_test_rng)?;
+	let (_, mut context) = selection::build_recipient_output(
+		wallet,
+		keychain_mask,
+		slate,
+		parent_key_id.clone(),
+		use_test_rng,
+	)?;
 
 	// fill public keys
 	let _ = slate.fill_round_1(
-		wallet.keychain(),
+		&wallet.keychain(keychain_mask)?,
 		&mut context.sec_key,
 		&context.sec_nonce,
 		1,
@@ -204,7 +221,7 @@ where
 	if !is_initiator {
 		// perform partial sig
 		let _ = slate.fill_round_2(
-			wallet.keychain(),
+			&wallet.keychain(keychain_mask)?,
 			&context.sec_key,
 			&context.sec_nonce,
 			participant_id,
@@ -215,40 +232,42 @@ where
 }
 
 /// Complete a transaction
-pub fn complete_tx<T: ?Sized, C, K>(
+pub fn complete_tx<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
 	slate: &mut Slate,
 	participant_id: usize,
 	context: &Context,
 ) -> Result<(), Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	let _ = slate.fill_round_2(
-		wallet.keychain(),
+		&wallet.keychain(keychain_mask)?,
 		&context.sec_key,
 		&context.sec_nonce,
 		participant_id,
 	)?;
 
 	// Final transaction can be built by anyone at this stage
-	slate.finalize(wallet.keychain())?;
+	slate.finalize(&wallet.keychain(keychain_mask)?)?;
 	Ok(())
 }
 
 /// Rollback outputs associated with a transaction in the wallet
-pub fn cancel_tx<T: ?Sized, C, K>(
+pub fn cancel_tx<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
 	parent_key_id: &Identifier,
 	tx_id: Option<u32>,
 	tx_slate_id: Option<Uuid>,
 ) -> Result<(), Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	let mut tx_id_string = String::new();
 	if let Some(tx_id) = tx_id {
@@ -268,22 +287,28 @@ where
 		return Err(ErrorKind::TransactionNotCancellable(tx_id_string))?;
 	}
 	// get outputs associated with tx
-	let res = updater::retrieve_outputs(wallet, false, Some(tx.id), Some(&parent_key_id))?;
+	let res = updater::retrieve_outputs(
+		wallet,
+		keychain_mask,
+		false,
+		Some(tx.id),
+		Some(&parent_key_id),
+	)?;
 	let outputs = res.iter().map(|m| m.output.clone()).collect();
-	updater::cancel_tx_and_outputs(wallet, tx, outputs, parent_key_id)?;
+	updater::cancel_tx_and_outputs(wallet, keychain_mask, tx, outputs, parent_key_id)?;
 	Ok(())
 }
 
 /// Update the stored transaction (this update needs to happen when the TX is finalised)
-pub fn update_stored_tx<T: ?Sized, C, K>(
+pub fn update_stored_tx<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	slate: &Slate,
 	is_invoiced: bool,
 ) -> Result<(), Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	// finalize command
 	let tx_vec = updater::retrieve_txs(wallet, None, Some(slate.id), None, false)?;
@@ -308,17 +333,21 @@ where
 }
 
 /// Update the transaction participant messages
-pub fn update_message<T: ?Sized, C, K>(wallet: &mut T, slate: &Slate) -> Result<(), Error>
+pub fn update_message<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	slate: &Slate,
+) -> Result<(), Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	let tx_vec = updater::retrieve_txs(wallet, None, Some(slate.id), None, false)?;
 	if tx_vec.is_empty() {
 		return Err(ErrorKind::TransactionDoesntExist(slate.id.to_string()))?;
 	}
-	let mut batch = wallet.batch()?;
+	let mut batch = wallet.batch(keychain_mask)?;
 	for mut tx in tx_vec.into_iter() {
 		tx.messages = Some(slate.participant_messages());
 		let parent_key = tx.parent_key_id.clone();
@@ -330,7 +359,7 @@ where
 
 #[cfg(test)]
 mod test {
-	use crate::grin_core::libtx::build;
+	use crate::grin_core::libtx::{build, ProofBuilder};
 	use crate::grin_keychain::{ExtKeychain, ExtKeychainPath, Keychain};
 
 	#[test]
@@ -338,10 +367,21 @@ mod test {
 	// based on the public key and amount begin spent
 	fn output_commitment_equals_input_commitment_on_spend() {
 		let keychain = ExtKeychain::from_random_seed(false).unwrap();
+		let builder = ProofBuilder::new(&keychain);
 		let key_id1 = ExtKeychainPath::new(1, 1, 0, 0, 0).to_identifier();
 
-		let tx1 = build::transaction(vec![build::output(105, key_id1.clone())], &keychain).unwrap();
-		let tx2 = build::transaction(vec![build::input(105, key_id1.clone())], &keychain).unwrap();
+		let tx1 = build::transaction(
+			vec![build::output(105, key_id1.clone())],
+			&keychain,
+			&builder,
+		)
+		.unwrap();
+		let tx2 = build::transaction(
+			vec![build::input(105, key_id1.clone())],
+			&keychain,
+			&builder,
+		)
+		.unwrap();
 
 		assert_eq!(tx1.outputs()[0].features, tx2.inputs()[0].features);
 		assert_eq!(tx1.outputs()[0].commitment(), tx2.inputs()[0].commitment());

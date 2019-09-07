@@ -117,13 +117,17 @@ pub enum ErrorKind {
 	#[fail(display = "Signature error: {}", _0)]
 	Signature(String),
 
+	/// OwnerAPIEncryption
+	#[fail(display = "{}", _0)]
+	APIEncryption(String),
+
 	/// Attempt to use duplicate transaction id in separate transactions
 	#[fail(display = "Duplicate transaction ID error")]
 	DuplicateTransactionId,
 
 	/// Wallet seed already exists
-	#[fail(display = "Wallet seed exists error")]
-	WalletSeedExists,
+	#[fail(display = "Wallet seed exists error: {}", _0)]
+	WalletSeedExists(String),
 
 	/// Wallet seed doesn't exist
 	#[fail(display = "Wallet seed doesn't exist error")]
@@ -192,6 +196,22 @@ pub enum ErrorKind {
 	/// Unknown slate version
 	#[fail(display = "Unknown Slate Version: {}", _0)]
 	SlateVersion(u16),
+
+	/// Compatibility error between incoming slate versions and what's expected
+	#[fail(display = "Compatibility Error: {}", _0)]
+	Compatibility(String),
+
+	/// Keychain doesn't exist (wallet not openend)
+	#[fail(display = "Keychain doesn't exist (has wallet been opened?)")]
+	KeychainDoesntExist,
+
+	/// Lifecycle Error
+	#[fail(display = "Lifecycle Error: {}", _0)]
+	Lifecycle(String),
+
+	/// Invalid Keychain Mask Error
+	#[fail(display = "Supplied Keychain Mask Token is incorrect")]
+	InvalidKeychainMask,
 
 	/// Other
 	#[fail(display = "Generic error: {}", _0)]

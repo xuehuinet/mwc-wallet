@@ -17,12 +17,12 @@
 
 use futures::{stream, Stream};
 
-use crate::libwallet::{NodeClient, TxWrapper};
+use crate::core::global;
+use crate::libwallet::{NodeClient, NodeVersionInfo, TxWrapper};
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 
 use crate::api;
-use crate::core::global;
 use crate::libwallet;
 use crate::util;
 use crate::util::secp::pedersen;
@@ -31,14 +31,16 @@ use crate::util::secp::pedersen;
 pub struct HTTPNodeClient {
 	node_url: String,
 	node_api_secret: Option<String>,
+	node_version_info: Option<NodeVersionInfo>,
 }
 
 impl HTTPNodeClient {
-	/// Create a new client that will communicate with the given grin node
+	/// Create a new client that will communicate with the given mwc node
 	pub fn new(node_url: &str, node_api_secret: Option<String>) -> HTTPNodeClient {
 		HTTPNodeClient {
 			node_url: node_url.to_owned(),
 			node_api_secret: node_api_secret,
+			node_version_info: None,
 		}
 	}
 
@@ -64,15 +66,12 @@ impl NodeClient for HTTPNodeClient {
 		self.node_api_secret = node_api_secret;
 	}
 
-	/// Posts a transaction to a grin node
-	fn post_tx(&self, tx: &TxWrapper, fluff: bool) -> Result<(), libwallet::Error> {
-		let url;
-		let dest = self.node_url();
-		if fluff {
-			url = format!("{}/v1/pool/push?fluff", dest);
-		} else {
-			url = format!("{}/v1/pool/push", dest);
+	fn get_version_info(&mut self) -> Option<NodeVersionInfo> {
+		if let Some(v) = self.node_version_info.as_ref() {
+			return Some(v.clone());
 		}
+		let url = format!("{}/v1/version", self.node_url());
+
 		let chain_type = if global::is_main() {
 			global::ChainTypes::Mainnet
 		} else if global::is_floo() {
@@ -80,6 +79,52 @@ impl NodeClient for HTTPNodeClient {
 		} else {
 			global::ChainTypes::UserTesting
 		};
+
+		let mut retval = match api::client::get::<NodeVersionInfo>(
+			url.as_str(),
+			self.node_api_secret(),
+			chain_type,
+		) {
+			Ok(n) => n,
+			Err(e) => {
+				// If node isn't available, allow offline functions
+				// unfortunately have to parse string due to error structure
+				let err_string = format!("{}", e);
+				if err_string.contains("404") {
+					return Some(NodeVersionInfo {
+						node_version: "1.0.0".into(),
+						block_header_version: 1,
+						verified: Some(false),
+					});
+				} else {
+					error!("Unable to contact Node to get version info: {}", e);
+					return None;
+				}
+			}
+		};
+		retval.verified = Some(true);
+		self.node_version_info = Some(retval.clone());
+		Some(retval)
+	}
+
+	/// Posts a transaction to a mwc node
+	fn post_tx(&self, tx: &TxWrapper, fluff: bool) -> Result<(), libwallet::Error> {
+		let url;
+		let dest = self.node_url();
+		if fluff {
+			url = format!("{}/v1/pool/push_tx?fluff", dest);
+		} else {
+			url = format!("{}/v1/pool/push_tx", dest);
+		}
+
+		let chain_type = if global::is_main() {
+			global::ChainTypes::Mainnet
+		} else if global::is_floo() {
+			global::ChainTypes::Floonet
+		} else {
+			global::ChainTypes::UserTesting
+		};
+
 		let res = api::client::post_no_ret(url.as_str(), self.node_api_secret(), tx, chain_type);
 		if let Err(e) = res {
 			let report = format!("Posting transaction to node: {}", e);
@@ -242,7 +287,7 @@ pub fn create_coinbase(dest: &str, block_fees: &BlockFees) -> Result<CbData, Err
 	match single_create_coinbase(&url, &block_fees) {
 		Err(e) => {
 			error!(
-				"Failed to get coinbase from {}. Run mwc-wallet listen?",
+				"Failed to get coinbase from {}. Run mwc wallet listen?",
 				url
 			);
 			error!("Underlying Error: {}", e.cause().unwrap());
