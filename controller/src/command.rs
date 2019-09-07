@@ -709,6 +709,35 @@ where
 	Ok(())
 }
 
+/// Submit
+pub struct SubmitArgs {
+	pub input: String,
+	pub fluff: bool,
+}
+
+pub fn submit<'a, L, C, K>(
+	wallet: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	args: SubmitArgs,
+) -> Result<(), Error>
+where
+        L: WalletLCProvider<'a, C, K>,
+        C: NodeClient + 'a,
+        K: keychain::Keychain + 'a,
+{
+	controller::owner_single_use(wallet.clone(), keychain_mask, |api, m| {
+		let stored_tx = api.load_stored_tx(&args.input)?;
+		if stored_tx.is_none() {
+			error!("File not found: {:?}", args.input);
+			return Ok(());
+		}
+		api.post_tx(m, &stored_tx.unwrap(), args.fluff)?;
+		info!("Reposted transaction in file: {}", args.input);
+		return Ok(());
+	})?;
+	Ok(())
+}
+
 /// Repost
 pub struct RepostArgs {
 	pub id: u32,

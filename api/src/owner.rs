@@ -1020,6 +1020,13 @@ where
 		owner::get_stored_tx(&**w, tx_log_entry)
 	}
 
+	/// Loads a stored transaction from a file
+	pub fn load_stored_tx(&self, file: &String) -> Result<Option<Transaction>, Error> {
+		let mut w_lock = self.wallet_inst.lock();
+		let w = w_lock.lc_provider()?.wallet_inst()?;
+		owner::load_stored_tx(&mut **w, file)
+	}
+
 	/// Verifies all messages in the slate match their public keys.
 	///
 	/// The optional messages themselves are part of the `participant_data` field within the slate.
