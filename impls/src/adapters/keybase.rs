@@ -14,13 +14,11 @@
 
 // Keybase Wallet Plugin
 
-use crate::adapters::{SlateReceiver, SlateSender};
 use crate::config::WalletConfig;
-use crate::keychain::ExtKeychain;
 use crate::libwallet::api_impl::foreign;
-use crate::libwallet::{Error, ErrorKind, Slate, WalletInst};
-use crate::util::ZeroingString;
-use crate::{DefaultLCProvider, DefaultWalletImpl, HTTPNodeClient};
+use crate::libwallet::{Error, ErrorKind, Slate};
+use crate::{instantiate_wallet, HTTPNodeClient, WalletCommAdapter};
+use failure::ResultExt;
 use serde::Serialize;
 use serde_json::{from_str, json, to_string, Value};
 use std::collections::{HashMap, HashSet};
@@ -38,38 +36,23 @@ const SLATE_NEW: &str = "mwc_slate_new";
 const SLATE_SIGNED: &str = "mwc_slate_signed";
 
 #[derive(Clone)]
-pub struct KeybaseChannel(String);
+pub struct KeybaseWalletCommAdapter {}
 
-impl KeybaseChannel {
+impl KeybaseWalletCommAdapter {
 	/// Check if keybase is installed and return an adapter object.
-	pub fn new(channel: String) -> Result<KeybaseChannel, Error> {
-		// Limit only one recipient
-		if channel.matches(",").count() > 0 {
-			return Err(
-				ErrorKind::GenericError("Only one recipient is supported!".to_owned()).into(),
-			);
-		}
+	pub fn new() -> Box<WalletCommAdapter> {
+		let mut proc = if cfg!(target_os = "windows") {
+			Command::new("where")
+		} else {
+			Command::new("which")
+		};
+		proc.arg("keybase")
+			.stdout(Stdio::null())
+			.status()
+			.expect("Keybase executable not found, make sure it is installed and in your PATH");
 
-		if !keybase_installed() {
-			return Err(ErrorKind::GenericError(
-				"Keybase executable not found, make sure it is installed and in your PATH"
-					.to_owned(),
-			)
-			.into());
-		}
-
-		Ok(KeybaseChannel(channel))
+		Box::new(KeybaseWalletCommAdapter {})
 	}
-}
-
-/// Check if keybase executable exists in path
-fn keybase_installed() -> bool {
-	let mut proc = if cfg!(target_os = "windows") {
-		Command::new("where")
-	} else {
-		Command::new("which")
-	};
-	proc.arg("keybase").stdout(Stdio::null()).status().is_ok()
 }
 
 /// Send a json object to the keybase process. Type `keybase chat api --help` for a list of available methods.
@@ -291,19 +274,29 @@ fn poll(nseconds: u64, channel: &str) -> Option<Slate> {
 		sleep(POLL_SLEEP_DURATION);
 	}
 	error!(
-		"No response from @{} in {} seconds. MWC send failed!",
+		"No response from @{} in {} seconds. Grin send failed!",
 		channel, nseconds
 	);
 	None
 }
 
-impl SlateSender for KeybaseChannel {
-	/// Send a slate to a keybase username then wait for a response for TTL seconds.
-	fn send_tx(&self, slate: &Slate) -> Result<Slate, Error> {
+impl WalletCommAdapter for KeybaseWalletCommAdapter {
+	fn supports_sync(&self) -> bool {
+		true
+	}
+
+	// Send a slate to a keybase username then wait for a response for TTL seconds.
+	fn send_tx_sync(&self, addr: &str, slate: &Slate) -> Result<Slate, Error> {
+		// Limit only one recipient
+		if addr.matches(",").count() > 0 {
+			error!("Only one recipient is supported!");
+			return Err(ErrorKind::GenericError("Tx rejected".to_owned()))?;
+		}
+
 		let id = slate.id;
 
 		// Send original slate to recipient with the SLATE_NEW topic
-		match send(&slate, &self.0, SLATE_NEW, TTL) {
+		match send(&slate, addr, SLATE_NEW, TTL) {
 			true => (),
 			false => {
 				return Err(ErrorKind::ClientCallback(
@@ -311,9 +304,9 @@ impl SlateSender for KeybaseChannel {
 				))?;
 			}
 		}
-		info!("tx request has been sent to @{}, tx uuid: {}", &self.0, id);
+		info!("tx request has been sent to @{}, tx uuid: {}", addr, id);
 		// Wait for response from recipient with SLATE_SIGNED topic
-		match poll(TTL as u64, &self.0) {
+		match poll(TTL as u64, addr) {
 			Some(slate) => return Ok(slate),
 			None => {
 				return Err(ErrorKind::ClientCallback(
@@ -322,55 +315,30 @@ impl SlateSender for KeybaseChannel {
 			}
 		}
 	}
-}
 
-/// Receives slates on all channels with topic SLATE_NEW
-pub struct KeybaseAllChannels {
-	_priv: (), // makes KeybaseAllChannels unconstructable without checking for existence of keybase executable
-}
-
-impl KeybaseAllChannels {
-	/// Create a KeybaseAllChannels, return error if keybase executable is not present
-	pub fn new() -> Result<KeybaseAllChannels, Error> {
-		if !keybase_installed() {
-			Err(ErrorKind::GenericError(
-				"Keybase executable not found, make sure it is installed and in your PATH"
-					.to_owned(),
-			)
-			.into())
-		} else {
-			Ok(KeybaseAllChannels { _priv: () })
-		}
+	/// Send a transaction asynchronously (result will be returned via the listener)
+	fn send_tx_async(&self, _addr: &str, _slate: &Slate) -> Result<(), Error> {
+		unimplemented!();
 	}
-}
 
-impl SlateReceiver for KeybaseAllChannels {
+	/// Receive a transaction async. (Actually just read it from wherever and return the slate)
+	fn receive_tx_async(&self, _params: &str) -> Result<Slate, Error> {
+		unimplemented!();
+	}
+
 	/// Start a listener, passing received messages to the wallet api directly
 	#[allow(unreachable_code)]
 	fn listen(
 		&self,
+		_params: HashMap<String, String>,
 		config: WalletConfig,
-		passphrase: ZeroingString,
+		passphrase: &str,
 		account: &str,
 		node_api_secret: Option<String>,
 	) -> Result<(), Error> {
 		let node_client = HTTPNodeClient::new(&config.check_node_api_http_addr, node_api_secret);
-		let mut wallet = Box::new(
-			DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client.clone()).unwrap(),
-		)
-			as Box<
-				dyn WalletInst<
-					'static,
-					DefaultLCProvider<HTTPNodeClient, ExtKeychain>,
-					HTTPNodeClient,
-					ExtKeychain,
-				>,
-			>;
-		let lc = wallet.lc_provider().unwrap();
-		lc.set_top_level_directory(&config.data_file_dir)?;
-		let mask = lc.open_wallet(None, passphrase, true, false)?;
-		let wallet_inst = lc.wallet_inst()?;
-		wallet_inst.set_parent_key_id_by_name(account)?;
+		let wallet = instantiate_wallet(config.clone(), node_client, passphrase, account)
+			.context(ErrorKind::WalletSeedDecryption)?;
 
 		info!("Listening for transactions on keybase ...");
 		loop {
@@ -411,14 +379,10 @@ impl SlateReceiver for KeybaseAllChannels {
 							return Err(e);
 						}
 						let res = {
-							let r = foreign::receive_tx(
-								&mut **wallet_inst,
-								Some(mask.as_ref().unwrap()),
-								&slate,
-								None,
-								None,
-								false,
-							);
+							let mut w = wallet.lock();
+							w.open_with_credentials()?;
+							let r = foreign::receive_tx(&mut *w, &slate, None, None, false);
+							w.close()?;
 							r
 						};
 						match res {
