@@ -170,7 +170,6 @@ pub fn post<IN>(url: &str, api_secret: Option<String>, input: &IN) -> Result<Str
 where
 	IN: Serialize,
 {
-
 	let chain_type = if global::is_mainnet() {
 		global::ChainTypes::Mainnet
 	} else if global::is_floonet() {

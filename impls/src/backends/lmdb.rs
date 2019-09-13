@@ -312,8 +312,7 @@ where
 		tx_f.read_to_string(&mut content)?;
 		let tx_bin = util::from_hex(content).unwrap();
 		Ok(Some(
-			ser::deserialize::<Transaction>(&mut &tx_bin[..])
-			.unwrap(),
+			ser::deserialize::<Transaction>(&mut &tx_bin[..]).unwrap(),
 		))
 	}
 
