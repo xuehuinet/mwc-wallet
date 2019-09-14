@@ -136,7 +136,7 @@ fn prompt_replace_seed() -> Result<bool, ParseError> {
 }
 
 fn getrecoveryphrase() -> Option<String> {
-        getenv("MWC_RECOVERY_PHRASE")
+	getenv("MWC_RECOVERY_PHRASE")
 }
 
 fn prompt_recovery_phrase() -> Result<ZeroingString, ParseError> {
