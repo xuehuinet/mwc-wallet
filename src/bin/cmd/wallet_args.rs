@@ -28,6 +28,7 @@ use grin_wallet_util::grin_keychain as keychain;
 use linefeed::terminal::Signal;
 use linefeed::{Interface, ReadResult};
 use rpassword;
+use std::env;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -79,14 +80,32 @@ pub fn prompt_password(password: &Option<ZeroingString>) -> ZeroingString {
 	}
 }
 
+fn getenv(key: &str) -> Option<String> {
+	// Accessing an env var
+	let ret = match env::var(key) {
+		Ok(val) => Some(val),
+		Err(_) => None,
+	};
+	return ret;
+}
+
+fn getpassword() -> Option<String> {
+	getenv("MWC_PASSWORD")
+}
+
 fn prompt_password_confirm() -> ZeroingString {
-	let mut first = ZeroingString::from("first");
-	let mut second = ZeroingString::from("second");
-	while first != second {
-		first = prompt_password_stdout("Password: ");
-		second = prompt_password_stdout("Confirm Password: ");
+	let env_password = getpassword();
+	if env_password.is_some() {
+		ZeroingString::from(env_password.unwrap())
+	} else {
+		let mut first = ZeroingString::from("first");
+		let mut second = ZeroingString::from("second");
+		while first != second {
+			first = prompt_password_stdout("Password: ");
+			second = prompt_password_stdout("Confirm Password: ");
+		}
+		first
 	}
-	first
 }
 
 fn prompt_replace_seed() -> Result<bool, ParseError> {
@@ -116,6 +135,10 @@ fn prompt_replace_seed() -> Result<bool, ParseError> {
 	}
 }
 
+fn getrecoveryphrase() -> Option<String> {
+        getenv("MWC_RECOVERY_PHRASE")
+}
+
 fn prompt_recovery_phrase() -> Result<ZeroingString, ParseError> {
 	let interface = Arc::new(Interface::new("recover")?);
 	let mut phrase = ZeroingString::from("");
@@ -123,6 +146,13 @@ fn prompt_recovery_phrase() -> Result<ZeroingString, ParseError> {
 	interface.set_prompt("phrase> ")?;
 	loop {
 		println!("Please enter your recovery phrase:");
+		let env_recovery_phrase = getrecoveryphrase();
+
+		if env_recovery_phrase.is_some() {
+			phrase = ZeroingString::from(env_recovery_phrase.unwrap());
+			break;
+		}
+
 		let res = interface.read_line()?;
 		match res {
 			ReadResult::Eof => break,
