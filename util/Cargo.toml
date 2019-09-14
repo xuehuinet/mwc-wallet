@@ -1,6 +1,6 @@
 [package]
 name = "grin_wallet_util"
-version = "2.4.2"
+version = "2.4.3-beta.1"
 authors = ["Grin Developers <mimblewimble@lists.launchpad.net>"]
 description = "Util, for generic utilities and to re-export grin crates"
 license = "Apache-2.0"
