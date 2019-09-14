@@ -628,7 +628,7 @@ pub struct SubmitArgs {
 	pub fluff: bool,
 }
 
-pub fn submit<'a, L, C, K>(
+pub fn submit(
 	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: SubmitArgs,
 ) -> Result<(), Error> {
