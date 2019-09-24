@@ -22,12 +22,12 @@ use crate::chain::Chain;
 use crate::config::WalletConfig;
 use crate::core::core::verifier_cache::LruVerifierCache;
 use crate::core::core::Transaction;
+use crate::core::core::TxKernel;
 use crate::core::global::{set_mining_mode, ChainTypes};
 use crate::core::{pow, ser};
 use crate::keychain::Keychain;
 use crate::libwallet::api_impl::foreign;
 use crate::libwallet::{NodeClient, NodeVersionInfo, Slate, TxWrapper, WalletInst};
-use crate::core::core::TxKernel;
 use crate::util;
 use crate::util::secp::pedersen;
 use crate::util::secp::pedersen::Commitment;
@@ -396,13 +396,13 @@ impl WalletCommAdapter for LocalWalletClient {
 
 impl NodeClient for LocalWalletClient {
 	fn get_kernel(
-                &mut self,
-                _excess: &pedersen::Commitment,
-                _min_height: Option<u64>,
-                _max_height: Option<u64>,
-        ) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
+		&mut self,
+		_excess: &pedersen::Commitment,
+		_min_height: Option<u64>,
+		_max_height: Option<u64>,
+	) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
 		Ok(None)
-        }
+	}
 
 	fn node_url(&self) -> &str {
 		"node"
