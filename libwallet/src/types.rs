@@ -23,6 +23,7 @@ use crate::grin_core::ser;
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::grin_util::secp::key::{PublicKey, SecretKey};
 use crate::grin_util::secp::{self, pedersen, Secp256k1};
+use crate::grin_core::core::TxKernel;
 use crate::slate::ParticipantMessages;
 use chrono::prelude::*;
 use failure::ResultExt;
@@ -255,6 +256,15 @@ pub trait NodeClient: Sync + Send + Clone {
 		),
 		Error,
 	>;
+        
+	/// Get a kernel and the height of the block it is included in. Returns
+	/// (tx_kernel, height, mmr_index)
+	fn get_kernel(
+		&mut self,
+		excess: &pedersen::Commitment,
+		min_height: Option<u64>,
+		max_height: Option<u64>,
+	) -> Result<Option<(TxKernel, u64, u64)>, Error>;
 }
 
 /// Node version info
