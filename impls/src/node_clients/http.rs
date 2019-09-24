@@ -17,10 +17,10 @@
 
 use futures::{stream, Stream};
 
-use crate::util::to_hex;
 use crate::api::LocatedTxKernel;
 use crate::core::core::TxKernel;
 use crate::libwallet::{NodeClient, NodeVersionInfo, TxWrapper};
+use crate::util::to_hex;
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 
@@ -281,29 +281,29 @@ impl NodeClient for HTTPNodeClient {
 		}
 	}
 
-fn get_kernel(
+	fn get_kernel(
 		&mut self,
 		excess: &pedersen::Commitment,
 		min_height: Option<u64>,
 		max_height: Option<u64>,
 	) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
-/*
-		let version = self
-			.get_version_info()
-			.ok_or(libwallet::ErrorKind::ClientCallback(
-				"Unable to get version".into(),
-			))?;
-*/
-/*
-		let version = Version::parse(&version.node_version)
-			.map_err(|_| libwallet::ErrorKind::ClientCallback("Unable to parse version".into()))?;
-		if version <= Version::new(2, 0, 0) {
-			return Err(libwallet::ErrorKind::ClientCallback(
-				"Kernel lookup not supported by node, please upgrade it".into(),
-			)
-			.into());
-		}
-*/
+		/*
+				let version = self
+					.get_version_info()
+					.ok_or(libwallet::ErrorKind::ClientCallback(
+						"Unable to get version".into(),
+					))?;
+		*/
+		/*
+				let version = Version::parse(&version.node_version)
+					.map_err(|_| libwallet::ErrorKind::ClientCallback("Unable to parse version".into()))?;
+				if version <= Version::new(2, 0, 0) {
+					return Err(libwallet::ErrorKind::ClientCallback(
+						"Kernel lookup not supported by node, please upgrade it".into(),
+					)
+					.into());
+				}
+		*/
 
 		let mut query = String::new();
 		if let Some(h) = min_height {
@@ -326,18 +326,18 @@ fn get_kernel(
 			query
 		);
 
-                let chain_type = if global::is_mainnet() {
-                        global::ChainTypes::Mainnet
-                } else if global::is_floonet() {
-                        global::ChainTypes::Floonet
-                } else {
-                        global::ChainTypes::UserTesting
-                };
+		let chain_type = if global::is_mainnet() {
+			global::ChainTypes::Mainnet
+		} else if global::is_floonet() {
+			global::ChainTypes::Floonet
+		} else {
+			global::ChainTypes::UserTesting
+		};
 
-		let res: Option<LocatedTxKernel> = api::client::get(url.as_str(), self.node_api_secret(), chain_type)
-			.map_err(|e| {
-			libwallet::ErrorKind::ClientCallback(format!("Kernel lookup: {}", e))
-		})?;
+		let res: Option<LocatedTxKernel> =
+			api::client::get(url.as_str(), self.node_api_secret(), chain_type).map_err(|e| {
+				libwallet::ErrorKind::ClientCallback(format!("Kernel lookup: {}", e))
+			})?;
 
 		Ok(res.map(|k| (k.tx_kernel, k.height, k.mmr_index)))
 	}
