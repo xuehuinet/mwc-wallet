@@ -26,3 +26,4 @@ pub use grin_core;
 pub use grin_keychain;
 pub use grin_store;
 pub use grin_util;
+pub use grin_p2p;
