@@ -28,8 +28,8 @@ use crate::core::{pow, ser};
 use crate::keychain::Keychain;
 use crate::libwallet::api_impl::foreign;
 use crate::libwallet::{NodeClient, NodeVersionInfo, Slate, TxWrapper, WalletInst};
-use crate::util;
 use crate::node_clients::http::grin_wallet_util::grin_p2p::types::PeerInfoDisplay;
+use crate::util;
 use crate::util::secp::pedersen;
 use crate::util::secp::pedersen::Commitment;
 use crate::util::{Mutex, RwLock};
@@ -546,7 +546,10 @@ impl NodeClient for LocalWalletClient {
 		Ok((o.highest_index, o.last_retrieved_index, api_outputs))
 	}
 
-        fn get_total_difficulty(&self) -> Result<u64, libwallet::Error> { unimplemented!(); }
-        fn get_connected_peer_info(&self) -> Result<Vec<PeerInfoDisplay>, libwallet::Error> { unimplemented!(); }
-
+	fn get_total_difficulty(&self) -> Result<u64, libwallet::Error> {
+		unimplemented!();
+	}
+	fn get_connected_peer_info(&self) -> Result<Vec<PeerInfoDisplay>, libwallet::Error> {
+		unimplemented!();
+	}
 }

@@ -344,9 +344,12 @@ impl NodeClient for HTTPNodeClient {
 		Ok(res.map(|k| (k.tx_kernel, k.height, k.mmr_index)))
 	}
 
-
-        fn get_total_difficulty(&self) -> Result<u64, libwallet::Error> { unimplemented!(); }
-        fn get_connected_peer_info(&self) -> Result<Vec<PeerInfoDisplay>, libwallet::Error> { unimplemented!(); }
+	fn get_total_difficulty(&self) -> Result<u64, libwallet::Error> {
+		unimplemented!();
+	}
+	fn get_connected_peer_info(&self) -> Result<Vec<PeerInfoDisplay>, libwallet::Error> {
+		unimplemented!();
+	}
 }
 
 /*
