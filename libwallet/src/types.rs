@@ -15,7 +15,6 @@
 //! Types and traits that should be provided by a wallet
 //! implementation
 
-
 extern crate grin_wallet_util;
 use crate::error::{Error, ErrorKind};
 use crate::grin_core::core::hash::Hash;
@@ -26,8 +25,8 @@ use crate::grin_core::ser;
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::grin_util::secp::key::{PublicKey, SecretKey};
 use crate::grin_util::secp::{self, pedersen, Secp256k1};
-use crate::types::grin_wallet_util::grin_p2p::types::PeerInfoDisplay;
 use crate::slate::ParticipantMessages;
+use crate::types::grin_wallet_util::grin_p2p::types::PeerInfoDisplay;
 use chrono::prelude::*;
 use failure::ResultExt;
 use serde;
