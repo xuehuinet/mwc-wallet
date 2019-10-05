@@ -17,6 +17,7 @@
 #[macro_use]
 extern crate clap;
 
+extern crate grin_wallet_util;
 #[macro_use]
 extern crate log;
 use crate::core::global;

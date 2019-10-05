@@ -15,6 +15,8 @@
 //! Types and traits that should be provided by a wallet
 //! implementation
 
+
+extern crate grin_wallet_util;
 use crate::error::{Error, ErrorKind};
 use crate::grin_core::core::hash::Hash;
 use crate::grin_core::core::Transaction;
@@ -24,6 +26,7 @@ use crate::grin_core::ser;
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::grin_util::secp::key::{PublicKey, SecretKey};
 use crate::grin_util::secp::{self, pedersen, Secp256k1};
+use crate::types::grin_wallet_util::grin_p2p::types::PeerInfoDisplay;
 use crate::slate::ParticipantMessages;
 use chrono::prelude::*;
 use failure::ResultExt;
@@ -265,6 +268,12 @@ pub trait NodeClient: Sync + Send + Clone {
 		min_height: Option<u64>,
 		max_height: Option<u64>,
 	) -> Result<Option<(TxKernel, u64, u64)>, Error>;
+
+	/// retreives total difficulty
+	fn get_total_difficulty(&self) -> Result<u64, Error>;
+
+	/// retreives the connected peer info of the node
+	fn get_connected_peer_info(&self) -> Result<Vec<PeerInfoDisplay>, Error>;
 }
 
 /// Node version info

@@ -870,6 +870,7 @@ dependencies = [
  "grin_chain 2.4.1-beta.1 (git+https://github.com/mwcproject/mwc-node)",
  "grin_core 2.4.1-beta.1 (git+https://github.com/mwcproject/mwc-node)",
  "grin_keychain 2.4.1-beta.1 (git+https://github.com/mwcproject/mwc-node)",
+ "grin_p2p 2.4.1-beta.1 (git+https://github.com/mwcproject/mwc-node)",
  "grin_store 2.4.1-beta.1 (git+https://github.com/mwcproject/mwc-node)",
  "grin_util 2.4.1-beta.1 (git+https://github.com/mwcproject/mwc-node)",
  "pretty_assertions 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
