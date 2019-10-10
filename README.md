@@ -12,7 +12,7 @@ This is the reference implementation of [MWC's](https://github.com/mimblewimble/
 
 * The Grin Wallet APIs, which are intended for use by Grin community wallet developers. The wallet APIs can be directly linked into other projects or invoked via a JSON-RPC interface.
 
-* A reference command-line wallet, which provides a baseline wallet for Grin and demonstrates how the wallet APIs should be called.
+* A reference command-line wallet, which provides a baseline wallet for MWC and demonstrates how the wallet APIs should be called.
 
 # Usage
 
