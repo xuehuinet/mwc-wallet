@@ -8,7 +8,7 @@
 
 # Grin Wallet
 
-This is the reference implementation of [Grin's](https://github.com/mimblewimble/grin) wallet. It consists of 2 major pieces:
+This is the reference implementation of [MWC's](https://github.com/mimblewimble/grin) wallet. It consists of 2 major pieces:
 
 * The Grin Wallet APIs, which are intended for use by Grin community wallet developers. The wallet APIs can be directly linked into other projects or invoked via a JSON-RPC interface.
 
