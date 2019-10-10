@@ -6,11 +6,11 @@
 [![Release Version](https://img.shields.io/github/release/mimblewimble/grin-wallet.svg)](https://github.com/mimblewimble/grin-wallet/releases)
 [![License](https://img.shields.io/github/license/mimblewimble/grin-wallet.svg)](https://github.com/mimblewimble/grin-wallet/blob/master/LICENSE)
 
-# Grin Wallet
+# MWC Wallet
 
 This is the reference implementation of [MWC's](https://github.com/mimblewimble/grin) wallet. It consists of 2 major pieces:
 
-* The Grin Wallet APIs, which are intended for use by Grin community wallet developers. The wallet APIs can be directly linked into other projects or invoked via a JSON-RPC interface.
+* The MWC Wallet APIs, which are intended for use by MWC community wallet developers. The wallet APIs can be directly linked into other projects or invoked via a JSON-RPC interface.
 
 * A reference command-line wallet, which provides a baseline wallet for MWC and demonstrates how the wallet APIs should be called.
 
