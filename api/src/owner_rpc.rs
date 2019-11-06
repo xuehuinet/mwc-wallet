@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(bare_trait_objects)]
+
 //! JSON-RPC Stub generation for the Owner API
 use uuid::Uuid;
 
