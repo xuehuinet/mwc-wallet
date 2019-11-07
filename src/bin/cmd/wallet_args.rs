@@ -328,7 +328,7 @@ pub fn parse_init_args(
 	g_args: &command::GlobalArgs,
 	args: &ArgMatches,
 ) -> Result<command::InitArgs, ParseError> {
-	if let Err(e) = WalletSeed::seed_file_exists(config) {
+	if let Err(e) = WalletSeed::seed_file_exists(&config.data_file_dir) {
 		let msg = format!("Not creating wallet - {}", e.inner);
 		return Err(ParseError::ArgumentError(msg));
 	}
