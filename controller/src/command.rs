@@ -60,7 +60,7 @@ pub struct InitArgs {
 
 pub fn init(g_args: &GlobalArgs, args: InitArgs) -> Result<(), Error> {
 	WalletSeed::init_file(
-		&args.config,
+		&args.config.data_file_dir,
 		args.list_length,
 		args.recovery_phrase,
 		&args.password,
@@ -84,13 +84,13 @@ pub struct RecoverArgs {
 
 /// Check whether seed file exists
 pub fn wallet_seed_exists(config: &WalletConfig) -> Result<(), Error> {
-	let res = WalletSeed::seed_file_exists(&config)?;
+	let res = WalletSeed::seed_file_exists(&config.data_file_dir)?;
 	Ok(res)
 }
 
 pub fn recover(config: &WalletConfig, args: RecoverArgs) -> Result<(), Error> {
 	if args.recovery_phrase.is_none() {
-		let res = WalletSeed::from_file(config, &args.passphrase);
+		let res = WalletSeed::from_file(&config.data_file_dir, &args.passphrase);
 		if let Err(e) = res {
 			error!("Error loading wallet seed (check password): {}", e);
 			return Err(e.into());
@@ -98,7 +98,7 @@ pub fn recover(config: &WalletConfig, args: RecoverArgs) -> Result<(), Error> {
 		let _ = res.unwrap().show_recovery_phrase();
 	} else {
 		let res = WalletSeed::recover_from_phrase(
-			&config,
+			&config.data_file_dir,
 			&args.recovery_phrase.as_ref().unwrap(),
 			&args.passphrase,
 		);

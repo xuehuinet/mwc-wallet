@@ -33,6 +33,7 @@ extern crate grin_wallet_config as config;
 
 mod adapters;
 mod backends;
+pub mod encrypt;
 mod error;
 mod node_clients;
 mod seed;
@@ -60,7 +61,7 @@ pub fn instantiate_wallet(
 	account: &str,
 ) -> Result<Arc<Mutex<dyn WalletInst<impl NodeClient, keychain::ExtKeychain>>>, Error> {
 	// First test decryption, so we can abort early if we have the wrong password
-	let _ = WalletSeed::from_file(&wallet_config, passphrase)?;
+	let _ = WalletSeed::from_file(&wallet_config.data_file_dir, passphrase)?;
 	let mut db_wallet = LMDBBackend::new(wallet_config.clone(), passphrase, node_client)?;
 	db_wallet.set_parent_key_id_by_name(account)?;
 	info!("Using LMDB Backend for wallet");
