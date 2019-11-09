@@ -212,7 +212,7 @@ where
 		let mut slate = serde_json::from_str(&m.body).context(
 			libwallet::ErrorKind::ClientCallback("Error parsing TxWrapper".to_owned()),
 		)?;
-;
+
 		{
 			let mut w = wallet.1.lock();
 			w.open_with_credentials()?;
