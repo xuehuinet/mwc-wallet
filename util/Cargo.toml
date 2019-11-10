@@ -1,6 +1,6 @@
 [package]
 name = "grin_wallet_util"
-version = "2.4.4-beta.1"
+version = "2.4.4"
 authors = ["Grin Developers <mimblewimble@lists.launchpad.net>"]
 description = "Util, for generic utilities and to re-export grin crates"
 license = "Apache-2.0"
@@ -17,13 +17,13 @@ toml = "0.4"
 dirs = "1.0.3"
 
 # For Release
-grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.2" }
-grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.2" }
-grin_chain = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.2" }
-grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.2" }
-grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.2" }
-grin_store = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.2" }
-grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.2" }
+grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.3" }
+grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.3" }
+grin_chain = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.3" }
+grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.3" }
+grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.3" }
+grin_store = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.3" }
+grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.3" }
 
 # For beta release
 # grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "2.4.0" }
