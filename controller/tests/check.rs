@@ -36,7 +36,7 @@ use std::time::Duration;
 macro_rules! send_to_dest {
 	($a:expr, $b:expr, $c:expr, $d:expr) => {
 		test_framework::send_to_dest::<
-			dyn WalletInst<LocalWalletClient, ExtKeychain>,
+			WalletInst<LocalWalletClient, ExtKeychain>,
 			LocalWalletClient,
 			ExtKeychain,
 		>($a, $b, $c, $d, false)
@@ -46,7 +46,7 @@ macro_rules! send_to_dest {
 macro_rules! wallet_info {
 	($a:expr) => {
 		test_framework::wallet_info::<
-			dyn WalletInst<LocalWalletClient, ExtKeychain>,
+			WalletInst<LocalWalletClient, ExtKeychain>,
 			LocalWalletClient,
 			ExtKeychain,
 		>($a)

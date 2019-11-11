@@ -26,8 +26,8 @@ use std::time::Duration;
 const MIN_COMPAT_NODE_VERSION: &str = "2.0.0-beta.1";
 
 pub fn _init_wallet_seed(wallet_config: WalletConfig, password: &str) {
-	if let Err(_) = WalletSeed::from_file(&wallet_config.data_file_dir, password) {
-		WalletSeed::init_file(&wallet_config.data_file_dir, 32, None, password)
+	if let Err(_) = WalletSeed::from_file(&wallet_config, password) {
+		WalletSeed::init_file(&wallet_config, 32, None, password)
 			.expect("Failed to create wallet seed file.");
 	};
 }
