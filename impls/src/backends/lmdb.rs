@@ -167,7 +167,7 @@ where
 {
 	/// Initialise with whatever stored credentials we have
 	fn open_with_credentials(&mut self) -> Result<(), Error> {
-		let wallet_seed = WalletSeed::from_file(&self.config, &self.passphrase)
+		let wallet_seed = WalletSeed::from_file(&self.config.data_file_dir, &self.passphrase)
 			.context(ErrorKind::CallbackImpl("Error opening wallet"))?;
 		self.keychain = Some(
 			wallet_seed
@@ -299,7 +299,7 @@ where
 			.join(filename);
 		let path_buf = Path::new(&path).to_path_buf();
 		let mut stored_tx = File::create(path_buf)?;
-		let tx_hex = util::to_hex(ser::ser_vec(tx).unwrap());;
+		let tx_hex = util::to_hex(ser::ser_vec(tx).unwrap());
 		stored_tx.write_all(&tx_hex.as_bytes())?;
 		stored_tx.sync_all()?;
 		Ok(())
