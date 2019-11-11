@@ -241,8 +241,7 @@ pub fn inst_wallet(
 	config: WalletConfig,
 	g_args: &command::GlobalArgs,
 	node_client: impl NodeClient + 'static,
-) -> Result<Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>, ParseError>
-{
+) -> Result<Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>, ParseError> {
 	let passphrase = prompt_password(&g_args.password);
 	let res = instantiate_wallet(config.clone(), node_client, &passphrase, &g_args.account);
 	match res {
@@ -328,7 +327,7 @@ pub fn parse_init_args(
 	g_args: &command::GlobalArgs,
 	args: &ArgMatches,
 ) -> Result<command::InitArgs, ParseError> {
-	if let Err(e) = WalletSeed::seed_file_exists(&config.data_file_dir) {
+	if let Err(e) = WalletSeed::seed_file_exists(config) {
 		let msg = format!("Not creating wallet - {}", e.inner);
 		return Err(ParseError::ArgumentError(msg));
 	}

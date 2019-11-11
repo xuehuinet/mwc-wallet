@@ -60,7 +60,7 @@ pub struct InitArgs {
 
 pub fn init(g_args: &GlobalArgs, args: InitArgs) -> Result<(), Error> {
 	WalletSeed::init_file(
-		&args.config.data_file_dir,
+		&args.config,
 		args.list_length,
 		args.recovery_phrase,
 		&args.password,
@@ -84,13 +84,13 @@ pub struct RecoverArgs {
 
 /// Check whether seed file exists
 pub fn wallet_seed_exists(config: &WalletConfig) -> Result<(), Error> {
-	let res = WalletSeed::seed_file_exists(&config.data_file_dir)?;
+	let res = WalletSeed::seed_file_exists(&config)?;
 	Ok(res)
 }
 
 pub fn recover(config: &WalletConfig, args: RecoverArgs) -> Result<(), Error> {
 	if args.recovery_phrase.is_none() {
-		let res = WalletSeed::from_file(&config.data_file_dir, &args.passphrase);
+		let res = WalletSeed::from_file(config, &args.passphrase);
 		if let Err(e) = res {
 			error!("Error loading wallet seed (check password): {}", e);
 			return Err(e.into());
@@ -98,7 +98,7 @@ pub fn recover(config: &WalletConfig, args: RecoverArgs) -> Result<(), Error> {
 		let _ = res.unwrap().show_recovery_phrase();
 	} else {
 		let res = WalletSeed::recover_from_phrase(
-			&config.data_file_dir,
+			&config,
 			&args.recovery_phrase.as_ref().unwrap(),
 			&args.passphrase,
 		);
@@ -167,7 +167,7 @@ pub fn listen(config: &WalletConfig, args: &ListenArgs, g_args: &GlobalArgs) -> 
 }
 
 pub fn owner_api(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	config: &WalletConfig,
 	g_args: &GlobalArgs,
 ) -> Result<(), Error> {
@@ -190,7 +190,7 @@ pub struct AccountArgs {
 }
 
 pub fn account(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: AccountArgs,
 ) -> Result<(), Error> {
 	if args.create.is_none() {
@@ -238,7 +238,7 @@ pub struct SendArgs {
 }
 
 pub fn send(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: SendArgs,
 	dark_scheme: bool,
 ) -> Result<(), Error> {
@@ -342,7 +342,7 @@ pub struct ReceiveArgs {
 }
 
 pub fn receive(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	g_args: &GlobalArgs,
 	args: ReceiveArgs,
 ) -> Result<(), Error> {
@@ -372,7 +372,7 @@ pub struct FinalizeArgs {
 }
 
 pub fn finalize(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: FinalizeArgs,
 ) -> Result<(), Error> {
 	let adapter = FileWalletCommAdapter::new();
@@ -441,7 +441,7 @@ pub struct IssueInvoiceArgs {
 }
 
 pub fn issue_invoice_tx(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: IssueInvoiceArgs,
 ) -> Result<(), Error> {
 	controller::owner_single_use(wallet.clone(), |api| {
@@ -468,7 +468,7 @@ pub struct ProcessInvoiceArgs {
 
 /// Process invoice
 pub fn process_invoice(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: ProcessInvoiceArgs,
 	dark_scheme: bool,
 ) -> Result<(), Error> {
@@ -556,7 +556,7 @@ pub struct InfoArgs {
 }
 
 pub fn info(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	g_args: &GlobalArgs,
 	args: InfoArgs,
 	dark_scheme: bool,
@@ -571,7 +571,7 @@ pub fn info(
 }
 
 pub fn outputs(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	g_args: &GlobalArgs,
 	dark_scheme: bool,
 ) -> Result<(), Error> {
@@ -590,7 +590,7 @@ pub struct TxsArgs {
 }
 
 pub fn txs(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	g_args: &GlobalArgs,
 	args: TxsArgs,
 	dark_scheme: bool,
@@ -629,7 +629,7 @@ pub struct SubmitArgs {
 }
 
 pub fn submit(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: SubmitArgs,
 ) -> Result<(), Error> {
 	controller::owner_single_use(wallet.clone(), |api| {
@@ -653,7 +653,7 @@ pub struct RepostArgs {
 }
 
 pub fn repost(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: RepostArgs,
 ) -> Result<(), Error> {
 	controller::owner_single_use(wallet.clone(), |api| {
@@ -699,7 +699,7 @@ pub struct CancelArgs {
 }
 
 pub fn cancel(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: CancelArgs,
 ) -> Result<(), Error> {
 	controller::owner_single_use(wallet.clone(), |api| {
@@ -719,7 +719,7 @@ pub fn cancel(
 }
 
 pub fn restore(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 ) -> Result<(), Error> {
 	controller::owner_single_use(wallet.clone(), |api| {
 		let result = api.restore();
@@ -744,7 +744,7 @@ pub struct CheckArgs {
 }
 
 pub fn check_repair(
-	wallet: Arc<Mutex<dyn WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
+	wallet: Arc<Mutex<WalletInst<impl NodeClient + 'static, keychain::ExtKeychain>>>,
 	args: CheckArgs,
 ) -> Result<(), Error> {
 	controller::owner_single_use(wallet.clone(), |api| {
