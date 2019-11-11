@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(bare_trait_objects)]
+
 //! JSON-RPC Stub generation for the Foreign API
+
+// easy_jsonrpc::rpc produce bare_trait_objects. Let's disable the warnings
+#![allow(bare_trait_objects)]
 
 use crate::keychain::Keychain;
 use crate::libwallet::{
