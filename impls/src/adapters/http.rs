@@ -32,7 +32,7 @@ impl HTTPWalletCommAdapter {
 	}
 
 	/// Check version of the other wallet
-	fn check_other_version(&self, url: &str) -> Result<(), Error> {
+	fn _check_other_version(&self, url: &str) -> Result<(), Error> {
 		let req = json!({
 			"jsonrpc": "2.0",
 			"method": "check_version",
@@ -106,7 +106,7 @@ impl WalletCommAdapter for HTTPWalletCommAdapter {
 		let url = format!("{}/v2/foreign", dest);
 		debug!("Posting transaction slate to {}", url);
 
-		self.check_other_version(&url)?;
+		//self.check_other_version(&url)?;
 
 		// Note: not using easy-jsonrpc as don't want the dependencies in this crate
 		let req = json!({
