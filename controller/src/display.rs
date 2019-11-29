@@ -153,6 +153,7 @@ pub fn txs(
 		bMG->"Shared Transaction Id",
 		bMG->"Creation Time",
 		bMG->"Confirmed?",
+		bMG->"Height",
 		bMG->"Confirmation Time",
 		bMG->"Num. \nInputs",
 		bMG->"Num. \nOutputs",
@@ -176,6 +177,7 @@ pub fn txs(
 			None => "None".to_owned(),
 		};
 		let confirmed = format!("{}", t.confirmed);
+		let height = if t.confirmed && t.output_height>0 { format!("{}",t.output_height) } else { "".to_string() };
 		let num_inputs = format!("{}", t.num_inputs);
 		let num_outputs = format!("{}", t.num_outputs);
 		let amount_debited_str = core::amount_to_hr_string(t.amount_debited, true);
@@ -203,6 +205,7 @@ pub fn txs(
 				bFC->slate_id,
 				bFB->creation_ts,
 				bFC->confirmed,
+				bFC->height,
 				bFB->confirmation_ts,
 				bFC->num_inputs,
 				bFC->num_outputs,
@@ -220,6 +223,7 @@ pub fn txs(
 					bFD->slate_id,
 					bFB->creation_ts,
 					bFg->confirmed,
+					bFg->height,
 					bFB->confirmation_ts,
 					bFD->num_inputs,
 					bFD->num_outputs,
@@ -236,6 +240,7 @@ pub fn txs(
 					bFD->slate_id,
 					bFB->creation_ts,
 					bFR->confirmed,
+					bFR->height,
 					bFB->confirmation_ts,
 					bFD->num_inputs,
 					bFD->num_outputs,

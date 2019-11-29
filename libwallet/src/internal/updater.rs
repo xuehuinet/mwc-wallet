@@ -276,6 +276,7 @@ where
 								log_id,
 							);
 							t.confirmed = true;
+							t.output_height = output.height;
 							t.amount_credited = output.value;
 							t.amount_debited = 0;
 							t.num_outputs = 1;
@@ -294,6 +295,7 @@ where
 							if let Some(mut t) = tx {
 								t.update_confirmation_ts();
 								t.confirmed = true;
+								t.output_height = output.height;
 								batch.save_tx_log_entry(t, &parent_key_id)?;
 							}
 						}
