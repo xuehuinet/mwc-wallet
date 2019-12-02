@@ -177,7 +177,11 @@ pub fn txs(
 			None => "None".to_owned(),
 		};
 		let confirmed = format!("{}", t.confirmed);
-		let height = if t.confirmed && t.output_height>0 { format!("{}",t.output_height) } else { "".to_string() };
+		let height = if t.confirmed && t.output_height > 0 {
+			format!("{}", t.output_height)
+		} else {
+			"".to_string()
+		};
 		let num_inputs = format!("{}", t.num_inputs);
 		let num_outputs = format!("{}", t.num_outputs);
 		let amount_debited_str = core::amount_to_hr_string(t.amount_debited, true);

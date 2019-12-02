@@ -656,7 +656,7 @@ pub struct TxLogEntry {
 	/// confirmed, or none should be; otherwise there's a deeper problem)
 	pub confirmed: bool,
 	/// height of confirmed output.
-    /// Users want to see that in there transaction list
+	/// Users want to see that in there transaction list
 	#[serde(default = "TxLogEntry::default_output_height")]
 	pub output_height: u64,
 	/// number of inputs involved in TX
