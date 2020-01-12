@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,19 @@ use crate::error::{Error, ErrorKind};
 use crate::grin_core::core::amount_to_hr_string;
 use crate::grin_core::core::committed::Committed;
 use crate::grin_core::core::transaction::{
-	kernel_features, kernel_sig_msg, Input, Output, Transaction, TransactionBody, TxKernel,
-	Weighting,
+	Input, KernelFeatures, Output, Transaction, TransactionBody, TxKernel, Weighting,
 };
 use crate::grin_core::core::verifier_cache::LruVerifierCache;
 use crate::grin_core::libtx::{aggsig, build, proof::ProofBuild, secp_ser, tx_fee};
 use crate::grin_core::map_vec;
 use crate::grin_keychain::{BlindSum, BlindingFactor, Keychain};
 use crate::grin_util::secp::key::{PublicKey, SecretKey};
+use crate::grin_util::secp::pedersen::Commitment;
 use crate::grin_util::secp::Signature;
 use crate::grin_util::{self, secp, RwLock};
+use crate::slate_versions::ser as dalek_ser;
+use ed25519_dalek::PublicKey as DalekPublicKey;
+use ed25519_dalek::Signature as DalekSignature;
 use failure::ResultExt;
 use rand::rngs::mock::StepRng;
 use rand::thread_rng;
@@ -39,11 +42,23 @@ use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::slate_versions::v2::{
-	InputV2, OutputV2, ParticipantDataV2, SlateV2, TransactionBodyV2, TransactionV2, TxKernelV2,
-	VersionCompatInfoV2,
+use crate::slate_versions::v2::SlateV2;
+use crate::slate_versions::v3::{
+	CoinbaseV3, InputV3, OutputV3, ParticipantDataV3, PaymentInfoV3, SlateV3, TransactionBodyV3,
+	TransactionV3, TxKernelV3, VersionCompatInfoV3,
 };
 use crate::slate_versions::{CURRENT_SLATE_VERSION, GRIN_BLOCK_HEADER_VERSION};
+use crate::types::CbData;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PaymentInfo {
+	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
+	pub sender_address: DalekPublicKey,
+	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
+	pub receiver_address: DalekPublicKey,
+	#[serde(with = "dalek_ser::option_dalek_sig_serde")]
+	pub receiver_signature: Option<DalekSignature>,
+}
 
 /// Public data for each participant in the slate
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -170,12 +185,23 @@ pub struct Slate {
 	/// Lock height
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub lock_height: u64,
+	/// TTL, the block height at which wallets
+	/// should refuse to process the transaction and unlock all
+	/// associated outputs
+	#[serde(with = "secp_ser::opt_string_or_u64")]
+	pub ttl_cutoff_height: Option<u64>,
 	/// Participant data, each participant in the transaction will
 	/// insert their public data here. For now, 0 is sender and 1
 	/// is receiver, though this will change for multi-party
 	pub participant_data: Vec<ParticipantData>,
+	/// Payment Proof
+	#[serde(default = "default_payment_none")]
+	pub payment_proof: Option<PaymentInfo>,
 }
 
+fn default_payment_none() -> Option<PaymentInfo> {
+	None
+}
 /// Versioning and compatibility info about this slate
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VersionCompatInfo {
@@ -205,18 +231,16 @@ impl Slate {
 	/// Recieve a slate, upgrade it to the latest version internally
 	pub fn deserialize_upgrade(slate_json: &str) -> Result<Slate, Error> {
 		let version = Slate::parse_slate_version(slate_json)?;
-		let v2: SlateV2 = match version {
-			2 => serde_json::from_str(slate_json).context(ErrorKind::SlateDeser)?,
-			// left as a reminder
-			/*0 => {
-				let v0: SlateV0 =
+		let v3: SlateV3 = match version {
+			3 => serde_json::from_str(slate_json).context(ErrorKind::SlateDeser)?,
+			2 => {
+				let v2: SlateV2 =
 					serde_json::from_str(slate_json).context(ErrorKind::SlateDeser)?;
-				let v1 = SlateV1::from(v0);
-				SlateV2::from(v1)
-			}*/
+				SlateV3::from(v2)
+			}
 			_ => return Err(ErrorKind::SlateVersion(version).into()),
 		};
-		Ok(v2.into())
+		Ok(v3.into())
 	}
 
 	/// Create a new slate
@@ -229,12 +253,14 @@ impl Slate {
 			fee: 0,
 			height: 0,
 			lock_height: 0,
+			ttl_cutoff_height: None,
 			participant_data: vec![],
 			version_info: VersionCompatInfo {
 				version: CURRENT_SLATE_VERSION,
 				orig_version: CURRENT_SLATE_VERSION,
 				block_header_version: GRIN_BLOCK_HEADER_VERSION,
 			},
+			payment_proof: None,
 		}
 	}
 
@@ -244,19 +270,26 @@ impl Slate {
 		&mut self,
 		keychain: &K,
 		builder: &B,
-		mut elems: Vec<Box<build::Append<K, B>>>,
+		elems: Vec<Box<build::Append<K, B>>>,
 	) -> Result<BlindingFactor, Error>
 	where
 		K: Keychain,
 		B: ProofBuild,
 	{
-		// Append to the exiting transaction
-		if self.tx.kernels().len() != 0 {
-			elems.insert(0, build::initial_tx(self.tx.clone()));
-		}
-		let (tx, blind) = build::partial_transaction(elems, keychain, builder)?;
+		self.update_kernel();
+		let (tx, blind) = build::partial_transaction(self.tx.clone(), elems, keychain, builder)?;
 		self.tx = tx;
 		Ok(blind)
+	}
+
+	/// Update the tx kernel based on kernel features derived from the current slate.
+	/// The fee may change as we build a transaction and we need to
+	/// update the tx kernel to reflect this during the tx building process.
+	pub fn update_kernel(&mut self) {
+		self.tx = self
+			.tx
+			.clone()
+			.replace_kernel(TxKernel::with_features(self.kernel_features()));
 	}
 
 	/// Completes callers part of round 1, adding public key info
@@ -289,12 +322,22 @@ impl Slate {
 		Ok(())
 	}
 
+	// Construct the appropriate kernel features based on our fee and lock_height.
+	// If lock_height is 0 then its a plain kernel, otherwise its a height locked kernel.
+	fn kernel_features(&self) -> KernelFeatures {
+		match self.lock_height {
+			0 => KernelFeatures::Plain { fee: self.fee },
+			_ => KernelFeatures::HeightLocked {
+				fee: self.fee,
+				lock_height: self.lock_height,
+			},
+		}
+	}
+
 	// This is the msg that we will sign as part of the tx kernel.
-	// Currently includes the fee and the lock_height.
+	// If lock_height is 0 then build a plain kernel, otherwise build a height locked kernel.
 	fn msg_to_sign(&self) -> Result<secp::Message, Error> {
-		// Currently we only support interactively creating a tx with a "default" kernel.
-		let features = kernel_features(self.lock_height);
-		let msg = kernel_sig_msg(self.fee, self.lock_height, features)?;
+		let msg = self.kernel_features().kernel_sig_msg()?;
 		Ok(msg)
 	}
 
@@ -495,6 +538,7 @@ impl Slate {
 			self.tx.kernels().len(),
 			None,
 		);
+
 		if fee > self.tx.fee() {
 			return Err(ErrorKind::Fee(
 				format!("Fee Dispute Error: {}, {}", self.tx.fee(), fee,).to_string(),
@@ -617,6 +661,25 @@ impl Slate {
 		Ok(final_sig)
 	}
 
+	/// return the final excess
+	pub fn calc_excess<K>(&self, keychain: &K) -> Result<Commitment, Error>
+	where
+		K: Keychain,
+	{
+		let kernel_offset = &self.tx.offset;
+		let tx = self.tx.clone();
+		let overage = tx.fee() as i64;
+		let tx_excess = tx.sum_commitments(overage)?;
+
+		// subtract the kernel_excess (built from kernel_offset)
+		let offset_excess = keychain
+			.secp()
+			.commit(0, kernel_offset.secret_key(&keychain.secp())?)?;
+		Ok(keychain
+			.secp()
+			.commit_sum(vec![tx_excess], vec![offset_excess])?)
+	}
+
 	/// builds a final transaction after the aggregated sig exchange
 	fn finalize_transaction<K>(
 		&mut self,
@@ -626,26 +689,13 @@ impl Slate {
 	where
 		K: Keychain,
 	{
-		let kernel_offset = &self.tx.offset;
-
 		self.check_fees()?;
+		// build the final excess based on final tx and offset
+		let final_excess = self.calc_excess(keychain)?;
+
+		debug!("Final Tx excess: {:?}", final_excess);
 
 		let mut final_tx = self.tx.clone();
-
-		// build the final excess based on final tx and offset
-		let final_excess = {
-			// sum the input/output commitments on the final tx
-			let overage = final_tx.fee() as i64;
-			let tx_excess = final_tx.sum_commitments(overage)?;
-
-			// subtract the kernel_excess (built from kernel_offset)
-			let offset_excess = keychain
-				.secp()
-				.commit(0, kernel_offset.secret_key(&keychain.secp())?)?;
-			keychain
-				.secp()
-				.commit_sum(vec![tx_excess], vec![offset_excess])?
-		};
 
 		// update the tx kernel to reflect the offset excess and sig
 		assert_eq!(final_tx.kernels().len(), 1);
@@ -673,15 +723,14 @@ impl Serialize for Slate {
 	{
 		use serde::ser::Error;
 
-		let v2 = SlateV2::from(self);
+		let v3 = SlateV3::from(self);
 		match self.version_info.orig_version {
-			2 => v2.serialize(serializer),
+			3 => v3.serialize(serializer),
 			// left as a reminder
-			/*0 => {
-				let v1 = SlateV1::from(v2);
-				let v0 = SlateV0::from(v1);
-				v0.serialize(serializer)
-			}*/
+			2 => {
+				let v2 = SlateV2::from(&v3);
+				v2.serialize(serializer)
+			}
 			v => Err(S::Error::custom(format!("Unknown slate version {}", v))),
 		}
 	}
@@ -707,41 +756,22 @@ impl SlateVersionProbe {
 	}
 }
 
-// Current slate version to versioned conversions
-
-// Slate to versioned
-impl From<Slate> for SlateV2 {
-	fn from(slate: Slate) -> SlateV2 {
-		let Slate {
-			num_participants,
-			id,
-			tx,
-			amount,
-			fee,
-			height,
-			lock_height,
-			participant_data,
-			version_info,
-		} = slate;
-		let participant_data = map_vec!(participant_data, |data| ParticipantDataV2::from(data));
-		let version_info = VersionCompatInfoV2::from(&version_info);
-		let tx = TransactionV2::from(tx);
-		SlateV2 {
-			num_participants,
-			id,
-			tx,
-			amount,
-			fee,
-			height,
-			lock_height,
-			participant_data,
-			version_info,
+// Coinbase data to versioned.
+impl From<CbData> for CoinbaseV3 {
+	fn from(cb: CbData) -> CoinbaseV3 {
+		CoinbaseV3 {
+			output: OutputV3::from(&cb.output),
+			kernel: TxKernelV3::from(&cb.kernel),
+			key_id: cb.key_id,
 		}
 	}
 }
 
-impl From<&Slate> for SlateV2 {
-	fn from(slate: &Slate) -> SlateV2 {
+// Current slate version to versioned conversions
+
+// Slate to versioned
+impl From<Slate> for SlateV3 {
+	fn from(slate: Slate) -> SlateV3 {
 		let Slate {
 			num_participants,
 			id,
@@ -750,19 +780,64 @@ impl From<&Slate> for SlateV2 {
 			fee,
 			height,
 			lock_height,
+			ttl_cutoff_height,
 			participant_data,
 			version_info,
+			payment_proof,
+		} = slate;
+		let participant_data = map_vec!(participant_data, |data| ParticipantDataV3::from(data));
+		let version_info = VersionCompatInfoV3::from(&version_info);
+		let payment_proof = match payment_proof {
+			Some(p) => Some(PaymentInfoV3::from(&p)),
+			None => None,
+		};
+		let tx = TransactionV3::from(tx);
+		SlateV3 {
+			num_participants,
+			id,
+			tx,
+			amount,
+			fee,
+			height,
+			lock_height,
+			ttl_cutoff_height,
+			participant_data,
+			version_info,
+			payment_proof,
+		}
+	}
+}
+
+impl From<&Slate> for SlateV3 {
+	fn from(slate: &Slate) -> SlateV3 {
+		let Slate {
+			num_participants,
+			id,
+			tx,
+			amount,
+			fee,
+			height,
+			lock_height,
+			ttl_cutoff_height,
+			participant_data,
+			version_info,
+			payment_proof,
 		} = slate;
 		let num_participants = *num_participants;
 		let id = *id;
-		let tx = TransactionV2::from(tx);
+		let tx = TransactionV3::from(tx);
 		let amount = *amount;
 		let fee = *fee;
 		let height = *height;
 		let lock_height = *lock_height;
-		let participant_data = map_vec!(participant_data, |data| ParticipantDataV2::from(data));
-		let version_info = VersionCompatInfoV2::from(version_info);
-		SlateV2 {
+		let ttl_cutoff_height = *ttl_cutoff_height;
+		let participant_data = map_vec!(participant_data, |data| ParticipantDataV3::from(data));
+		let version_info = VersionCompatInfoV3::from(version_info);
+		let payment_proof = match payment_proof {
+			Some(p) => Some(PaymentInfoV3::from(p)),
+			None => None,
+		};
+		SlateV3 {
 			num_participants,
 			id,
 			tx,
@@ -770,14 +845,16 @@ impl From<&Slate> for SlateV2 {
 			fee,
 			height,
 			lock_height,
+			ttl_cutoff_height,
 			participant_data,
 			version_info,
+			payment_proof,
 		}
 	}
 }
 
-impl From<&ParticipantData> for ParticipantDataV2 {
-	fn from(data: &ParticipantData) -> ParticipantDataV2 {
+impl From<&ParticipantData> for ParticipantDataV3 {
+	fn from(data: &ParticipantData) -> ParticipantDataV3 {
 		let ParticipantData {
 			id,
 			public_blind_excess,
@@ -792,7 +869,7 @@ impl From<&ParticipantData> for ParticipantDataV2 {
 		let part_sig = *part_sig;
 		let message: Option<String> = message.as_ref().map(|t| String::from(&**t));
 		let message_sig = *message_sig;
-		ParticipantDataV2 {
+		ParticipantDataV3 {
 			id,
 			public_blind_excess,
 			public_nonce,
@@ -803,8 +880,8 @@ impl From<&ParticipantData> for ParticipantDataV2 {
 	}
 }
 
-impl From<&VersionCompatInfo> for VersionCompatInfoV2 {
-	fn from(data: &VersionCompatInfo) -> VersionCompatInfoV2 {
+impl From<&VersionCompatInfo> for VersionCompatInfoV3 {
+	fn from(data: &VersionCompatInfo) -> VersionCompatInfoV3 {
 		let VersionCompatInfo {
 			version,
 			orig_version,
@@ -813,7 +890,7 @@ impl From<&VersionCompatInfo> for VersionCompatInfoV2 {
 		let version = *version;
 		let orig_version = *orig_version;
 		let block_header_version = *block_header_version;
-		VersionCompatInfoV2 {
+		VersionCompatInfoV3 {
 			version,
 			orig_version,
 			block_header_version,
@@ -821,35 +898,53 @@ impl From<&VersionCompatInfo> for VersionCompatInfoV2 {
 	}
 }
 
-impl From<Transaction> for TransactionV2 {
-	fn from(tx: Transaction) -> TransactionV2 {
-		let Transaction { offset, body } = tx;
-		let body = TransactionBodyV2::from(&body);
-		TransactionV2 { offset, body }
+impl From<&PaymentInfo> for PaymentInfoV3 {
+	fn from(data: &PaymentInfo) -> PaymentInfoV3 {
+		let PaymentInfo {
+			sender_address,
+			receiver_address,
+			receiver_signature,
+		} = data;
+		let sender_address = *sender_address;
+		let receiver_address = *receiver_address;
+		let receiver_signature = *receiver_signature;
+		PaymentInfoV3 {
+			sender_address,
+			receiver_address,
+			receiver_signature,
+		}
 	}
 }
 
-impl From<&Transaction> for TransactionV2 {
-	fn from(tx: &Transaction) -> TransactionV2 {
+impl From<Transaction> for TransactionV3 {
+	fn from(tx: Transaction) -> TransactionV3 {
+		let Transaction { offset, body } = tx;
+		let body = TransactionBodyV3::from(&body);
+		TransactionV3 { offset, body }
+	}
+}
+
+impl From<&Transaction> for TransactionV3 {
+	fn from(tx: &Transaction) -> TransactionV3 {
 		let Transaction { offset, body } = tx;
 		let offset = offset.clone();
-		let body = TransactionBodyV2::from(body);
-		TransactionV2 { offset, body }
+		let body = TransactionBodyV3::from(body);
+		TransactionV3 { offset, body }
 	}
 }
 
-impl From<&TransactionBody> for TransactionBodyV2 {
-	fn from(body: &TransactionBody) -> TransactionBodyV2 {
+impl From<&TransactionBody> for TransactionBodyV3 {
+	fn from(body: &TransactionBody) -> TransactionBodyV3 {
 		let TransactionBody {
 			inputs,
 			outputs,
 			kernels,
 		} = body;
 
-		let inputs = map_vec!(inputs, |inp| InputV2::from(inp));
-		let outputs = map_vec!(outputs, |out| OutputV2::from(out));
-		let kernels = map_vec!(kernels, |kern| TxKernelV2::from(kern));
-		TransactionBodyV2 {
+		let inputs = map_vec!(inputs, |inp| InputV3::from(inp));
+		let outputs = map_vec!(outputs, |out| OutputV3::from(out));
+		let kernels = map_vec!(kernels, |kern| TxKernelV3::from(kern));
+		TransactionBodyV3 {
 			inputs,
 			outputs,
 			kernels,
@@ -857,21 +952,21 @@ impl From<&TransactionBody> for TransactionBodyV2 {
 	}
 }
 
-impl From<&Input> for InputV2 {
-	fn from(input: &Input) -> InputV2 {
+impl From<&Input> for InputV3 {
+	fn from(input: &Input) -> InputV3 {
 		let Input { features, commit } = *input;
-		InputV2 { features, commit }
+		InputV3 { features, commit }
 	}
 }
 
-impl From<&Output> for OutputV2 {
-	fn from(output: &Output) -> OutputV2 {
+impl From<&Output> for OutputV3 {
+	fn from(output: &Output) -> OutputV3 {
 		let Output {
 			features,
 			commit,
 			proof,
 		} = *output;
-		OutputV2 {
+		OutputV3 {
 			features,
 			commit,
 			proof,
@@ -879,29 +974,29 @@ impl From<&Output> for OutputV2 {
 	}
 }
 
-impl From<&TxKernel> for TxKernelV2 {
-	fn from(kernel: &TxKernel) -> TxKernelV2 {
-		let TxKernel {
+impl From<&TxKernel> for TxKernelV3 {
+	fn from(kernel: &TxKernel) -> TxKernelV3 {
+		let (features, fee, lock_height) = match kernel.features {
+			KernelFeatures::Plain { fee } => (CompatKernelFeatures::Plain, fee, 0),
+			KernelFeatures::Coinbase => (CompatKernelFeatures::Coinbase, 0, 0),
+			KernelFeatures::HeightLocked { fee, lock_height } => {
+				(CompatKernelFeatures::HeightLocked, fee, lock_height)
+			}
+		};
+		TxKernelV3 {
 			features,
 			fee,
 			lock_height,
-			excess,
-			excess_sig,
-		} = *kernel;
-		TxKernelV2 {
-			features,
-			fee,
-			lock_height,
-			excess,
-			excess_sig,
+			excess: kernel.excess,
+			excess_sig: kernel.excess_sig,
 		}
 	}
 }
 
 // Versioned to current slate
-impl From<SlateV2> for Slate {
-	fn from(slate: SlateV2) -> Slate {
-		let SlateV2 {
+impl From<SlateV3> for Slate {
+	fn from(slate: SlateV3) -> Slate {
+		let SlateV3 {
 			num_participants,
 			id,
 			tx,
@@ -909,11 +1004,17 @@ impl From<SlateV2> for Slate {
 			fee,
 			height,
 			lock_height,
+			ttl_cutoff_height,
 			participant_data,
 			version_info,
+			payment_proof,
 		} = slate;
 		let participant_data = map_vec!(participant_data, |data| ParticipantData::from(data));
 		let version_info = VersionCompatInfo::from(&version_info);
+		let payment_proof = match payment_proof {
+			Some(p) => Some(PaymentInfo::from(&p)),
+			None => None,
+		};
 		let tx = Transaction::from(tx);
 		Slate {
 			num_participants,
@@ -923,15 +1024,17 @@ impl From<SlateV2> for Slate {
 			fee,
 			height,
 			lock_height,
+			ttl_cutoff_height,
 			participant_data,
 			version_info,
+			payment_proof,
 		}
 	}
 }
 
-impl From<&ParticipantDataV2> for ParticipantData {
-	fn from(data: &ParticipantDataV2) -> ParticipantData {
-		let ParticipantDataV2 {
+impl From<&ParticipantDataV3> for ParticipantData {
+	fn from(data: &ParticipantDataV3) -> ParticipantData {
+		let ParticipantDataV3 {
 			id,
 			public_blind_excess,
 			public_nonce,
@@ -956,9 +1059,9 @@ impl From<&ParticipantDataV2> for ParticipantData {
 	}
 }
 
-impl From<&VersionCompatInfoV2> for VersionCompatInfo {
-	fn from(data: &VersionCompatInfoV2) -> VersionCompatInfo {
-		let VersionCompatInfoV2 {
+impl From<&VersionCompatInfoV3> for VersionCompatInfo {
+	fn from(data: &VersionCompatInfoV3) -> VersionCompatInfo {
+		let VersionCompatInfoV3 {
 			version,
 			orig_version,
 			block_header_version,
@@ -974,17 +1077,35 @@ impl From<&VersionCompatInfoV2> for VersionCompatInfo {
 	}
 }
 
-impl From<TransactionV2> for Transaction {
-	fn from(tx: TransactionV2) -> Transaction {
-		let TransactionV2 { offset, body } = tx;
+impl From<&PaymentInfoV3> for PaymentInfo {
+	fn from(data: &PaymentInfoV3) -> PaymentInfo {
+		let PaymentInfoV3 {
+			sender_address,
+			receiver_address,
+			receiver_signature,
+		} = data;
+		let sender_address = *sender_address;
+		let receiver_address = *receiver_address;
+		let receiver_signature = *receiver_signature;
+		PaymentInfo {
+			sender_address,
+			receiver_address,
+			receiver_signature,
+		}
+	}
+}
+
+impl From<TransactionV3> for Transaction {
+	fn from(tx: TransactionV3) -> Transaction {
+		let TransactionV3 { offset, body } = tx;
 		let body = TransactionBody::from(&body);
 		Transaction { offset, body }
 	}
 }
 
-impl From<&TransactionBodyV2> for TransactionBody {
-	fn from(body: &TransactionBodyV2) -> TransactionBody {
-		let TransactionBodyV2 {
+impl From<&TransactionBodyV3> for TransactionBody {
+	fn from(body: &TransactionBodyV3) -> TransactionBody {
+		let TransactionBodyV3 {
 			inputs,
 			outputs,
 			kernels,
@@ -1001,16 +1122,16 @@ impl From<&TransactionBodyV2> for TransactionBody {
 	}
 }
 
-impl From<&InputV2> for Input {
-	fn from(input: &InputV2) -> Input {
-		let InputV2 { features, commit } = *input;
+impl From<&InputV3> for Input {
+	fn from(input: &InputV3) -> Input {
+		let InputV3 { features, commit } = *input;
 		Input { features, commit }
 	}
 }
 
-impl From<&OutputV2> for Output {
-	fn from(output: &OutputV2) -> Output {
-		let OutputV2 {
+impl From<&OutputV3> for Output {
+	fn from(output: &OutputV3) -> Output {
+		let OutputV3 {
 			features,
 			commit,
 			proof,
@@ -1023,21 +1144,25 @@ impl From<&OutputV2> for Output {
 	}
 }
 
-impl From<&TxKernelV2> for TxKernel {
-	fn from(kernel: &TxKernelV2) -> TxKernel {
-		let TxKernelV2 {
-			features,
-			fee,
-			lock_height,
-			excess,
-			excess_sig,
-		} = *kernel;
+impl From<&TxKernelV3> for TxKernel {
+	fn from(kernel: &TxKernelV3) -> TxKernel {
+		let (fee, lock_height) = (kernel.fee, kernel.lock_height);
+		let features = match kernel.features {
+			CompatKernelFeatures::Plain => KernelFeatures::Plain { fee },
+			CompatKernelFeatures::Coinbase => KernelFeatures::Coinbase,
+			CompatKernelFeatures::HeightLocked => KernelFeatures::HeightLocked { fee, lock_height },
+		};
 		TxKernel {
 			features,
-			fee,
-			lock_height,
-			excess,
-			excess_sig,
+			excess: kernel.excess,
+			excess_sig: kernel.excess_sig,
 		}
 	}
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub enum CompatKernelFeatures {
+	Plain,
+	Coinbase,
+	HeightLocked,
 }

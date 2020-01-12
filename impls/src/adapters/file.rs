@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,56 +16,43 @@
 use std::fs::File;
 use std::io::{Read, Write};
 
-use crate::config::WalletConfig;
-use crate::libwallet::{Error, ErrorKind, Slate};
-use crate::WalletCommAdapter;
-use std::collections::HashMap;
+use crate::libwallet::{Error, ErrorKind, Slate, SlateVersion, VersionedSlate};
+use crate::{SlateGetter, SlatePutter};
+use std::path::PathBuf;
 
 #[derive(Clone)]
-pub struct FileWalletCommAdapter {}
+pub struct PathToSlate(pub PathBuf);
 
-impl FileWalletCommAdapter {
-	/// Create
-	pub fn new() -> Box<dyn WalletCommAdapter> {
-		Box::new(FileWalletCommAdapter {})
-	}
-}
-
-impl WalletCommAdapter for FileWalletCommAdapter {
-	fn supports_sync(&self) -> bool {
-		false
-	}
-
-	fn send_tx_sync(&self, _dest: &str, _slate: &Slate) -> Result<Slate, Error> {
-		unimplemented!();
-	}
-
-	fn send_tx_async(&self, dest: &str, slate: &Slate) -> Result<(), Error> {
-		let mut pub_tx = File::create(dest)?;
+impl SlatePutter for PathToSlate {
+	fn put_tx(&self, slate: &Slate) -> Result<(), Error> {
+		let mut pub_tx = File::create(&self.0)?;
+		let out_slate = {
+			if slate.payment_proof.is_some() || slate.ttl_cutoff_height.is_some() {
+				warn!("Transaction contains features that require mwc-wallet 3.0.0 or later");
+				warn!("Please ensure the other party is running mwc-wallet v3.0.0 or later before sending");
+				VersionedSlate::into_version(slate.clone(), SlateVersion::V3)
+			} else {
+				let mut s = slate.clone();
+				s.version_info.version = 2;
+				s.version_info.orig_version = 2;
+				VersionedSlate::into_version(s, SlateVersion::V2)
+			}
+		};
 		pub_tx.write_all(
-			serde_json::to_string(slate)
+			serde_json::to_string(&out_slate)
 				.map_err(|_| ErrorKind::SlateSer)?
 				.as_bytes(),
 		)?;
 		pub_tx.sync_all()?;
 		Ok(())
 	}
+}
 
-	fn receive_tx_async(&self, params: &str) -> Result<Slate, Error> {
-		let mut pub_tx_f = File::open(params)?;
+impl SlateGetter for PathToSlate {
+	fn get_tx(&self) -> Result<Slate, Error> {
+		let mut pub_tx_f = File::open(&self.0)?;
 		let mut content = String::new();
 		pub_tx_f.read_to_string(&mut content)?;
 		Ok(Slate::deserialize_upgrade(&content)?)
-	}
-
-	fn listen(
-		&self,
-		_params: HashMap<String, String>,
-		_config: WalletConfig,
-		_passphrase: &str,
-		_account: &str,
-		_node_api_secret: Option<String>,
-	) -> Result<(), Error> {
-		unimplemented!();
 	}
 }

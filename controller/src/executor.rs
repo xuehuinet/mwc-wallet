@@ -19,7 +19,7 @@ pub struct RunHandlerInThread {
 
 	// Need option because join require ownership transfer. That is why can't belong to 'self' dicertly
 	// (State, Result<Response<Body>>)  - resulting from API call as required by gotham
-	worker_thread: Option<thread::JoinHandle<(Result<serde_json::Value, Error>)>>,
+	worker_thread: Option<thread::JoinHandle<Result<serde_json::Value, Error>>>,
 }
 
 impl RunHandlerInThread {

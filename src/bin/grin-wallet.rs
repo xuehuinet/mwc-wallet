@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,12 +24,12 @@ use crate::core::global;
 use crate::util::init_logger;
 use clap::App;
 use grin_wallet_config as config;
-use grin_wallet_util::grin_api as api;
+use grin_wallet_impls::HTTPNodeClient;
 use grin_wallet_util::grin_core as core;
 use grin_wallet_util::grin_util as util;
-use std::process::exit;
+use std::env;
 
-mod cmd;
+use mwc_wallet::cmd;
 
 // include build information
 pub mod built_info {
@@ -68,7 +68,9 @@ fn main() {
 
 fn real_main() -> i32 {
 	let yml = load_yaml!("mwc-wallet.yml");
-	let args = App::from_yaml(yml).get_matches();
+	let args = App::from_yaml(yml)
+		.version(built_info::PKG_VERSION)
+		.get_matches();
 
 	let chain_type = if args.is_present("floonet") {
 		global::ChainTypes::Floonet
@@ -78,43 +80,41 @@ fn real_main() -> i32 {
 		global::ChainTypes::Mainnet
 	};
 
-	// Deal with configuration file creation
+	let mut current_dir = None;
+
+	// special cases for certain lifecycle commands
 	match args.subcommand() {
-		// wallet init command should spit out its config file then continue
-		// (if desired)
 		("init", Some(init_args)) => {
 			if init_args.is_present("here") {
-				cmd::config_command_wallet(&chain_type, config::WALLET_CONFIG_FILE_NAME);
+				current_dir = Some(env::current_dir().unwrap_or_else(|e| {
+					panic!("Error creating config file: {}", e);
+				}));
 			}
 		}
 		_ => {}
 	}
 
 	// Load relevant config, try and load a wallet config file
-	let mut w = config::initial_setup_wallet(&chain_type).unwrap_or_else(|e| {
+	// Use defaults for configuration if config file not found anywhere
+	let mut config = config::initial_setup_wallet(&chain_type, current_dir).unwrap_or_else(|e| {
 		panic!("Error loading wallet configuration: {}", e);
 	});
 
-	if !cmd::seed_exists(w.members.as_ref().unwrap().wallet.clone()) {
-		if "init" == args.subcommand().0 || "recover" == args.subcommand().0 {
-		} else {
-			println!("Wallet seed file doesn't exist. Run `mwc-wallet init` first");
-			exit(1);
-		}
-	}
+	//config.members.as_mut().unwrap().wallet.chain_type = Some(chain_type);
 
 	// Load logging config
-	let l = w.members.as_mut().unwrap().logging.clone().unwrap();
-	init_logger(Some(l));
+	let l = config.members.as_mut().unwrap().logging.clone().unwrap();
+	init_logger(Some(l), None);
 	info!(
 		"Using wallet configuration file at {}",
-		w.config_file_path.as_ref().unwrap().to_str().unwrap()
+		config.config_file_path.as_ref().unwrap().to_str().unwrap()
 	);
 
 	log_build_info();
 
 	global::set_mining_mode(
-		w.members
+		config
+			.members
 			.as_ref()
 			.unwrap()
 			.wallet
@@ -124,5 +124,8 @@ fn real_main() -> i32 {
 			.clone(),
 	);
 
-	cmd::wallet_command(&args, w)
+	let wallet_config = config.clone().members.unwrap().wallet;
+	let node_client = HTTPNodeClient::new(&wallet_config.check_node_api_http_addr, None);
+
+	cmd::wallet_command(&args, config, node_client)
 }

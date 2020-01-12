@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Contains V2 of the slate (grin-wallet 1.1.0)
+//! Contains V2 of the slate (mwc-wallet 1.1.0)
 //! Changes from V1:
 //! * ParticipantData struct fields serialized as hex strings instead of arrays:
 //!    * public_blind_excess
@@ -35,13 +35,16 @@
 //!    orig_version: u16,
 //!    block_header_version: u16,
 
-use crate::grin_core::core::transaction::{KernelFeatures, OutputFeatures};
+use crate::grin_core::core::transaction::OutputFeatures;
 use crate::grin_core::libtx::secp_ser;
-use crate::grin_keychain::BlindingFactor;
+use crate::grin_keychain::{BlindingFactor, Identifier};
 use crate::grin_util::secp;
 use crate::grin_util::secp::key::PublicKey;
 use crate::grin_util::secp::pedersen::{Commitment, RangeProof};
 use crate::grin_util::secp::Signature;
+use crate::slate::CompatKernelFeatures;
+use crate::slate_versions::v3::{OutputV3, TxKernelV3};
+use crate::types::CbData;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -162,7 +165,7 @@ pub struct OutputV2 {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TxKernelV2 {
 	/// Options for a kernel's structure or use
-	pub features: KernelFeatures,
+	pub features: CompatKernelFeatures,
 	/// Fee originally included in the transaction this proof is for.
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub fee: u64,
@@ -182,4 +185,30 @@ pub struct TxKernelV2 {
 	/// the transaction fee.
 	#[serde(with = "secp_ser::sig_serde")]
 	pub excess_sig: secp::Signature,
+}
+
+/// A mining node requests new coinbase via the foreign api every time a new candidate block is built.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CoinbaseV2 {
+	/// Output
+	pub output: OutputV2,
+	/// Kernel
+	pub kernel: TxKernelV2,
+	/// Key Id
+	pub key_id: Option<Identifier>,
+}
+
+// Coinbase data to versioned.
+impl From<CbData> for CoinbaseV2 {
+	fn from(cb: CbData) -> CoinbaseV2 {
+		let output = OutputV3::from(&cb.output);
+		let output = OutputV2::from(&output);
+		let kernel = TxKernelV3::from(&cb.kernel);
+		let kernel = TxKernelV2::from(&kernel);
+		CoinbaseV2 {
+			output,
+			kernel,
+			key_id: cb.key_id,
+		}
+	}
 }
