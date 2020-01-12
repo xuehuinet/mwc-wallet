@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,5 @@ pub use grin_api;
 pub use grin_chain;
 pub use grin_core;
 pub use grin_keychain;
-pub use grin_p2p;
 pub use grin_store;
 pub use grin_util;

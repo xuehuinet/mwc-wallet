@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,14 @@
 
 //! Types specific to the wallet api, mostly argument serialization
 
-use crate::grin_core::core::{Output, TxKernel};
 use crate::grin_core::libtx::secp_ser;
 use crate::grin_keychain::Identifier;
 use crate::grin_util::secp::pedersen;
+use crate::slate_versions::ser as dalek_ser;
 use crate::slate_versions::SlateVersion;
 use crate::types::OutputData;
+
+use ed25519_dalek::PublicKey as DalekPublicKey;
 
 /// Send TX API Args
 // TODO: This is here to ensure the legacy V1 API remains intact
@@ -87,6 +89,12 @@ pub struct InitTxArgs {
 	/// down to the minimum slate version compatible with the current. If `None` the slate
 	/// is generated with the latest version.
 	pub target_slate_version: Option<u16>,
+	/// Number of blocks from current after which TX should be ignored
+	#[serde(with = "secp_ser::opt_string_or_u64")]
+	pub ttl_blocks: Option<u64>,
+	/// If set, require a payment proof for the particular recipient
+	#[serde(with = "dalek_ser::option_dalek_pubkey_serde")]
+	pub payment_proof_recipient_address: Option<DalekPublicKey>,
 	/// If true, just return an estimate of the resulting slate, containing fees and amounts
 	/// locked without actually locking outputs or creating the transaction. Note if this is set to
 	/// 'true', the amount field in the slate will contain the total amount locked, not the provided
@@ -124,7 +132,9 @@ impl Default for InitTxArgs {
 			selection_strategy_is_use_all: true,
 			message: None,
 			target_slate_version: None,
+			ttl_blocks: None,
 			estimate_only: Some(false),
+			payment_proof_recipient_address: None,
 			send_args: None,
 		}
 	}
@@ -179,17 +189,6 @@ impl BlockFees {
 	}
 }
 
-/// Response to build a coinbase output.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CbData {
-	/// Output
-	pub output: Output,
-	/// Kernel
-	pub kernel: TxKernel,
-	/// Key Id
-	pub key_id: Option<Identifier>,
-}
-
 /// Map Outputdata to commits
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OutputCommitMapping {
@@ -209,6 +208,8 @@ pub struct NodeHeightResult {
 	/// Last known height
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub height: u64,
+	/// Hash
+	pub header_hash: String,
 	/// Whether this height was updated from the node
 	pub updated_from_node: bool,
 }

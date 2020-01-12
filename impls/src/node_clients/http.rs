@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,20 +17,17 @@
 
 use futures::{stream, Stream};
 
-use crate::api::LocatedTxKernel;
+use crate::api::{self, LocatedTxKernel};
 use crate::core::core::TxKernel;
 use crate::libwallet::{NodeClient, NodeVersionInfo, TxWrapper};
-pub extern crate grin_wallet_util;
-use crate::node_clients::http::grin_wallet_util::grin_p2p::types::PeerInfoDisplay;
-use crate::util::to_hex;
+use semver::Version;
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 
-use crate::api;
-use crate::core::global;
+use crate::client_utils::Client;
 use crate::libwallet;
-use crate::util;
 use crate::util::secp::pedersen;
+use crate::util::{self, to_hex};
 
 #[derive(Clone)]
 pub struct HTTPNodeClient {
@@ -50,8 +47,8 @@ impl HTTPNodeClient {
 	}
 
 	/// Allow returning the chain height without needing a wallet instantiated
-	pub fn chain_height(&self) -> Result<u64, libwallet::Error> {
-		self.get_chain_height()
+	pub fn chain_height(&self) -> Result<(u64, String), libwallet::Error> {
+		self.get_chain_tip()
 	}
 }
 
@@ -76,20 +73,8 @@ impl NodeClient for HTTPNodeClient {
 			return Some(v.clone());
 		}
 		let url = format!("{}/v1/version", self.node_url());
-
-		let chain_type = if global::is_mainnet() {
-			global::ChainTypes::Mainnet
-		} else if global::is_floonet() {
-			global::ChainTypes::Floonet
-		} else {
-			global::ChainTypes::UserTesting
-		};
-
-		let mut retval = match api::client::get::<NodeVersionInfo>(
-			url.as_str(),
-			self.node_api_secret(),
-			chain_type,
-		) {
+		let client = Client::new();
+		let mut retval = match client.get::<NodeVersionInfo>(url.as_str(), self.node_api_secret()) {
 			Ok(n) => n,
 			Err(e) => {
 				// If node isn't available, allow offline functions
@@ -121,16 +106,8 @@ impl NodeClient for HTTPNodeClient {
 		} else {
 			url = format!("{}/v1/pool/push_tx", dest);
 		}
-
-		let chain_type = if global::is_mainnet() {
-			global::ChainTypes::Mainnet
-		} else if global::is_floonet() {
-			global::ChainTypes::Floonet
-		} else {
-			global::ChainTypes::UserTesting
-		};
-
-		let res = api::client::post_no_ret(url.as_str(), self.node_api_secret(), tx, chain_type);
+		let client = Client::new();
+		let res = client.post_no_ret(url.as_str(), self.node_api_secret(), tx);
 		if let Err(e) = res {
 			let report = format!("Posting transaction to node: {}", e);
 			error!("Post TX Error: {}", e);
@@ -140,27 +117,68 @@ impl NodeClient for HTTPNodeClient {
 	}
 
 	/// Return the chain tip from a given node
-	fn get_chain_height(&self) -> Result<u64, libwallet::Error> {
+	fn get_chain_tip(&self) -> Result<(u64, String), libwallet::Error> {
 		let addr = self.node_url();
 		let url = format!("{}/v1/chain", addr);
-
-		let chain_type = if global::is_mainnet() {
-			global::ChainTypes::Mainnet
-		} else if global::is_floonet() {
-			global::ChainTypes::Floonet
-		} else {
-			global::ChainTypes::UserTesting
-		};
-
-		let res = api::client::get::<api::Tip>(url.as_str(), self.node_api_secret(), chain_type);
+		let client = Client::new();
+		let res = client.get::<api::Tip>(url.as_str(), self.node_api_secret());
 		match res {
 			Err(e) => {
 				let report = format!("Getting chain height from node: {}", e);
 				error!("Get chain height error: {}", e);
 				Err(libwallet::ErrorKind::ClientCallback(report).into())
 			}
-			Ok(r) => Ok(r.height),
+			Ok(r) => Ok((r.height, r.last_block_pushed)),
 		}
+	}
+
+	/// Get kernel implementation
+	fn get_kernel(
+		&mut self,
+		excess: &pedersen::Commitment,
+		min_height: Option<u64>,
+		max_height: Option<u64>,
+	) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
+		let version = self
+			.get_version_info()
+			.ok_or(libwallet::ErrorKind::ClientCallback(
+				"Unable to get version".into(),
+			))?;
+		let version = Version::parse(&version.node_version)
+			.map_err(|_| libwallet::ErrorKind::ClientCallback("Unable to parse version".into()))?;
+		if version <= Version::new(2, 0, 0) {
+			return Err(libwallet::ErrorKind::ClientCallback(
+				"Kernel lookup not supported by node, please upgrade it".into(),
+			)
+			.into());
+		}
+
+		let mut query = String::new();
+		if let Some(h) = min_height {
+			query += &format!("min_height={}", h);
+		}
+		if let Some(h) = max_height {
+			if query.len() > 0 {
+				query += "&";
+			}
+			query += &format!("max_height={}", h);
+		}
+		if query.len() > 0 {
+			query.insert_str(0, "?");
+		}
+
+		let url = format!(
+			"{}/v1/chain/kernels/{}{}",
+			self.node_url(),
+			to_hex(excess.0.to_vec()),
+			query
+		);
+		let client = Client::new();
+		let res: Option<LocatedTxKernel> = client
+			.get(url.as_str(), self.node_api_secret())
+			.map_err(|e| libwallet::ErrorKind::ClientCallback(format!("Kernel lookup: {}", e)))?;
+
+		Ok(res.map(|k| (k.tx_kernel, k.height, k.mmr_index)))
 	}
 
 	/// Retrieve outputs from node
@@ -180,22 +198,11 @@ impl NodeClient for HTTPNodeClient {
 		let mut api_outputs: HashMap<pedersen::Commitment, (String, u64, u64)> = HashMap::new();
 		let mut tasks = Vec::new();
 
+		let client = Client::new();
+
 		for query_chunk in query_params.chunks(200) {
 			let url = format!("{}/v1/chain/outputs/byids?{}", addr, query_chunk.join("&"),);
-
-			let chain_type = if global::is_mainnet() {
-				global::ChainTypes::Mainnet
-			} else if global::is_floonet() {
-				global::ChainTypes::Floonet
-			} else {
-				global::ChainTypes::UserTesting
-			};
-
-			tasks.push(api::client::get_async::<Vec<api::Output>>(
-				url.as_str(),
-				self.node_api_secret(),
-				chain_type,
-			));
+			tasks.push(client.get_async::<Vec<api::Output>>(url.as_str(), self.node_api_secret()));
 		}
 
 		let task = stream::futures_unordered(tasks).collect();
@@ -223,7 +230,8 @@ impl NodeClient for HTTPNodeClient {
 
 	fn get_outputs_by_pmmr_index(
 		&self,
-		start_height: u64,
+		start_index: u64,
+		end_index: Option<u64>,
 		max_outputs: u64,
 	) -> Result<
 		(
@@ -234,41 +242,55 @@ impl NodeClient for HTTPNodeClient {
 		libwallet::Error,
 	> {
 		let addr = self.node_url();
-		let query_param = format!("start_index={}&max={}", start_height, max_outputs);
+		let mut query_param = format!("start_index={}&max={}", start_index, max_outputs);
+
+		if let Some(e) = end_index {
+			query_param = format!("{}&end_index={}", query_param, e);
+		};
 
 		let url = format!("{}/v1/txhashset/outputs?{}", addr, query_param,);
 
 		let mut api_outputs: Vec<(pedersen::Commitment, pedersen::RangeProof, bool, u64, u64)> =
 			Vec::new();
 
-		let chain_type = if global::is_mainnet() {
-			global::ChainTypes::Mainnet
-		} else if global::is_floonet() {
-			global::ChainTypes::Floonet
-		} else {
-			global::ChainTypes::UserTesting
-		};
+		let client = Client::new();
 
-		match api::client::get::<api::OutputListing>(
-			url.as_str(),
-			self.node_api_secret(),
-			chain_type,
-		) {
+		match client.get::<api::OutputListing>(url.as_str(), self.node_api_secret()) {
 			Ok(o) => {
 				for out in o.outputs {
 					let is_coinbase = match out.output_type {
 						api::OutputType::Coinbase => true,
 						api::OutputType::Transaction => false,
 					};
+					let range_proof = match out.range_proof() {
+						Ok(r) => r,
+						Err(e) => {
+							let msg = format!("Unexpected error in returned output (missing range proof): {:?}. {:?}, {}",
+									out.commit,
+									out,
+									e);
+							error!("{}", msg);
+							Err(libwallet::ErrorKind::ClientCallback(msg))?
+						}
+					};
+					let block_height = match out.block_height {
+						Some(h) => h,
+						None => {
+							let msg = format!("Unexpected error in returned output (missing block height): {:?}. {:?}",
+									out.commit,
+									out);
+							error!("{}", msg);
+							Err(libwallet::ErrorKind::ClientCallback(msg))?
+						}
+					};
 					api_outputs.push((
 						out.commit,
-						out.range_proof().unwrap(),
+						range_proof,
 						is_coinbase,
-						out.block_height.unwrap(),
+						block_height,
 						out.mmr_index,
 					));
 				}
-
 				Ok((o.highest_index, o.last_retrieved_index, api_outputs))
 			}
 			Err(e) => {
@@ -283,72 +305,31 @@ impl NodeClient for HTTPNodeClient {
 		}
 	}
 
-	fn get_kernel(
-		&mut self,
-		excess: &pedersen::Commitment,
-		min_height: Option<u64>,
-		max_height: Option<u64>,
-	) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
-		/*
-				let version = self
-					.get_version_info()
-					.ok_or(libwallet::ErrorKind::ClientCallback(
-						"Unable to get version".into(),
-					))?;
-		*/
-		/*
-				let version = Version::parse(&version.node_version)
-					.map_err(|_| libwallet::ErrorKind::ClientCallback("Unable to parse version".into()))?;
-				if version <= Version::new(2, 0, 0) {
-					return Err(libwallet::ErrorKind::ClientCallback(
-						"Kernel lookup not supported by node, please upgrade it".into(),
-					)
-					.into());
-				}
-		*/
-
-		let mut query = String::new();
-		if let Some(h) = min_height {
-			query += &format!("min_height={}", h);
-		}
-		if let Some(h) = max_height {
-			if query.len() > 0 {
-				query += "&";
-			}
-			query += &format!("max_height={}", h);
-		}
-		if query.len() > 0 {
-			query.insert_str(0, "?");
-		}
-
-		let url = format!(
-			"{}/v1/chain/kernels/{}{}",
-			self.node_url(),
-			to_hex(excess.0.to_vec()),
-			query
-		);
-
-		let chain_type = if global::is_mainnet() {
-			global::ChainTypes::Mainnet
-		} else if global::is_floonet() {
-			global::ChainTypes::Floonet
-		} else {
-			global::ChainTypes::UserTesting
+	fn height_range_to_pmmr_indices(
+		&self,
+		start_height: u64,
+		end_height: Option<u64>,
+	) -> Result<(u64, u64), libwallet::Error> {
+		debug!("Indices start");
+		let addr = self.node_url();
+		let mut query_param = format!("start_height={}", start_height);
+		if let Some(e) = end_height {
+			query_param = format!("{}&end_height={}", query_param, e);
 		};
 
-		let res: Option<LocatedTxKernel> =
-			api::client::get(url.as_str(), self.node_api_secret(), chain_type).map_err(|e| {
-				libwallet::ErrorKind::ClientCallback(format!("Kernel lookup: {}", e))
-			})?;
+		let url = format!("{}/v1/txhashset/heightstopmmr?{}", addr, query_param,);
 
-		Ok(res.map(|k| (k.tx_kernel, k.height, k.mmr_index)))
-	}
+		let client = Client::new();
 
-	fn get_total_difficulty(&self) -> Result<u64, libwallet::Error> {
-		unimplemented!();
-	}
-	fn get_connected_peer_info(&self) -> Result<Vec<PeerInfoDisplay>, libwallet::Error> {
-		unimplemented!();
+		match client.get::<api::OutputListing>(url.as_str(), self.node_api_secret()) {
+			Ok(o) => Ok((o.last_retrieved_index, o.highest_index)),
+			Err(e) => {
+				// if we got anything other than 200 back from server, bye
+				error!("heightstopmmr: error contacting {}. Error: {}", addr, e);
+				let report = format!(": {}", e);
+				Err(libwallet::ErrorKind::ClientCallback(report))?
+			}
+		}
 	}
 }
 
@@ -373,7 +354,7 @@ pub fn create_coinbase(dest: &str, block_fees: &BlockFees) -> Result<CbData, Err
 
 /// Makes a single request to the wallet API to create a new coinbase output.
 fn single_create_coinbase(url: &str, block_fees: &BlockFees) -> Result<CbData, Error> {
-	let res = api::client::post(url, None, block_fees).context(ErrorKind::GenericError(
+	let res = Client::post(url, None, block_fees).context(ErrorKind::GenericError(
 		"Posting create coinbase".to_string(),
 	))?;
 	Ok(res)

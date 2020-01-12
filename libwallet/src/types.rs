@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,19 +15,22 @@
 //! Types and traits that should be provided by a wallet
 //! implementation
 
-extern crate grin_wallet_util;
+use crate::config::{TorConfig, WalletConfig};
 use crate::error::{Error, ErrorKind};
 use crate::grin_core::core::hash::Hash;
-use crate::grin_core::core::Transaction;
-use crate::grin_core::core::TxKernel;
+use crate::grin_core::core::{Output, Transaction, TxKernel};
 use crate::grin_core::libtx::{aggsig, secp_ser};
-use crate::grin_core::ser;
+use crate::grin_core::{global, ser};
 use crate::grin_keychain::{Identifier, Keychain};
+use crate::grin_util::logger::LoggingConfig;
 use crate::grin_util::secp::key::{PublicKey, SecretKey};
 use crate::grin_util::secp::{self, pedersen, Secp256k1};
+use crate::grin_util::ZeroingString;
 use crate::slate::ParticipantMessages;
-use crate::types::grin_wallet_util::grin_p2p::types::PeerInfoDisplay;
+use crate::slate_versions::ser as dalek_ser;
 use chrono::prelude::*;
+use ed25519_dalek::PublicKey as DalekPublicKey;
+use ed25519_dalek::Signature as DalekSignature;
 use failure::ResultExt;
 use serde;
 use serde_json;
@@ -36,37 +39,124 @@ use std::fmt;
 use uuid::Uuid;
 
 /// Combined trait to allow dynamic wallet dispatch
-pub trait WalletInst<C, K>: WalletBackend<C, K> + Send + Sync + 'static
+pub trait WalletInst<'a, L, C, K>: Send + Sync
 where
-	C: NodeClient,
-	K: Keychain,
+	L: WalletLCProvider<'a, C, K> + Send + Sync,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
+	/// Return the stored instance
+	fn lc_provider(&mut self) -> Result<&mut (dyn WalletLCProvider<'a, C, K> + 'a), Error>;
 }
-impl<T, C, K> WalletInst<C, K> for T
+
+/// Trait for a provider of wallet lifecycle methods
+pub trait WalletLCProvider<'a, C, K>: Send + Sync
 where
-	T: WalletBackend<C, K> + Send + Sync + 'static,
-	C: NodeClient,
-	K: Keychain,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
+	/// Sets the top level system wallet directory
+	/// default is assumed to be ~/.grin/main/wallet_data (or floonet equivalent)
+	fn set_top_level_directory(&mut self, dir: &str) -> Result<(), Error>;
+
+	/// Sets the top level system wallet directory
+	/// default is assumed to be ~/.grin/main/wallet_data (or floonet equivalent)
+	fn get_top_level_directory(&self) -> Result<String, Error>;
+
+	/// Output a grin-wallet.toml file into the current top-level system wallet directory
+	fn create_config(
+		&self,
+		chain_type: &global::ChainTypes,
+		file_name: &str,
+		wallet_config: Option<WalletConfig>,
+		logging_config: Option<LoggingConfig>,
+		tor_config: Option<TorConfig>,
+	) -> Result<(), Error>;
+
+	///
+	fn create_wallet(
+		&mut self,
+		name: Option<&str>,
+		mnemonic: Option<ZeroingString>,
+		mnemonic_length: usize,
+		password: ZeroingString,
+		test_mode: bool,
+	) -> Result<(), Error>;
+
+	///
+	fn open_wallet(
+		&mut self,
+		name: Option<&str>,
+		password: ZeroingString,
+		create_mask: bool,
+		use_test_rng: bool,
+	) -> Result<Option<SecretKey>, Error>;
+
+	///
+	fn close_wallet(&mut self, name: Option<&str>) -> Result<(), Error>;
+
+	/// whether a wallet exists at the given directory
+	fn wallet_exists(&self, name: Option<&str>) -> Result<bool, Error>;
+
+	/// return mnemonic of given wallet
+	fn get_mnemonic(
+		&self,
+		name: Option<&str>,
+		password: ZeroingString,
+	) -> Result<ZeroingString, Error>;
+
+	/// Check whether a provided mnemonic string is valid
+	fn validate_mnemonic(&self, mnemonic: ZeroingString) -> Result<(), Error>;
+
+	/// Recover a seed from phrase, without destroying existing data
+	/// should back up seed
+	fn recover_from_mnemonic(
+		&self,
+		mnemonic: ZeroingString,
+		password: ZeroingString,
+	) -> Result<(), Error>;
+
+	/// changes password
+	fn change_password(
+		&self,
+		name: Option<&str>,
+		old: ZeroingString,
+		new: ZeroingString,
+	) -> Result<(), Error>;
+
+	/// deletes wallet
+	fn delete_wallet(&self, name: Option<&str>) -> Result<(), Error>;
+
+	/// return wallet instance
+	fn wallet_inst(&mut self) -> Result<&mut Box<dyn WalletBackend<'a, C, K> + 'a>, Error>;
 }
 
 /// TODO:
 /// Wallets should implement this backend for their storage. All functions
 /// here expect that the wallet instance has instantiated itself or stored
 /// whatever credentials it needs
-pub trait WalletBackend<C, K>
+pub trait WalletBackend<'ck, C, K>: Send + Sync
 where
-	C: NodeClient,
-	K: Keychain,
+	C: NodeClient + 'ck,
+	K: Keychain + 'ck,
 {
-	/// Initialize with whatever stored credentials we have
-	fn open_with_credentials(&mut self) -> Result<(), Error>;
+	/// Set the keychain, which should already be initialized
+	/// Optionally return a token value used to XOR the stored
+	/// key value
+	fn set_keychain(
+		&mut self,
+		k: Box<K>,
+		mask: bool,
+		use_test_rng: bool,
+	) -> Result<Option<SecretKey>, Error>;
 
 	/// Close wallet and remove any stored credentials (TBD)
 	fn close(&mut self) -> Result<(), Error>;
 
-	/// Return the keychain being used
-	fn keychain(&mut self) -> &mut K;
+	/// Return the keychain being used. Ensure a cloned copy so it will be dropped
+	/// and zeroized by the caller
+	/// Can optionally take a mask value
+	fn keychain(&self, mask: Option<&SecretKey>) -> Result<K, Error>;
 
 	/// Return the client being used to communicate with the node
 	fn w2n_client(&mut self) -> &mut C;
@@ -74,6 +164,7 @@ where
 	/// return the commit for caching if allowed, none otherwise
 	fn calc_commit_for_cache(
 		&mut self,
+		keychain_mask: Option<&SecretKey>,
 		amount: u64,
 		id: &Identifier,
 	) -> Result<Option<String>, Error>;
@@ -100,6 +191,7 @@ where
 	/// Retrieves the private context associated with a given slate id
 	fn get_private_context(
 		&mut self,
+		keychain_mask: Option<&SecretKey>,
 		slate_id: &[u8],
 		participant_id: usize,
 	) -> Result<Context, Error>;
@@ -123,19 +215,28 @@ where
 	fn load_stored_tx(&self, path: &str) -> Result<Option<Transaction>, Error>;
 
 	/// Create a new write batch to update or remove output data
-	fn batch<'a>(&'a mut self) -> Result<Box<dyn WalletOutputBatch<K> + 'a>, Error>;
+	fn batch<'a>(
+		&'a mut self,
+		keychain_mask: Option<&SecretKey>,
+	) -> Result<Box<dyn WalletOutputBatch<K> + 'a>, Error>;
+
+	/// Batch for use when keychain isn't available or required
+	fn batch_no_mask<'a>(&'a mut self) -> Result<Box<dyn WalletOutputBatch<K> + 'a>, Error>;
+
+	/// Return the current child Index
+	fn current_child_index<'a>(&mut self, parent_key_id: &Identifier) -> Result<u32, Error>;
 
 	/// Next child ID when we want to create a new output, based on current parent
-	fn next_child<'a>(&mut self) -> Result<Identifier, Error>;
+	fn next_child<'a>(&mut self, keychain_mask: Option<&SecretKey>) -> Result<Identifier, Error>;
 
 	/// last verified height of outputs directly descending from the given parent key
 	fn last_confirmed_height<'a>(&mut self) -> Result<u64, Error>;
 
-	/// Attempt to restore the contents of a wallet from seed
-	fn restore(&mut self) -> Result<(), Error>;
+	/// last block scanned during scan or restore
+	fn last_scanned_block<'a>(&mut self) -> Result<ScannedBlockInfo, Error>;
 
-	/// Attempt to check and fix wallet state
-	fn check_repair(&mut self, delete_unconfirmed: bool) -> Result<(), Error>;
+	/// Flag whether the wallet needs a full UTXO scan on next update attempt
+	fn init_status<'a>(&mut self) -> Result<WalletInitStatus, Error>;
 }
 
 /// Batch trait to update the output data backend atomically. Trying to use a
@@ -171,6 +272,12 @@ where
 		parent_key_id: &Identifier,
 		height: u64,
 	) -> Result<(), Error>;
+
+	/// Save the last PMMR index that was scanned via a scan operation
+	fn save_last_scanned_block(&mut self, block: ScannedBlockInfo) -> Result<(), Error>;
+
+	/// Save flag indicating whether wallet needs a full UTXO scan
+	fn save_init_status<'a>(&mut self, value: WalletInitStatus) -> Result<(), Error>;
 
 	/// get next tx log entry for the parent
 	fn next_tx_log_id(&mut self, parent_key_id: &Identifier) -> Result<u32, Error>;
@@ -211,7 +318,7 @@ where
 
 /// Encapsulate all wallet-node communication functions. No functions within libwallet
 /// should care about communication details
-pub trait NodeClient: Sync + Send + Clone {
+pub trait NodeClient: Send + Sync + Clone {
 	/// Return the URL of the check node
 	fn node_url(&self) -> &str;
 
@@ -231,8 +338,17 @@ pub trait NodeClient: Sync + Send + Clone {
 	/// by the node. Result can be cached for later use
 	fn get_version_info(&mut self) -> Option<NodeVersionInfo>;
 
-	/// retrieves the current tip from the specified grin node
-	fn get_chain_height(&self) -> Result<u64, Error>;
+	/// retrieves the current tip (height, hash) from the specified grin node
+	fn get_chain_tip(&self) -> Result<(u64, String), Error>;
+
+	/// Get a kernel and the height of the block it's included in. Returns
+	/// (tx_kernel, height, mmr_index)
+	fn get_kernel(
+		&mut self,
+		excess: &pedersen::Commitment,
+		min_height: Option<u64>,
+		max_height: Option<u64>,
+	) -> Result<Option<(TxKernel, u64, u64)>, Error>;
 
 	/// retrieve a list of outputs from the specified grin node
 	/// need "by_height" and "by_id" variants
@@ -249,6 +365,7 @@ pub trait NodeClient: Sync + Send + Clone {
 	fn get_outputs_by_pmmr_index(
 		&self,
 		start_height: u64,
+		end_height: Option<u64>,
 		max_outputs: u64,
 	) -> Result<
 		(
@@ -259,20 +376,14 @@ pub trait NodeClient: Sync + Send + Clone {
 		Error,
 	>;
 
-	/// Get a kernel and the height of the block it is included in. Returns
-	/// (tx_kernel, height, mmr_index)
-	fn get_kernel(
-		&mut self,
-		excess: &pedersen::Commitment,
-		min_height: Option<u64>,
-		max_height: Option<u64>,
-	) -> Result<Option<(TxKernel, u64, u64)>, Error>;
-
-	/// retreives total difficulty
-	fn get_total_difficulty(&self) -> Result<u64, Error>;
-
-	/// retreives the connected peer info of the node
-	fn get_connected_peer_info(&self) -> Result<Vec<PeerInfoDisplay>, Error>;
+	/// Return the pmmr indices representing the outputs between a given
+	/// set of block heights
+	/// (start pmmr index, end pmmr index)
+	fn height_range_to_pmmr_indices(
+		&self,
+		start_height: u64,
+		end_height: Option<u64>,
+	) -> Result<(u64, u64), Error>;
 }
 
 /// Node version info
@@ -442,6 +553,8 @@ pub struct Context {
 	pub fee: u64,
 	/// keep track of the participant id
 	pub participant_id: usize,
+	/// Payment proof sender address derivation path, if needed
+	pub payment_proof_derivation_index: Option<u32>,
 }
 
 impl Context {
@@ -465,6 +578,7 @@ impl Context {
 			output_ids: vec![],
 			fee: 0,
 			participant_id: participant_id,
+			payment_proof_derivation_index: None,
 		}
 	}
 }
@@ -672,10 +786,25 @@ pub struct TxLogEntry {
 	/// Fee
 	#[serde(with = "secp_ser::opt_string_or_u64")]
 	pub fee: Option<u64>,
+	/// Cutoff block height
+	#[serde(with = "secp_ser::opt_string_or_u64")]
+	#[serde(default)]
+	pub ttl_cutoff_height: Option<u64>,
 	/// Message data, stored as json
 	pub messages: Option<ParticipantMessages>,
 	/// Location of the store transaction, (reference or resending)
 	pub stored_tx: Option<String>,
+	/// Associated kernel excess, for later lookup if necessary
+	#[serde(with = "secp_ser::option_commitment_serde")]
+	#[serde(default)]
+	pub kernel_excess: Option<pedersen::Commitment>,
+	/// Height reported when transaction was created, if lookup
+	/// of kernel is necessary
+	#[serde(default)]
+	pub kernel_lookup_min_height: Option<u64>,
+	/// Additional info needed to stored payment proof
+	#[serde(default)]
+	pub payment_proof: Option<StoredProofInfo>,
 }
 
 impl ser::Writeable for TxLogEntry {
@@ -708,8 +837,12 @@ impl TxLogEntry {
 			num_inputs: 0,
 			num_outputs: 0,
 			fee: None,
+			ttl_cutoff_height: None,
 			messages: None,
 			stored_tx: None,
+			kernel_excess: None,
+			kernel_lookup_min_height: None,
+			payment_proof: None,
 		}
 	}
 
@@ -729,6 +862,39 @@ impl TxLogEntry {
 	/// Return zero height - mean unknown. Needed for backward compatibility
 	pub fn default_output_height() -> u64 {
 		0
+	}
+}
+
+/// Payment proof information. Differs from what is sent via
+/// the slate
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct StoredProofInfo {
+	/// receiver address
+	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
+	pub receiver_address: DalekPublicKey,
+	#[serde(with = "dalek_ser::option_dalek_sig_serde")]
+	/// receiver signature
+	pub receiver_signature: Option<DalekSignature>,
+	/// sender address derivation path index
+	pub sender_address_path: u32,
+	/// sender address
+	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
+	pub sender_address: DalekPublicKey,
+	/// sender signature
+	#[serde(with = "dalek_ser::option_dalek_sig_serde")]
+	pub sender_signature: Option<DalekSignature>,
+}
+
+impl ser::Writeable for StoredProofInfo {
+	fn write<W: ser::Writer>(&self, writer: &mut W) -> Result<(), ser::Error> {
+		writer.write_bytes(&serde_json::to_vec(self).map_err(|_| ser::Error::CorruptedData)?)
+	}
+}
+
+impl ser::Readable for StoredProofInfo {
+	fn read(reader: &mut dyn ser::Reader) -> Result<StoredProofInfo, ser::Error> {
+		let data = reader.read_bytes_len_prefix()?;
+		serde_json::from_slice(&data[..]).map_err(|_| ser::Error::CorruptedData)
 	}
 }
 
@@ -759,4 +925,67 @@ impl ser::Readable for AcctPathMapping {
 pub struct TxWrapper {
 	/// hex representation of transaction
 	pub tx_hex: String,
+}
+
+/// Store details of the last scanned block
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ScannedBlockInfo {
+	/// Node chain height (corresponding to the last PMMR index scanned)
+	pub height: u64,
+	/// Hash of tip
+	pub hash: String,
+	/// Starting PMMR Index
+	pub start_pmmr_index: u64,
+	/// Last PMMR Index
+	pub last_pmmr_index: u64,
+}
+
+impl ser::Writeable for ScannedBlockInfo {
+	fn write<W: ser::Writer>(&self, writer: &mut W) -> Result<(), ser::Error> {
+		writer.write_bytes(&serde_json::to_vec(self).map_err(|_| ser::Error::CorruptedData)?)
+	}
+}
+
+impl ser::Readable for ScannedBlockInfo {
+	fn read(reader: &mut dyn ser::Reader) -> Result<ScannedBlockInfo, ser::Error> {
+		let data = reader.read_bytes_len_prefix()?;
+		serde_json::from_slice(&data[..]).map_err(|_| ser::Error::CorruptedData)
+	}
+}
+
+/// Wrapper for reward output and kernel used when building a coinbase for a mining node.
+/// Note: Not serializable, must be converted to necesssary "versioned" representation
+/// before serializing to json to ensure compatibility with mining node.
+#[derive(Debug, Clone)]
+pub struct CbData {
+	/// Output
+	pub output: Output,
+	/// Kernel
+	pub kernel: TxKernel,
+	/// Key Id
+	pub key_id: Option<Identifier>,
+}
+
+/// Enum to determine what amount of scanning is required for a new wallet
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WalletInitStatus {
+	/// Wallet is newly created and needs scanning
+	InitNeedsScanning,
+	/// Wallet is new but doesn't need scanning
+	InitNoScanning,
+	/// Wallet scan checks have been completed
+	InitComplete,
+}
+
+impl ser::Writeable for WalletInitStatus {
+	fn write<W: ser::Writer>(&self, writer: &mut W) -> Result<(), ser::Error> {
+		writer.write_bytes(&serde_json::to_vec(self).map_err(|_| ser::Error::CorruptedData)?)
+	}
+}
+
+impl ser::Readable for WalletInitStatus {
+	fn read(reader: &mut dyn ser::Reader) -> Result<WalletInitStatus, ser::Error> {
+		let data = reader.read_bytes_len_prefix()?;
+		serde_json::from_slice(&data[..]).map_err(|_| ser::Error::CorruptedData)
+	}
 }

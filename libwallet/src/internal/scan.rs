@@ -1,4 +1,4 @@
-// Copyright 2018 The Grin Developers
+// Copyright 2019 The Grin Developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,20 +13,25 @@
 // limitations under the License.
 //! Functions to restore a wallet's outputs from just the master seed
 
+use crate::api_impl::owner_updater::StatusMessage;
 use crate::grin_core::consensus::{valid_header_version, WEEK_HEIGHT};
 use crate::grin_core::core::HeaderVersion;
 use crate::grin_core::global;
 use crate::grin_core::libtx::proof;
-use crate::grin_keychain::{ExtKeychain, Identifier, Keychain, SwitchCommitmentType};
+use crate::grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
+use crate::grin_util::secp::key::SecretKey;
 use crate::grin_util::secp::pedersen;
+use crate::grin_util::Mutex;
 use crate::internal::{keys, updater};
 use crate::types::*;
-use crate::{Error, OutputCommitMapping};
+use crate::{wallet_lock, Error, OutputCommitMapping};
+use std::cmp;
 use std::collections::HashMap;
-use std::time::Instant;
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
 
 /// Utility struct for return values from below
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct OutputResult {
 	///
 	pub commit: pedersen::Commitment,
@@ -57,26 +62,20 @@ struct RestoredTxStats {
 	///
 	pub num_outputs: usize,
 	/// Height of the output. Just want to know for transaction
-	pub output_heiht: u64,
+	pub output_height: u64,
 }
 
-fn identify_utxo_outputs<T, C, K>(
-	wallet: &mut T,
+fn identify_utxo_outputs<'a, K>(
+	keychain: &K,
 	outputs: Vec<(pedersen::Commitment, pedersen::RangeProof, bool, u64, u64)>,
+	status_send_channel: &Option<Sender<StatusMessage>>,
+	percentage_complete: u8,
 ) -> Result<Vec<OutputResult>, Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	K: Keychain + 'a,
 {
 	let mut wallet_outputs: Vec<OutputResult> = Vec::new();
 
-	warn!(
-		"Scanning {} outputs in the current MWC utxo set",
-		outputs.len(),
-	);
-
-	let keychain = wallet.keychain();
 	let legacy_builder = proof::LegacyProofBuilder::new(keychain);
 	let builder = proof::ProofBuilder::new(keychain);
 	let legacy_version = HeaderVersion(1);
@@ -115,13 +114,20 @@ where
 			*height
 		};
 
-		info!(
+		let msg = format!(
 			"Output found: {:?}, amount: {:?}, key_id: {:?}, mmr_index: {},",
 			commit, amount, key_id, mmr_index,
 		);
 
+		if let Some(ref s) = status_send_channel {
+			let _ = s.send(StatusMessage::Scanning(msg, percentage_complete));
+		}
+
 		if switch != SwitchCommitmentType::Regular {
-			warn!("Unexpected switch commitment type {:?}", switch);
+			let msg = format!("Unexpected switch commitment type {:?}", switch);
+			if let Some(ref s) = status_send_channel {
+				let _ = s.send(StatusMessage::UpdateWarning(msg));
+			}
 		}
 
 		wallet_outputs.push(OutputResult {
@@ -138,50 +144,73 @@ where
 	Ok(wallet_outputs)
 }
 
-fn collect_chain_outputs<T, C, K>(wallet: &mut T) -> Result<Vec<OutputResult>, Error>
+fn collect_chain_outputs<'a, C, K>(
+	keychain: &K,
+	client: C,
+	start_index: u64,
+	end_index: Option<u64>,
+	status_send_channel: &Option<Sender<StatusMessage>>,
+) -> Result<(Vec<OutputResult>, u64), Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	let batch_size = 1000;
-	let mut start_index = 1;
+	let start_index_stat = start_index;
+	let mut start_index = start_index;
 	let mut result_vec: Vec<OutputResult> = vec![];
+	let last_retrieved_return_index;
 	loop {
-		let (highest_index, last_retrieved_index, outputs) = wallet
-			.w2n_client()
-			.get_outputs_by_pmmr_index(start_index, batch_size)?;
-		warn!(
+		let (highest_index, last_retrieved_index, outputs) =
+			client.get_outputs_by_pmmr_index(start_index, end_index, batch_size)?;
+
+		let range = highest_index as f64 - start_index_stat as f64;
+		let progress = last_retrieved_index as f64 - start_index_stat as f64;
+		let perc_complete = cmp::min(((progress / range) * 100.0) as u8, 99);
+
+		let msg = format!(
 			"Checking {} outputs, up to index {}. (Highest index: {})",
 			outputs.len(),
 			highest_index,
 			last_retrieved_index,
 		);
+		if let Some(ref s) = status_send_channel {
+			let _ = s.send(StatusMessage::Scanning(msg, perc_complete));
+		}
 
-		result_vec.append(&mut identify_utxo_outputs(wallet, outputs.clone())?);
+		result_vec.append(&mut identify_utxo_outputs(
+			keychain,
+			outputs.clone(),
+			status_send_channel,
+			perc_complete as u8,
+		)?);
 
-		if highest_index == last_retrieved_index {
+		if highest_index <= last_retrieved_index {
+			last_retrieved_return_index = last_retrieved_index;
 			break;
 		}
 		start_index = last_retrieved_index + 1;
 	}
-	Ok(result_vec)
+	Ok((result_vec, last_retrieved_return_index))
 }
 
 ///
-fn restore_missing_output<T, C, K>(
-	wallet: &mut T,
+fn restore_missing_output<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
 	output: OutputResult,
 	found_parents: &mut HashMap<Identifier, u32>,
 	tx_stats: &mut Option<&mut HashMap<Identifier, RestoredTxStats>>,
 ) -> Result<(), Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
-	let commit = wallet.calc_commit_for_cache(output.value, &output.key_id)?;
-	let mut batch = wallet.batch()?;
+	wallet_lock!(wallet_inst, w);
+
+	let commit = w.calc_commit_for_cache(keychain_mask, output.value, &output.key_id)?;
+	let mut batch = w.batch(keychain_mask)?;
 
 	let parent_key_id = output.key_id.parent_path();
 	if !found_parents.contains_key(&parent_key_id) {
@@ -193,7 +222,7 @@ where
 					log_id: batch.next_tx_log_id(&parent_key_id)?,
 					amount_credited: 0,
 					num_outputs: 0,
-					output_heiht: 0,
+					output_height: 0,
 				},
 			);
 		}
@@ -222,7 +251,7 @@ where
 					log_id: ts.log_id,
 					amount_credited: ts.amount_credited + output.value,
 					num_outputs: ts.num_outputs + 1,
-					output_heiht: output.height,
+					output_height: output.height,
 				},
 			);
 			ts.log_id
@@ -255,16 +284,21 @@ where
 }
 
 ///
-fn cancel_tx_log_entry<T, C, K>(wallet: &mut T, output: &OutputData) -> Result<(), Error>
+fn cancel_tx_log_entry<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	output: &OutputData,
+) -> Result<(), Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	let parent_key_id = output.key_id.parent_path();
+	wallet_lock!(wallet_inst, w);
 	let updated_tx_entry = if output.tx_log_entry.is_some() {
 		let entries = updater::retrieve_txs(
-			wallet,
+			&mut **w,
 			output.tx_log_entry.clone(),
 			None,
 			Some(&parent_key_id),
@@ -284,7 +318,7 @@ where
 	} else {
 		None
 	};
-	let mut batch = wallet.batch()?;
+	let mut batch = w.batch(keychain_mask)?;
 	if let Some(t) = updated_tx_entry {
 		batch.save_tx_log_entry(t, &parent_key_id)?;
 	}
@@ -292,27 +326,54 @@ where
 	Ok(())
 }
 
-/// Check / repair wallet contents
+/// Check / repair wallet contents by scanning against chain
 /// assume wallet contents have been freshly updated with contents
 /// of latest block
-pub fn check_repair<T, C, K>(wallet: &mut T, delete_unconfirmed: bool) -> Result<(), Error>
+pub fn scan<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	delete_unconfirmed: bool,
+	start_height: u64,
+	end_height: u64,
+	status_send_channel: &Option<Sender<StatusMessage>>,
+) -> Result<ScannedBlockInfo, Error>
 where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	// First, get a definitive list of outputs we own from the chain
-	warn!("Starting wallet check.");
-	let chain_outs = collect_chain_outputs(wallet)?;
-	warn!(
+	if let Some(ref s) = status_send_channel {
+		let _ = s.send(StatusMessage::Scanning("Starting UTXO scan".to_owned(), 0));
+	}
+	let (client, keychain) = {
+		wallet_lock!(wallet_inst, w);
+		(w.w2n_client().clone(), w.keychain(keychain_mask)?.clone())
+	};
+
+	// Retrieve the actual PMMR index range we're looking for
+	let pmmr_range = client.height_range_to_pmmr_indices(start_height, Some(end_height))?;
+
+	let (chain_outs, last_index) = collect_chain_outputs(
+		&keychain,
+		client,
+		pmmr_range.0,
+		Some(pmmr_range.1),
+		status_send_channel,
+	)?;
+	let msg = format!(
 		"Identified {} wallet_outputs as belonging to this wallet",
 		chain_outs.len(),
 	);
 
+	if let Some(ref s) = status_send_channel {
+		let _ = s.send(StatusMessage::Scanning(msg, 99));
+	}
+
 	// Now, get all outputs owned by this wallet (regardless of account)
 	let wallet_outputs = {
-		let res = updater::retrieve_outputs(&mut *wallet, true, None, None)?;
-		res
+		wallet_lock!(wallet_inst, w);
+		updater::retrieve_outputs(&mut **w, keychain_mask, true, None, None)?
 	};
 
 	let mut missing_outs = vec![];
@@ -338,15 +399,19 @@ where
 	// mark problem spent outputs as unspent (confirmed against a short-lived fork, for example)
 	for m in accidental_spend_outs.into_iter() {
 		let mut o = m.0;
-		warn!(
+		let msg = format!(
 			"Output for {} with ID {} ({:?}) marked as spent but exists in UTXO set. \
 			 Marking unspent and cancelling any associated transaction log entries.",
 			o.value, o.key_id, m.1.commit,
 		);
+		if let Some(ref s) = status_send_channel {
+			let _ = s.send(StatusMessage::Scanning(msg, 99));
+		}
 		o.status = OutputStatus::Unspent;
 		// any transactions associated with this should be cancelled
-		cancel_tx_log_entry(wallet, &o)?;
-		let mut batch = wallet.batch()?;
+		cancel_tx_log_entry(wallet_inst.clone(), keychain_mask, &o)?;
+		wallet_lock!(wallet_inst, w);
+		let mut batch = w.batch(keychain_mask)?;
 		batch.save(o)?;
 		batch.commit()?;
 	}
@@ -355,26 +420,39 @@ where
 
 	// Restore missing outputs, adding transaction for it back to the log
 	for m in missing_outs.into_iter() {
-		warn!(
-			"Confirmed output for {} with ID {} ({:?}) exists in UTXO set but not in wallet. \
-			 Restoring.",
-			m.value, m.key_id, m.commit,
-		);
-		restore_missing_output(wallet, m, &mut found_parents, &mut None)?;
+		let msg = format!(
+				"Confirmed output for {} with ID {} ({:?}, index {}) exists in UTXO set but not in wallet. \
+				 Restoring.",
+				m.value, m.key_id, m.commit, m.mmr_index
+			);
+		if let Some(ref s) = status_send_channel {
+			let _ = s.send(StatusMessage::Scanning(msg, 99));
+		}
+		restore_missing_output(
+			wallet_inst.clone(),
+			keychain_mask,
+			m,
+			&mut found_parents,
+			&mut None,
+		)?;
 	}
 
 	if delete_unconfirmed {
 		// Unlock locked outputs
 		for m in locked_outs.into_iter() {
 			let mut o = m.0;
-			warn!(
+			let msg = format!(
 				"Confirmed output for {} with ID {} ({:?}) exists in UTXO set and is locked. \
 				 Unlocking and cancelling associated transaction log entries.",
 				o.value, o.key_id, m.1.commit,
 			);
+			if let Some(ref s) = status_send_channel {
+				let _ = s.send(StatusMessage::Scanning(msg, 99));
+			}
 			o.status = OutputStatus::Unspent;
-			cancel_tx_log_entry(wallet, &o)?;
-			let mut batch = wallet.batch()?;
+			cancel_tx_log_entry(wallet_inst.clone(), keychain_mask, &o)?;
+			wallet_lock!(wallet_inst, w);
+			let mut batch = w.batch(keychain_mask)?;
 			batch.save(o)?;
 			batch.commit()?;
 		}
@@ -386,105 +464,57 @@ where
 		// Delete unconfirmed outputs
 		for m in unconfirmed_outs.into_iter() {
 			let o = m.output.clone();
-			warn!(
+			let msg = format!(
 				"Unconfirmed output for {} with ID {} ({:?}) not in UTXO set. \
 				 Deleting and cancelling associated transaction log entries.",
 				o.value, o.key_id, m.commit,
 			);
-			cancel_tx_log_entry(wallet, &o)?;
-			let mut batch = wallet.batch()?;
+			if let Some(ref s) = status_send_channel {
+				let _ = s.send(StatusMessage::Scanning(msg, 99));
+			}
+			cancel_tx_log_entry(wallet_inst.clone(), keychain_mask, &o)?;
+			wallet_lock!(wallet_inst, w);
+			let mut batch = w.batch(keychain_mask)?;
 			batch.delete(&o.key_id, &o.mmr_index)?;
 			batch.commit()?;
 		}
 	}
 
 	// restore labels, account paths and child derivation indices
+	wallet_lock!(wallet_inst, w);
 	let label_base = "account";
-	let mut acct_index = 1;
+	let accounts: Vec<Identifier> = w.acct_path_iter().map(|m| m.path).collect();
+	let mut acct_index = accounts.len();
 	for (path, max_child_index) in found_parents.iter() {
-		// default path already exists
-		if *path != ExtKeychain::derive_key_id(2, 0, 0, 0, 0) {
+		// Only restore paths that don't exist
+		if !accounts.contains(path) {
 			let label = format!("{}_{}", label_base, acct_index);
-			keys::set_acct_path(wallet, &label, path)?;
+			let msg = format!("Setting account {} at path {}", label, path);
+			if let Some(ref s) = status_send_channel {
+				let _ = s.send(StatusMessage::Scanning(msg, 99));
+			}
+			keys::set_acct_path(&mut **w, keychain_mask, &label, path)?;
 			acct_index += 1;
 		}
-		let mut batch = wallet.batch()?;
-		debug!("Next child for account {} is {}", path, max_child_index + 1);
-		batch.save_child_index(path, max_child_index + 1)?;
-		batch.commit()?;
-	}
-	Ok(())
-}
-
-/// Restore a wallet
-pub fn restore<T, C, K>(wallet: &mut T) -> Result<(), Error>
-where
-	T: WalletBackend<C, K>,
-	C: NodeClient,
-	K: Keychain,
-{
-	// Don't proceed if wallet_data has anything in it
-	let is_empty = wallet.iter().next().is_none();
-	if !is_empty {
-		error!("Not restoring. Please back up and remove existing db directory first.");
-		return Ok(());
-	}
-
-	let now = Instant::now();
-	warn!("Starting restore.");
-
-	let result_vec = collect_chain_outputs(wallet)?;
-
-	warn!(
-		"Identified {} wallet_outputs as belonging to this wallet",
-		result_vec.len(),
-	);
-
-	let mut found_parents: HashMap<Identifier, u32> = HashMap::new();
-	let mut restore_stats = HashMap::new();
-
-	// Now save what we have
-	for output in result_vec {
-		restore_missing_output(
-			wallet,
-			output,
-			&mut found_parents,
-			&mut Some(&mut restore_stats),
-		)?;
-	}
-
-	// restore labels, account paths and child derivation indices
-	let label_base = "account";
-	let mut acct_index = 1;
-	for (path, max_child_index) in found_parents.iter() {
-		// default path already exists
-		if *path != ExtKeychain::derive_key_id(2, 0, 0, 0, 0) {
-			let label = format!("{}_{}", label_base, acct_index);
-			keys::set_acct_path(wallet, &label, path)?;
-			acct_index += 1;
-		}
-		// restore tx log entry for non-coinbase outputs
-		if let Some(s) = restore_stats.get(path) {
-			let mut batch = wallet.batch()?;
-			let mut t = TxLogEntry::new(path.clone(), TxLogEntryType::TxReceived, s.log_id);
-			t.confirmed = true;
-			t.amount_credited = s.amount_credited;
-			t.num_outputs = s.num_outputs;
-			t.output_height = s.output_heiht;
-			t.update_confirmation_ts();
-			batch.save_tx_log_entry(t, &path)?;
+		let current_child_index = w.current_child_index(&path)?;
+		if *max_child_index >= current_child_index {
+			let mut batch = w.batch(keychain_mask)?;
+			debug!("Next child for account {} is {}", path, max_child_index + 1);
+			batch.save_child_index(path, max_child_index + 1)?;
 			batch.commit()?;
 		}
-		let mut batch = wallet.batch()?;
-		batch.save_child_index(path, max_child_index + 1)?;
-		debug!("Next child for account {} is {}", path, max_child_index + 1);
-		batch.commit()?;
 	}
 
-	let mut sec = now.elapsed().as_secs();
-	let min = sec / 60;
-	sec %= 60;
-	info!("Restored wallet in {}m{}s", min, sec);
+	if let Some(ref s) = status_send_channel {
+		let _ = s.send(StatusMessage::ScanningComplete(
+			"Scanning Complete".to_owned(),
+		));
+	}
 
-	Ok(())
+	Ok(ScannedBlockInfo {
+		height: end_height,
+		hash: "".to_owned(),
+		start_pmmr_index: pmmr_range.0,
+		last_pmmr_index: last_index,
+	})
 }
