@@ -140,6 +140,9 @@ where
 	C: NodeClient + 'ck,
 	K: Keychain + 'ck,
 {
+	/// For mwc713. Checking if wallet is open. Return Error if it is not
+	fn check_if_open(&self) -> Result<(), Error>;
+
 	/// Set the keychain, which should already be initialized
 	/// Optionally return a token value used to XOR the stored
 	/// key value
@@ -287,6 +290,14 @@ where
 
 	/// save a tx log entry
 	fn save_tx_log_entry(&mut self, t: TxLogEntry, parent_id: &Identifier) -> Result<(), Error>;
+
+	/// rename account, old_name -> new_name
+	fn rename_acct_path(
+		&mut self,
+		accounts: Vec<AcctPathMapping>,
+		old_name: &str,
+		new_name: &str,
+	) -> Result<(), Error>;
 
 	/// save an account label -> path mapping
 	fn save_acct_path(&mut self, mapping: AcctPathMapping) -> Result<(), Error>;

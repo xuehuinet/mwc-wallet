@@ -180,6 +180,17 @@ where
 	C: NodeClient + 'ck,
 	K: Keychain + 'ck,
 {
+	/// For mwc713. Checking if wallet is open. Return Error if it is not
+	fn check_if_open(&self) -> Result<(), Error> {
+		if self.keychain.is_some() {
+			Ok(())
+		} else {
+			Err(Error::from(ErrorKind::GenericError(
+				"Wallet is not open".to_string(),
+			)))
+		}
+	}
+
 	/// Set the keychain, which should already have been opened
 	fn set_keychain(
 		&mut self,
@@ -658,6 +669,38 @@ where
 			.as_ref()
 			.unwrap()
 			.put_ser(&tx_log_key, &tx_in)?;
+		Ok(())
+	}
+
+	fn rename_acct_path(
+		&mut self,
+		accounts: Vec<AcctPathMapping>,
+		old_name: &str,
+		new_name: &str,
+	) -> Result<(), Error> {
+		for acc in accounts {
+			if acc.label == old_name {
+				let mut nacc = acc.clone();
+				let old_key = to_key(
+					ACCOUNT_PATH_MAPPING_PREFIX,
+					&mut acc.label.as_bytes().to_vec(),
+				);
+				self.db.borrow().as_ref().unwrap().delete(&old_key)?;
+				nacc.label = new_name.to_string();
+				let acct_key = to_key(
+					ACCOUNT_PATH_MAPPING_PREFIX,
+					&mut nacc.label.as_bytes().to_vec(),
+				);
+				self.db
+					.borrow()
+					.as_ref()
+					.unwrap()
+					.put_ser(&acct_key, &nacc)?;
+
+				break;
+			}
+		}
+		println!("rename acct from '{}' to '{}'", old_name, new_name);
 		Ok(())
 	}
 

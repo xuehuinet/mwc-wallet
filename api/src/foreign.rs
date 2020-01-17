@@ -394,6 +394,8 @@ where
 			&mut **w,
 			(&self.keychain_mask).as_ref(),
 			slate,
+			None,
+			None,
 			dest_acct_name,
 			message,
 			self.doctest_mode,

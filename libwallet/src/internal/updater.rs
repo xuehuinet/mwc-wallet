@@ -42,6 +42,8 @@ pub fn retrieve_outputs<'a, T: ?Sized, C, K>(
 	show_spent: bool,
 	tx_id: Option<u32>,
 	parent_key_id: Option<&Identifier>,
+	pagination_start: Option<u32>,
+	pagination_len: Option<u32>,
 ) -> Result<Vec<OutputCommitMapping>, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -73,7 +75,7 @@ where
 	outputs.sort_by_key(|out| out.n_child);
 	let keychain = wallet.keychain(keychain_mask)?;
 
-	let res = outputs
+	let res: Vec<OutputCommitMapping> = outputs
 		.into_iter()
 		.map(|output| {
 			let commit = match output.commit.clone() {
@@ -85,17 +87,72 @@ where
 			OutputCommitMapping { output, commit }
 		})
 		.collect();
-	Ok(res)
+
+	if pagination_len.is_some() || pagination_start.is_some() {
+		let pag_len = pagination_len.unwrap_or(res.len() as u32);
+		let pagination_start = pagination_start.unwrap_or(0);
+		let mut pag_vec = Vec::new();
+
+		let mut pre_count = 0;
+		let mut count = 0;
+		for n in res {
+			if pre_count >= pagination_start {
+				pag_vec.push(n);
+				count = count + 1;
+				if count == pag_len {
+					break;
+				}
+			}
+			pre_count = pre_count + 1;
+		}
+		Ok(pag_vec)
+	} else {
+		Ok(res)
+	}
 }
 
 /// Retrieve all of the transaction entries, or a particular entry
 /// if `parent_key_id` is set, only return entries from that key
 pub fn retrieve_txs<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
 	tx_id: Option<u32>,
 	tx_slate_id: Option<Uuid>,
 	parent_key_id: Option<&Identifier>,
 	outstanding_only: bool,
+	pagination_start: Option<u32>,
+	pagination_len: Option<u32>,
+) -> Result<Vec<TxLogEntry>, Error>
+where
+	T: WalletBackend<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	retrieve_txs_with_outputs(
+		wallet,
+		keychain_mask,
+		tx_id,
+		tx_slate_id,
+		parent_key_id,
+		outstanding_only,
+		pagination_start,
+		pagination_len,
+		None,
+	)
+}
+
+/// Retrieve all of the transaction entries, or a particular entry
+/// if `parent_key_id` is set, only return entries from that key
+pub fn retrieve_txs_with_outputs<'a, T: ?Sized, C, K>(
+	wallet: &mut T,
+	keychain_mask: Option<&SecretKey>,
+	tx_id: Option<u32>,
+	tx_slate_id: Option<Uuid>,
+	parent_key_id: Option<&Identifier>,
+	outstanding_only: bool,
+	pagination_start: Option<u32>,
+	pagination_len: Option<u32>,
+	output_list: Option<(bool, Vec<(OutputData, pedersen::Commitment)>)>,
 ) -> Result<Vec<TxLogEntry>, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -128,8 +185,62 @@ where
 			f_pk && f_tx_id && f_txs && f_outstanding
 		})
 		.collect();
+
+	if output_list.is_some() {
+		let mut batch = wallet.batch(keychain_mask)?;
+		let output_list = output_list.unwrap().1;
+		for i in 0..txs.len() {
+			let mut tx = &mut txs[i];
+			if !tx.confirmed && tx.tx_type == TxLogEntryType::TxSent {
+				// if it's not confirmed, see if we have any outputs
+				// Point that if we found output - it is mean that transaction didn't go through.
+				//  otherwise we can mark is confirmed, but unfortunatelly without block height
+				let mut confirmed = true;
+				for j in 0..output_list.len() {
+					if output_list[j].0.tx_log_entry.is_some() {
+						let id = output_list[j].0.tx_log_entry.unwrap();
+						if id == tx.id {
+							confirmed = false;
+							break;
+						}
+					}
+				}
+				tx.confirmed = confirmed;
+				if tx.confirmed {
+					tx.output_height = 0;
+					tx.update_confirmation_ts();
+					batch.save_tx_log_entry(tx.clone(), &tx.parent_key_id)?;
+				}
+			}
+		}
+		batch.commit()?;
+	}
+
 	txs.sort_by_key(|tx| tx.creation_ts);
-	Ok(txs)
+
+	if pagination_start.is_some() || pagination_len.is_some() {
+		let pag_len = pagination_len.unwrap_or(txs.len() as u32);
+		let mut pag_txs: Vec<TxLogEntry> = Vec::new();
+
+		let mut pre_count = 0;
+		let mut count = 0;
+
+		let pagination_start = pagination_start.unwrap_or(0);
+
+		for tx in txs {
+			if pre_count >= pagination_start {
+				pag_txs.push(tx);
+				count = count + 1;
+				if count == pag_len {
+					break;
+				}
+			}
+			pre_count = pre_count + 1;
+		}
+		Ok(pag_txs)
+	} else {
+		Ok(txs)
+	}
 }
 
 /// Refreshes the outputs in a wallet with the latest information
@@ -146,7 +257,14 @@ where
 	K: Keychain + 'a,
 {
 	let height = wallet.w2n_client().get_chain_tip()?.0;
-	refresh_output_state(wallet, keychain_mask, height, parent_key_id, update_all)?;
+	refresh_output_state(
+		wallet,
+		keychain_mask,
+		height,
+		parent_key_id,
+		update_all,
+		None,
+	)?;
 	Ok(())
 }
 
@@ -171,7 +289,16 @@ where
 		.filter(|x| x.root_key_id == *parent_key_id && x.status != OutputStatus::Spent)
 		.collect();
 
-	let tx_entries = retrieve_txs(wallet, None, None, Some(&parent_key_id), true)?;
+	let tx_entries = retrieve_txs(
+		wallet,
+		keychain_mask,
+		None,
+		None,
+		Some(&parent_key_id),
+		true,
+		None,
+		None,
+	)?;
 
 	// Only select outputs that are actually involved in an outstanding transaction
 	let unspents: Vec<OutputData> = match update_all {
@@ -334,12 +461,13 @@ where
 
 /// Builds a single api query to retrieve the latest output data from the node.
 /// So we can refresh the local wallet outputs.
-fn refresh_output_state<'a, T: ?Sized, C, K>(
+pub fn refresh_output_state<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	height: u64,
 	parent_key_id: &Identifier,
 	update_all: bool,
+	node_outputs: Option<Vec<grin_api::Output>>,
 ) -> Result<(), Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -354,9 +482,21 @@ where
 
 	let wallet_output_keys = wallet_outputs.keys().map(|commit| commit.clone()).collect();
 
-	let api_outputs = wallet
-		.w2n_client()
-		.get_outputs_from_node(wallet_output_keys)?;
+	let api_outputs = match node_outputs {
+		Some(node_outputs) => {
+			let mut api_outputs: HashMap<pedersen::Commitment, (String, u64, u64)> = HashMap::new();
+			for out in node_outputs {
+				api_outputs.insert(
+					out.commit.commit,
+					(util::to_hex(out.commit.to_vec()), out.height, out.mmr_index),
+				);
+			}
+			api_outputs
+		}
+		None => wallet
+			.w2n_client()
+			.get_outputs_from_node(wallet_output_keys)?,
+	};
 
 	apply_api_outputs(
 		wallet,

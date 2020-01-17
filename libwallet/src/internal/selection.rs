@@ -217,11 +217,14 @@ where
 /// Creates a new output in the wallet for the recipient,
 /// returning the key of the fresh output
 /// Also creates a new transaction containing the output
+/// Note: key_id & output_amounts needed for secure claims.
 pub fn build_recipient_output<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &mut Slate,
 	parent_key_id: Identifier,
+	key_id_opt: Option<&str>,
+	output_amounts: Option<Vec<u64>>,
 	use_test_rng: bool,
 ) -> Result<(Identifier, Context), Error>
 where
@@ -229,19 +232,53 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	// Create a potential output for this transaction
-	let key_id = keys::next_available_key(wallet, keychain_mask).unwrap();
+	// Keeping keys with amounts because context want that ( <id>, <amount> )
+	let mut key_vec_amounts = Vec::new();
+
+	if output_amounts.is_some() {
+		// Just calculating the key...
+		let mut i = 0;
+		let output_amounts_unwrapped = output_amounts.clone().unwrap();
+		let mut sum = 0;
+		for oaui in output_amounts_unwrapped {
+			sum = sum + oaui;
+			key_vec_amounts.push((
+				keys::next_available_key(wallet, keychain_mask).unwrap(),
+				oaui,
+			));
+			i = i + 1;
+		}
+		if sum != slate.amount {
+			println!("mismatch sum = {}, amount = {}", sum, slate.amount);
+			return Err(ErrorKind::AmountMismatch {
+				amount: slate.amount,
+				sum: sum,
+			})?;
+		}
+	} else {
+		// building transaction, apply provided key.
+		let key_id = if key_id_opt.is_some() {
+			let key_str = key_id_opt.unwrap();
+			Identifier::from_hex(key_str).unwrap()
+		} else {
+			keys::next_available_key(wallet, keychain_mask).unwrap()
+		};
+		key_vec_amounts.push((key_id, slate.amount));
+	}
+
 	let keychain = wallet.keychain(keychain_mask)?;
-	let key_id_inner = key_id.clone();
 	let amount = slate.amount;
 	let height = slate.height;
 
 	let slate_id = slate.id.clone();
-	let blinding = slate.add_transaction_elements(
-		&keychain,
-		&ProofBuilder::new(&keychain),
-		vec![build::output(amount, key_id.clone())],
-	)?;
+
+	let mut out_vec = Vec::new();
+	for kva in &key_vec_amounts {
+		out_vec.push(build::output(kva.1, kva.0.clone()));
+	}
+
+	let blinding =
+		slate.add_transaction_elements(&keychain, &ProofBuilder::new(&keychain), out_vec)?;
 
 	// Add blinding sum to our context
 	let mut context = Context::new(
@@ -254,15 +291,24 @@ where
 		1,
 	);
 
-	context.add_output(&key_id, &None, amount);
+	for kva in &key_vec_amounts {
+		context.add_output(&kva.0, &None, kva.1);
+	}
+
 	let messages = Some(slate.participant_messages());
-	let commit = wallet.calc_commit_for_cache(keychain_mask, amount, &key_id_inner)?;
+
+	let mut commit_vec = Vec::new();
+	for kva in &key_vec_amounts {
+		let commit = wallet.calc_commit_for_cache(keychain_mask, kva.1, &kva.0)?;
+		commit_vec.push(commit);
+	}
+
 	let mut batch = wallet.batch(keychain_mask)?;
 	let log_id = batch.next_tx_log_id(&parent_key_id)?;
 	let mut t = TxLogEntry::new(parent_key_id.clone(), TxLogEntryType::TxReceived, log_id);
 	t.tx_slate_id = Some(slate_id);
 	t.amount_credited = amount;
-	t.num_outputs = 1;
+	t.num_outputs = key_vec_amounts.len();
 	t.messages = messages;
 	t.ttl_cutoff_height = slate.ttl_cutoff_height;
 	// when invoicing, this will be invalid
@@ -271,23 +317,30 @@ where
 		Err(_) => {}
 	}
 	t.kernel_lookup_min_height = Some(slate.height);
-	batch.save(OutputData {
-		root_key_id: parent_key_id.clone(),
-		key_id: key_id_inner.clone(),
-		mmr_index: None,
-		n_child: key_id_inner.to_path().last_path_index(),
-		commit: commit,
-		value: amount,
-		status: OutputStatus::Unconfirmed,
-		height: height,
-		lock_height: 0,
-		is_coinbase: false,
-		tx_log_entry: Some(log_id),
-	})?;
 	batch.save_tx_log_entry(t, &parent_key_id)?;
+
+	let mut i = 0;
+	for kva in &key_vec_amounts {
+		batch.save(OutputData {
+			root_key_id: parent_key_id.clone(),
+			key_id: kva.0.clone(),
+			mmr_index: None,
+			n_child: kva.0.to_path().last_path_index(),
+			commit: commit_vec[i].clone(),
+			value: kva.1,
+			status: OutputStatus::Unconfirmed,
+			height: height,
+			lock_height: 0,
+			is_coinbase: false,
+			tx_log_entry: Some(log_id),
+		})?;
+		i = i + 1;
+	}
 	batch.commit()?;
 
-	Ok((key_id, context))
+	// returning last key that was used in the chain.
+	// That suppose to satisfy all caller needs
+	Ok((key_vec_amounts.last().unwrap().0.clone(), context))
 }
 
 /// Builds a transaction to send to someone from the HD seed associated with the

@@ -32,7 +32,7 @@ use std::sync::Arc;
 
 /// Utility struct for return values from below
 #[derive(Debug, Clone)]
-struct OutputResult {
+pub struct OutputResult {
 	///
 	pub commit: pedersen::Commitment,
 	///
@@ -54,7 +54,7 @@ struct OutputResult {
 #[derive(Debug, Clone)]
 /// Collect stats in case we want to just output a single tx log entry
 /// for restored non-coinbase outputs
-struct RestoredTxStats {
+pub struct RestoredTxStats {
 	///
 	pub log_id: u32,
 	///
@@ -144,7 +144,8 @@ where
 	Ok(wallet_outputs)
 }
 
-fn collect_chain_outputs<'a, C, K>(
+/// Scanning chain for the outputs. Shared with mwc713
+pub fn collect_chain_outputs<'a, C, K>(
 	keychain: &K,
 	client: C,
 	start_index: u64,
@@ -194,8 +195,8 @@ where
 	Ok((result_vec, last_retrieved_return_index))
 }
 
-///
-fn restore_missing_output<'a, L, C, K>(
+/// Respore missing outputs. Shared with mwc713
+pub fn restore_missing_output<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
 	output: OutputResult,
@@ -299,10 +300,13 @@ where
 	let updated_tx_entry = if output.tx_log_entry.is_some() {
 		let entries = updater::retrieve_txs(
 			&mut **w,
+			keychain_mask,
 			output.tx_log_entry.clone(),
 			None,
 			Some(&parent_key_id),
 			false,
+			None,
+			None,
 		)?;
 		if entries.len() > 0 {
 			let mut entry = entries[0].clone();
@@ -373,7 +377,7 @@ where
 	// Now, get all outputs owned by this wallet (regardless of account)
 	let wallet_outputs = {
 		wallet_lock!(wallet_inst, w);
-		updater::retrieve_outputs(&mut **w, keychain_mask, true, None, None)?
+		updater::retrieve_outputs(&mut **w, keychain_mask, true, None, None, None, None)?
 	};
 
 	let mut missing_outs = vec![];

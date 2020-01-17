@@ -38,7 +38,7 @@ mod client_utils;
 pub mod encrypt;
 mod error;
 pub mod lifecycle;
-mod node_clients;
+pub mod node_clients;
 pub mod test_framework;
 pub mod tor;
 

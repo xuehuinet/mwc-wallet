@@ -44,10 +44,12 @@ extern crate strum;
 #[macro_use]
 extern crate strum_macros;
 
+extern crate grin_api;
+
 pub mod address;
 pub mod api_impl;
 mod error;
-mod internal;
+pub mod internal;
 mod slate;
 pub mod slate_versions;
 mod types;
@@ -58,6 +60,8 @@ pub use crate::slate_versions::{
 	SlateVersion, VersionedCoinbase, VersionedSlate, CURRENT_SLATE_VERSION,
 	GRIN_BLOCK_HEADER_VERSION,
 };
+pub use api_impl::foreign;
+pub use api_impl::owner;
 pub use api_impl::owner_updater::StatusMessage;
 pub use api_impl::types::{
 	BlockFees, InitTxArgs, InitTxSendArgs, IssueInvoiceTxArgs, NodeHeightResult,

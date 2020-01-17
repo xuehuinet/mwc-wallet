@@ -173,6 +173,14 @@ pub enum ErrorKind {
 	#[fail(display = "Account Label '{}' already exists", _0)]
 	AccountLabelAlreadyExists(String),
 
+	/// Try to rename/delete unknown account
+	#[fail(display = "\x1b[31;1merror:\x1b[0m Account label {} doesn't exist!", 0)]
+	AccountLabelNotExists(String),
+
+	/// Account with can't be renamed
+	#[fail(display = "\x1b[31;1merror:\x1b[0m default account cannot be renamed!")]
+	AccountDefaultCannotBeRenamed,
+
 	/// Reference unknown account label
 	#[fail(display = "Unknown Account Label '{}'", _0)]
 	UnknownAccountLabel(String),
@@ -236,6 +244,18 @@ pub enum ErrorKind {
 	/// Transaction has expired it's TTL
 	#[fail(display = "Transaction Expired")]
 	TransactionExpired,
+
+	/// Claim prepare call with wrong amount value
+	#[fail(
+		display = "\x1b[31;1merror:\x1b[0m Amount specified does not match slate! slate = {} / sum = {}",
+		amount, sum
+	)]
+	AmountMismatch {
+		/// Amount that pass as a prameter
+		amount: u64,
+		/// Sum of amounts that slate has
+		sum: u64,
+	},
 
 	/// Other
 	#[fail(display = "Generic error: {}", _0)]
