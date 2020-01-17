@@ -1027,6 +1027,7 @@ dependencies = [
  "ed25519-dalek 1.0.0-pre.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_derive 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grin_api 3.0.0-beta.1",
  "grin_wallet_config 3.0.0-beta.1",
  "grin_wallet_util 3.0.0-beta.1",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

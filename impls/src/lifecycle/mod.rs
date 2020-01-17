@@ -17,3 +17,5 @@ mod seed;
 
 pub use self::default::DefaultLCProvider;
 pub use seed::show_recovery_phrase;
+pub use seed::EncryptedWalletSeed;
+pub use seed::WalletSeed;

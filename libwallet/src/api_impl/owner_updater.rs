@@ -85,6 +85,30 @@ pub fn start_updater_log_thread(
 	Ok(())
 }
 
+/// Helper function that starts a simple console printing thread for updater messages
+/// Used by mwc713
+pub fn start_updater_console_thread(rx: Receiver<StatusMessage>) -> Result<(), Error> {
+	let _ = thread::Builder::new()
+		.name("wallet-console-updater-status".to_string())
+		.spawn(move || loop {
+			while let Ok(m) = rx.try_recv() {
+				match m {
+					StatusMessage::UpdatingOutputs(s) => println!("{}", s),
+					StatusMessage::UpdatingTransactions(s) => println!("{}", s),
+					StatusMessage::FullScanWarn(s) => println!("{}", s),
+					StatusMessage::Scanning(s, m) => {
+						println!("{}, {}% complete", s, m);
+					}
+					StatusMessage::ScanningComplete(s) => println!("{}", s),
+					StatusMessage::UpdateWarning(s) => println!("{}", s),
+				}
+			}
+			thread::sleep(Duration::from_millis(500));
+		})?;
+
+	Ok(())
+}
+
 /// Handles and launches a background update thread
 pub struct Updater<'a, L, C, K>
 where

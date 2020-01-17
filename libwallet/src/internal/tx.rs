@@ -203,10 +203,13 @@ where
 }
 
 /// Add receiver output to the slate
+/// Note: key_id & output_amounts needed for secure claims, mwc713.
 pub fn add_output_to_slate<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &mut Slate,
+	key_id_opt: Option<&str>,
+	output_amounts: Option<Vec<u64>>,
 	parent_key_id: &Identifier,
 	participant_id: usize,
 	message: Option<String>,
@@ -224,6 +227,8 @@ where
 		keychain_mask,
 		slate,
 		parent_key_id.clone(),
+		key_id_opt,
+		output_amounts,
 		use_test_rng,
 	)?;
 
@@ -294,7 +299,16 @@ where
 	} else if let Some(tx_slate_id) = tx_slate_id {
 		tx_id_string = tx_slate_id.to_string();
 	}
-	let tx_vec = updater::retrieve_txs(wallet, tx_id, tx_slate_id, Some(&parent_key_id), false)?;
+	let tx_vec = updater::retrieve_txs(
+		wallet,
+		keychain_mask,
+		tx_id,
+		tx_slate_id,
+		Some(&parent_key_id),
+		false,
+		None,
+		None,
+	)?;
 	if tx_vec.len() != 1 {
 		return Err(ErrorKind::TransactionDoesntExist(tx_id_string))?;
 	}
@@ -312,6 +326,8 @@ where
 		false,
 		Some(tx.id),
 		Some(&parent_key_id),
+		None,
+		None,
 	)?;
 	let outputs = res.iter().map(|m| m.output.clone()).collect();
 	updater::cancel_tx_and_outputs(wallet, keychain_mask, tx, outputs, parent_key_id)?;
@@ -332,7 +348,16 @@ where
 	K: Keychain + 'a,
 {
 	// finalize command
-	let tx_vec = updater::retrieve_txs(wallet, None, Some(slate.id), None, false)?;
+	let tx_vec = updater::retrieve_txs(
+		wallet,
+		keychain_mask,
+		None,
+		Some(slate.id),
+		None,
+		false,
+		None,
+		None,
+	)?;
 	let mut tx = None;
 	// don't want to assume this is the right tx, in case of self-sending
 	for t in tx_vec {
@@ -392,7 +417,16 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let tx_vec = updater::retrieve_txs(wallet, None, Some(slate.id), None, false)?;
+	let tx_vec = updater::retrieve_txs(
+		wallet,
+		keychain_mask,
+		None,
+		Some(slate.id),
+		None,
+		false,
+		None,
+		None,
+	)?;
 	if tx_vec.is_empty() {
 		return Err(ErrorKind::TransactionDoesntExist(slate.id.to_string()))?;
 	}
@@ -406,6 +440,7 @@ where
 	Ok(())
 }
 
+/// Generate proof record
 pub fn payment_proof_message(
 	amount: u64,
 	kernel_commitment: &pedersen::Commitment,
@@ -418,6 +453,7 @@ pub fn payment_proof_message(
 	Ok(msg)
 }
 
+/// decode proof message
 pub fn _decode_payment_proof_message(
 	msg: &Vec<u8>,
 ) -> Result<(u64, pedersen::Commitment, DalekPublicKey), Error> {
@@ -474,7 +510,16 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let tx_vec = updater::retrieve_txs(wallet, None, Some(slate.id), Some(parent_key_id), false)?;
+	let tx_vec = updater::retrieve_txs(
+		wallet,
+		keychain_mask,
+		None,
+		Some(slate.id),
+		Some(parent_key_id),
+		false,
+		None,
+		None,
+	)?;
 	if tx_vec.len() == 0 {
 		return Err(ErrorKind::PaymentProof(
 			"TxLogEntry with original proof info not found (is account correct?)".to_owned(),

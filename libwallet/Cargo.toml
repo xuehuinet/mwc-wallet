@@ -31,3 +31,10 @@ data-encoding = "2"
 
 grin_wallet_util = { path = "../util", version = "3.0.0-beta.1" }
 grin_wallet_config = { path = "../config", version = "3.0.0-beta.1" }
+
+# Release
+
+# For bleeding edge
+
+# For local testing
+grin_api = { path = "../../mwc-node/api", version= "3.0.0-beta.1"}

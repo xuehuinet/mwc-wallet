@@ -57,10 +57,13 @@ pub fn verify_slate_messages(slate: &Slate) -> Result<(), Error> {
 }
 
 /// Receive a tx as recipient
+/// Note: key_id & output_amounts needed for secure claims, mwc713.
 pub fn receive_tx<'a, T: ?Sized, C, K>(
 	w: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
+	key_id_opt: Option<&str>,
+	output_amounts: Option<Vec<u64>>,
 	dest_acct_name: Option<&str>,
 	message: Option<String>,
 	use_test_rng: bool,
@@ -85,10 +88,13 @@ where
 	// Don't do this multiple times
 	let tx = updater::retrieve_txs(
 		&mut *w,
+		keychain_mask,
 		None,
 		Some(ret_slate.id),
 		Some(&parent_key_id),
 		use_test_rng,
+		None,
+		None,
 	)?;
 	for t in &tx {
 		if t.tx_type == TxLogEntryType::TxReceived {
@@ -104,10 +110,13 @@ where
 		None => None,
 	};
 
+	// Note: key_id & output_amounts needed for secure claims, mwc713.
 	tx::add_output_to_slate(
 		&mut *w,
 		keychain_mask,
 		&mut ret_slate,
+		key_id_opt,
+		output_amounts,
 		&parent_key_id,
 		1,
 		message,

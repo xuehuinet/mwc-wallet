@@ -417,6 +417,8 @@ impl SlateReceiver for KeybaseAllChannels {
 								&slate,
 								None,
 								None,
+								None,
+								None,
 								false,
 							);
 							r
