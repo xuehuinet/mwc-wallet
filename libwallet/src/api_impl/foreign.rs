@@ -62,6 +62,7 @@ pub fn receive_tx<'a, T: ?Sized, C, K>(
 	w: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
+	address: Option<String>,
 	key_id_opt: Option<&str>,
 	output_amounts: Option<Vec<u64>>,
 	dest_acct_name: Option<&str>,
@@ -110,11 +111,17 @@ where
 		None => None,
 	};
 
+	let num_outputs = match &output_amounts {
+		Some(v) => v.len(),
+		None => 1,
+	};
+
 	// Note: key_id & output_amounts needed for secure claims, mwc713.
 	tx::add_output_to_slate(
 		&mut *w,
 		keychain_mask,
 		&mut ret_slate,
+		address,
 		key_id_opt,
 		output_amounts,
 		&parent_key_id,
@@ -122,6 +129,7 @@ where
 		message,
 		false,
 		use_test_rng,
+		num_outputs,
 	)?;
 	tx::update_message(&mut *w, keychain_mask, &mut ret_slate)?;
 
@@ -155,13 +163,16 @@ where
 {
 	let mut sl = slate.clone();
 	check_ttl(w, &sl)?;
-	let context = w.get_private_context(keychain_mask, sl.id.as_bytes(), 1)?;
-	tx::complete_tx(&mut *w, keychain_mask, &mut sl, 1, &context)?;
+	// Participant id 0 for mwc713 compatibility
+	let context = w.get_private_context(keychain_mask, sl.id.as_bytes(), 0)?;
+	// Participant id 0 for mwc713 compatibility
+	tx::complete_tx(&mut *w, keychain_mask, &mut sl, 0, &context)?;
 	tx::update_stored_tx(&mut *w, keychain_mask, &context, &mut sl, true)?;
 	tx::update_message(&mut *w, keychain_mask, &mut sl)?;
 	{
 		let mut batch = w.batch(keychain_mask)?;
-		batch.delete_private_context(sl.id.as_bytes(), 1)?;
+		// Participant id 0 for mwc713 compatibility
+		batch.delete_private_context(sl.id.as_bytes(), 0)?;
 		batch.commit()?;
 	}
 	Ok(sl)

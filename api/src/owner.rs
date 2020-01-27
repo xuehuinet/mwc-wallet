@@ -633,12 +633,22 @@ where
 		&self,
 		keychain_mask: Option<&SecretKey>,
 		args: InitTxArgs,
+		outputs: Option<Vec<&str>>, // outputs to include into the transaction
+		routputs: usize,            // Number of resulting outputs. Normally it is 1
 	) -> Result<Slate, Error> {
 		let send_args = args.send_args.clone();
+		let address = args.address.clone();
 		let mut slate = {
 			let mut w_lock = self.wallet_inst.lock();
 			let w = w_lock.lc_provider()?.wallet_inst()?;
-			owner::init_send_tx(&mut **w, keychain_mask, args, self.doctest_mode)?
+			owner::init_send_tx(
+				&mut **w,
+				keychain_mask,
+				args,
+				self.doctest_mode,
+				outputs,
+				routputs,
+			)?
 		};
 		// Helper functionality. If send arguments exist, attempt to send
 		match send_args {
@@ -658,7 +668,7 @@ where
 				let comm_adapter = create_sender(&sa.method, &sa.dest, tor_config_lock.clone())
 					.map_err(|e| ErrorKind::GenericError(format!("{}", e)))?;
 				slate = comm_adapter.send_tx(&slate)?;
-				self.tx_lock_outputs(keychain_mask, &slate, 0)?;
+				self.tx_lock_outputs(keychain_mask, &slate, address, 0)?;
 				let slate = match sa.finalize {
 					true => self.finalize_tx(keychain_mask, &slate)?,
 					false => slate,
@@ -715,7 +725,7 @@ where
 	) -> Result<Slate, Error> {
 		let mut w_lock = self.wallet_inst.lock();
 		let w = w_lock.lc_provider()?.wallet_inst()?;
-		owner::issue_invoice_tx(&mut **w, keychain_mask, args, self.doctest_mode)
+		owner::issue_invoice_tx(&mut **w, keychain_mask, args, self.doctest_mode, 1)
 	}
 
 	/// Processes an invoice tranaction created by another party, essentially
@@ -843,11 +853,12 @@ where
 		&self,
 		keychain_mask: Option<&SecretKey>,
 		slate: &Slate,
+		address: Option<String>,
 		participant_id: usize,
 	) -> Result<(), Error> {
 		let mut w_lock = self.wallet_inst.lock();
 		let w = w_lock.lc_provider()?.wallet_inst()?;
-		owner::tx_lock_outputs(&mut **w, keychain_mask, slate, participant_id)
+		owner::tx_lock_outputs(&mut **w, keychain_mask, slate, address, participant_id)
 	}
 
 	/// Finalizes a transaction, after all parties
@@ -914,7 +925,8 @@ where
 	) -> Result<Slate, Error> {
 		let mut w_lock = self.wallet_inst.lock();
 		let w = w_lock.lc_provider()?.wallet_inst()?;
-		owner::finalize_tx(&mut **w, keychain_mask, &slate)
+		let (slate, _) = owner::finalize_tx(&mut **w, keychain_mask, &slate)?;
+		Ok(slate)
 	}
 
 	/// Posts a completed transaction to the listening node for validation and inclusion in a block
@@ -1430,7 +1442,7 @@ where
 	/// let api_owner = Owner::new(wallet.clone());
 	/// let _ = api_owner.set_top_level_directory(dir);
 	///
-	/// let result = api_owner.create_config(&ChainTypes::Mainnet, None, None, None);
+	/// let result = api_owner.create_config(&ChainTypes::Mainnet, None, None, None, None);
 	///
 	/// if let Ok(_) = result {
 	///		//...
@@ -1517,6 +1529,7 @@ where
 		mnemonic: Option<ZeroingString>,
 		mnemonic_length: u32,
 		password: ZeroingString,
+		wallet_data_dir: Option<&str>,
 	) -> Result<(), Error> {
 		let mut w_lock = self.wallet_inst.lock();
 		let lc = w_lock.lc_provider()?;
@@ -1526,6 +1539,7 @@ where
 			mnemonic_length as usize,
 			password,
 			self.doctest_mode,
+			wallet_data_dir,
 		)
 	}
 
@@ -1571,9 +1585,9 @@ where
 	///
 	///	// create new wallet wirh random seed
 	///	let pw = ZeroingString::from("my_password");
-	/// let _ = api_owner.create_wallet(None, None, 0, pw.clone());
+	/// let _ = api_owner.create_wallet(None, None, 0, pw.clone(), None);
 	///
-	/// let result = api_owner.open_wallet(None, pw, true);
+	/// let result = api_owner.open_wallet(None, pw, true, None);
 	///
 	/// if let Ok(m) = result {
 	///		// use this mask in all subsequent calls
@@ -1586,6 +1600,7 @@ where
 		name: Option<&str>,
 		password: ZeroingString,
 		use_mask: bool,
+		wallet_data_dir: Option<&str>,
 	) -> Result<Option<SecretKey>, Error> {
 		// just return a representative string for doctest mode
 		if self.doctest_mode {
@@ -1601,7 +1616,7 @@ where
 		}
 		let mut w_lock = self.wallet_inst.lock();
 		let lc = w_lock.lc_provider()?;
-		lc.open_wallet(name, password, use_mask, self.doctest_mode)
+		lc.open_wallet(name, password, use_mask, self.doctest_mode, wallet_data_dir)
 	}
 
 	/// `Close` a wallet, removing the master seed from memory.
@@ -1661,7 +1676,7 @@ where
 	/// # let api_owner = Owner::new(wallet.clone());
 	///
 	///	let pw = ZeroingString::from("my_password");
-	/// let res = api_owner.get_mnemonic(None, pw);
+	/// let res = api_owner.get_mnemonic(None, pw, None);
 	///
 	/// if let Ok(mne) = res {
 	///		// ...
@@ -1671,10 +1686,11 @@ where
 		&self,
 		name: Option<&str>,
 		password: ZeroingString,
+		wallet_data_dir: Option<&str>,
 	) -> Result<ZeroingString, Error> {
 		let mut w_lock = self.wallet_inst.lock();
 		let lc = w_lock.lc_provider()?;
-		lc.get_mnemonic(name, password)
+		lc.get_mnemonic(name, password, wallet_data_dir)
 	}
 
 	/// Changes a wallet's password, meaning the old seed file is decrypted with the old password,
@@ -1707,7 +1723,7 @@ where
 	///
 	///	let old = ZeroingString::from("my_password");
 	///	let new = ZeroingString::from("new_password");
-	/// let res = api_owner.change_password(None, old, new);
+	/// let res = api_owner.change_password(None, old, new, None);
 	///
 	/// if let Ok(mne) = res {
 	///		// ...
@@ -1718,10 +1734,11 @@ where
 		name: Option<&str>,
 		old: ZeroingString,
 		new: ZeroingString,
+		wallet_data_dir: Option<&str>,
 	) -> Result<(), Error> {
 		let mut w_lock = self.wallet_inst.lock();
 		let lc = w_lock.lc_provider()?;
-		lc.change_password(name, old, new)
+		lc.change_password(name, old, new, wallet_data_dir)
 	}
 
 	/// Deletes a wallet, removing the config file, seed file and all data files.

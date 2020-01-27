@@ -180,15 +180,9 @@ where
 	C: NodeClient + 'ck,
 	K: Keychain + 'ck,
 {
-	/// For mwc713. Checking if wallet is open. Return Error if it is not
-	fn check_if_open(&self) -> Result<(), Error> {
-		if self.keychain.is_some() {
-			Ok(())
-		} else {
-			Err(Error::from(ErrorKind::GenericError(
-				"Wallet is not open".to_string(),
-			)))
-		}
+	/// data file directory. mwc713 needs it
+	fn get_data_file_dir(&self) -> &str {
+		&self.data_file_dir
 	}
 
 	/// Set the keychain, which should already have been opened
@@ -394,6 +388,23 @@ where
 				"Unable to build transaction path".to_string(),
 			))?,
 		}
+	}
+
+	fn get_stored_tx_by_uuid(&self, uuid: &str) -> Result<Transaction, Error> {
+		let filename = format!("{}.mwctx", uuid);
+
+		let path = path::Path::new(&self.data_file_dir)
+			.join(TX_SAVE_DIR)
+			.join(filename);
+
+		let trans = match path.to_str() {
+			Some(s) => self.load_stored_tx(s)?,
+			None => Err(ErrorKind::GenericError(
+				"Unable to build transaction path".to_string(),
+			))?,
+		};
+
+		Ok(trans.unwrap())
 	}
 
 	fn load_stored_tx(&self, path: &str) -> Result<Option<Transaction>, Error> {

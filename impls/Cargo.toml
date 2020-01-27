@@ -49,3 +49,13 @@ sysinfo = "0.9"
 grin_wallet_util = { path = "../util", version = "3.0.0-beta.1" }
 grin_wallet_config = { path = "../config", version = "3.0.0-beta.1" }
 grin_wallet_libwallet = { path = "../libwallet", version = "3.0.0-beta.1" }
+
+
+# Release
+#grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "3.0.0" }
+
+# For bleeding edge
+#grin_p2p = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
+
+# For local testing
+grin_p2p = { path = "../../mwc-node/p2p", version= "3.0.0-beta.1"}

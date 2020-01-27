@@ -200,6 +200,8 @@ pub fn send_to_dest<'a, L, C, K>(
 	dest: &str,
 	amount: u64,
 	test_mode: bool,
+	outputs: Option<Vec<&str>>, // outputs to include into the transaction
+	routputs: usize,            // Number of resulting outputs. Normally it is 1
 ) -> Result<(), libwallet::Error>
 where
 	L: WalletLCProvider<'a, C, K>,
@@ -218,10 +220,11 @@ where
 			selection_strategy_is_use_all: true,
 			..Default::default()
 		};
-		let slate_i = owner::init_send_tx(&mut **w, keychain_mask, args, test_mode)?;
-		let slate = client.send_tx_slate_direct(dest, &slate_i)?;
-		owner::tx_lock_outputs(&mut **w, keychain_mask, &slate, 0)?;
-		let slate = owner::finalize_tx(&mut **w, keychain_mask, &slate)?;
+		let slate_i =
+			owner::init_send_tx(&mut **w, keychain_mask, args, test_mode, outputs, routputs)?;
+		let slate = client.send_tx_slate_direct(dest.clone(), &slate_i)?;
+		owner::tx_lock_outputs(&mut **w, keychain_mask, &slate, Some(String::from(dest)), 0)?;
+		let (slate, _) = owner::finalize_tx(&mut **w, keychain_mask, &slate)?;
 		slate
 	};
 	let client = {

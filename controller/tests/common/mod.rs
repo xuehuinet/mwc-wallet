@@ -122,10 +122,10 @@ pub fn create_local_wallet(
 		>;
 	let lc = wallet.lc_provider().unwrap();
 	let _ = lc.set_top_level_directory(&format!("{}/{}", test_dir, name));
-	lc.create_wallet(None, mnemonic, 32, ZeroingString::from(""), false)
+	lc.create_wallet(None, mnemonic, 32, ZeroingString::from(""), false, None)
 		.unwrap();
 	let mask = lc
-		.open_wallet(None, ZeroingString::from(""), create_mask, false)
+		.open_wallet(None, ZeroingString::from(""), create_mask, false, None)
 		.unwrap();
 	(Arc::new(Mutex::new(wallet)), mask)
 }
@@ -162,7 +162,7 @@ pub fn open_local_wallet(
 	let lc = wallet.lc_provider().unwrap();
 	let _ = lc.set_top_level_directory(&format!("{}/{}", test_dir, name));
 	let mask = lc
-		.open_wallet(None, ZeroingString::from(""), create_mask, false)
+		.open_wallet(None, ZeroingString::from(""), create_mask, false, None)
 		.unwrap();
 	(Arc::new(Mutex::new(wallet)), mask)
 }

@@ -36,7 +36,7 @@ use common::{clean_output_dir, create_wallet_proxy, setup};
 
 macro_rules! send_to_dest {
 	($a:expr, $m: expr, $b:expr, $c:expr, $d:expr) => {
-		test_framework::send_to_dest($a, $m, $b, $c, $d, false)
+		test_framework::send_to_dest($a, $m, $b, $c, $d, false, None, 1)
 	};
 }
 
@@ -185,11 +185,11 @@ fn scan_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 			selection_strategy_is_use_all: true,
 			..Default::default()
 		};
-		let slate = api.init_send_tx(m, args)?;
+		let slate = api.init_send_tx(m, args, None, 1)?;
 		// output tx file
 		let send_file = format!("{}/part_tx_1.tx", test_dir);
 		PathToSlate(send_file.into()).put_tx(&slate)?;
-		api.tx_lock_outputs(m, &slate, 0)?;
+		api.tx_lock_outputs(m, &slate, None, 0)?;
 		Ok(())
 	})?;
 

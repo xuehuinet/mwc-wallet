@@ -47,7 +47,7 @@ impl HTTPNodeClient {
 	}
 
 	/// Allow returning the chain height without needing a wallet instantiated
-	pub fn chain_height(&self) -> Result<(u64, String), libwallet::Error> {
+	pub fn chain_height(&self) -> Result<(u64, String, u64), libwallet::Error> {
 		self.get_chain_tip()
 	}
 }
@@ -117,7 +117,8 @@ impl NodeClient for HTTPNodeClient {
 	}
 
 	/// Return the chain tip from a given node
-	fn get_chain_tip(&self) -> Result<(u64, String), libwallet::Error> {
+	/// (<height>, <hash>, <total difficulty>)
+	fn get_chain_tip(&self) -> Result<(u64, String, u64), libwallet::Error> {
 		let addr = self.node_url();
 		let url = format!("{}/v1/chain", addr);
 		let client = Client::new();
@@ -128,7 +129,27 @@ impl NodeClient for HTTPNodeClient {
 				error!("Get chain height error: {}", e);
 				Err(libwallet::ErrorKind::ClientCallback(report).into())
 			}
-			Ok(r) => Ok((r.height, r.last_block_pushed)),
+			Ok(r) => Ok((r.height, r.last_block_pushed, r.total_difficulty)),
+		}
+	}
+
+	/// Return Connected peers
+	fn get_connected_peer_info(
+		&self,
+	) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error> {
+		let addr = self.node_url();
+		let url = format!("{}/v1/peers/connected", addr);
+		let client = Client::new();
+
+		let res = client
+			.get::<Vec<grin_p2p::types::PeerInfoDisplay>>(url.as_str(), self.node_api_secret());
+		match res {
+			Err(e) => {
+				let report = format!("Getting connected peers from node: {}", e);
+				error!("Get connected peers error: {}", e);
+				Err(libwallet::ErrorKind::ClientCallback(report).into())
+			}
+			Ok(peer) => Ok(peer),
 		}
 	}
 
@@ -332,30 +353,3 @@ impl NodeClient for HTTPNodeClient {
 		}
 	}
 }
-
-/*
-/// Call the wallet API to create a coinbase output for the given block_fees.
-/// Will retry based on default "retry forever with backoff" behavior.
-pub fn create_coinbase(dest: &str, block_fees: &BlockFees) -> Result<CbData, Error> {
-	let url = format!("{}/v1/wallet/foreign/build_coinbase", dest);
-	match single_create_coinbase(&url, &block_fees) {
-		Err(e) => {
-			error!(
-				"Failed to get coinbase from {}. Run mwc wallet listen?",
-				url
-			);
-			error!("Underlying Error: {}", e.cause().unwrap());
-			error!("Backtrace: {}", e.backtrace().unwrap());
-			Err(e)?
-		}
-		Ok(res) => Ok(res),
-	}
-}
-
-/// Makes a single request to the wallet API to create a new coinbase output.
-fn single_create_coinbase(url: &str, block_fees: &BlockFees) -> Result<CbData, Error> {
-	let res = Client::post(url, None, block_fees).context(ErrorKind::GenericError(
-		"Posting create coinbase".to_string(),
-	))?;
-	Ok(res)
-}*/

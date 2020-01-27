@@ -119,6 +119,7 @@ fn check_api_secret_file(
 pub fn initial_setup_wallet(
 	chain_type: &global::ChainTypes,
 	data_path: Option<PathBuf>,
+	wallet_data_dir: Option<&str>,
 ) -> Result<GlobalWalletConfig, ConfigError> {
 	check_api_secret_file(chain_type, data_path.clone(), OWNER_API_SECRET_FILE_NAME)?;
 	check_api_secret_file(chain_type, data_path.clone(), API_SECRET_FILE_NAME)?;
@@ -141,7 +142,7 @@ pub fn initial_setup_wallet(
 			let mut default_config = GlobalWalletConfig::for_chain(chain_type);
 			default_config.config_file_path = Some(config_path);
 			// update paths relative to current dir
-			default_config.update_paths(&grin_path);
+			default_config.update_paths(&grin_path, wallet_data_dir);
 			Ok(default_config)
 		} else {
 			GlobalWalletConfig::new(config_path.to_str().unwrap())
@@ -237,9 +238,9 @@ impl GlobalWalletConfig {
 	}
 
 	/// Update paths
-	pub fn update_paths(&mut self, wallet_home: &PathBuf) {
+	pub fn update_paths(&mut self, wallet_home: &PathBuf, wallet_data_dir: Option<&str>) {
 		let mut wallet_path = wallet_home.clone();
-		wallet_path.push(GRIN_WALLET_DIR);
+		wallet_path.push(wallet_data_dir.unwrap_or(GRIN_WALLET_DIR));
 		self.members.as_mut().unwrap().wallet.data_file_dir =
 			wallet_path.to_str().unwrap().to_owned();
 		let mut secret_path = wallet_home.clone();

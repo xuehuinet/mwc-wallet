@@ -96,7 +96,7 @@ fn payment_proofs_test_impl(test_dir: &'static str) -> Result<(), libwallet::Err
 			payment_proof_recipient_address: Some(address),
 			..Default::default()
 		};
-		let slate_i = sender_api.init_send_tx(m, args)?;
+		let slate_i = sender_api.init_send_tx(m, args, None, 1)?;
 
 		assert_eq!(
 			slate_i.payment_proof.as_ref().unwrap().receiver_address,
@@ -112,7 +112,7 @@ fn payment_proofs_test_impl(test_dir: &'static str) -> Result<(), libwallet::Err
 		assert_eq!(0, slate.lock_height);
 
 		slate = client1.send_tx_slate_direct("wallet2", &slate_i)?;
-		sender_api.tx_lock_outputs(m, &slate, 0)?;
+		sender_api.tx_lock_outputs(m, &slate, None, 0)?;
 
 		// Ensure what's stored in TX log for payment proof is correct
 		let (_, txs) = sender_api.retrieve_txs(m, true, None, Some(slate.id))?;
