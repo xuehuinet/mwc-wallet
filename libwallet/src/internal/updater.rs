@@ -250,20 +250,30 @@ pub fn refresh_outputs<'a, T: ?Sized, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	parent_key_id: &Identifier,
 	update_all: bool,
+	height: Option<u64>,
+	node_outputs: Option<Vec<grin_api::Output>>,
 ) -> Result<(), Error>
 where
 	T: WalletBackend<'a, C, K>,
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let height = wallet.w2n_client().get_chain_tip()?.0;
+	// for now if height specified don't refresh. It means we're in the owner api.
+	// cannot make blocking call.
+	// TODO: implement in owner api via futures
+	let height = if height.is_none() {
+		wallet.w2n_client().get_chain_tip()?.0
+	} else {
+		height.unwrap()
+	};
+
 	refresh_output_state(
 		wallet,
 		keychain_mask,
 		height,
 		parent_key_id,
 		update_all,
-		None,
+		node_outputs,
 	)?;
 	Ok(())
 }

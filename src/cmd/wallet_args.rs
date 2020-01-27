@@ -612,6 +612,7 @@ pub fn parse_issue_invoice_args(
 		dest: dest.into(),
 		issue_args: IssueInvoiceTxArgs {
 			dest_acct_name: None,
+			address: Some(String::from(dest)),
 			amount,
 			message,
 			target_slate_version,
@@ -921,7 +922,7 @@ where
 			// If wallet exists, open it. Otherwise, that's fine too.
 			let mut wallet_lock = wallet.lock();
 			let lc = wallet_lock.lc_provider().unwrap();
-			open_wallet = lc.wallet_exists(None)?;
+			open_wallet = lc.wallet_exists(None, wallet_config.wallet_data_dir.as_deref())?;
 		}
 		_ => {}
 	}
@@ -935,6 +936,7 @@ where
 				prompt_password(&global_wallet_args.password),
 				false,
 				false,
+				wallet_config.wallet_data_dir.as_deref(),
 			)?;
 			if let Some(account) = wallet_args.value_of("account") {
 				let wallet_inst = lc.wallet_inst()?;
@@ -955,11 +957,16 @@ where
 				&global_wallet_args,
 				&args
 			));
-			command::init(wallet, &global_wallet_args, a)
+			command::init(
+				wallet,
+				&global_wallet_args,
+				a,
+				wallet_config.wallet_data_dir.as_deref(),
+			)
 		}
 		("recover", Some(_)) => {
 			let a = arg_parse!(parse_recover_args(&global_wallet_args,));
-			command::recover(wallet, a)
+			command::recover(wallet, a, wallet_config.wallet_data_dir.as_deref())
 		}
 		("listen", Some(args)) => {
 			let mut c = wallet_config.clone();
@@ -1008,7 +1015,11 @@ where
 		}
 		("finalize", Some(args)) => {
 			let a = arg_parse!(parse_finalize_args(&args));
-			command::finalize(wallet, km, a)
+			command::finalize(wallet, km, a, false)
+		}
+		("finalize_invoice", Some(args)) => {
+			let a = arg_parse!(parse_finalize_args(&args));
+			command::finalize(wallet, km, a, true)
 		}
 		("invoice", Some(args)) => {
 			let a = arg_parse!(parse_issue_invoice_args(&args));
