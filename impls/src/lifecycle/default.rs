@@ -100,7 +100,7 @@ where
 				None => Some(TorConfig::default()),
 			},
 		};
-`
+
 		let wallet_data_dir = wallet.wallet_data_dir.clone().unwrap_or(String::from(GRIN_WALLET_DIR));
 
 		default_config = GlobalWalletConfig {
