@@ -139,7 +139,7 @@ where
 	/// // These traits can be replaced with alternative implementations if desired
 	///
 	/// let mut wallet = Box::new(DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client.clone()).unwrap())
-	///		as Box<WalletInst<'static, DefaultLCProvider<HTTPNodeClient, ExtKeychain>, HTTPNodeClient, ExtKeychain>>;
+	///		as Box<dyn WalletInst<'static, DefaultLCProvider<HTTPNodeClient, ExtKeychain>, HTTPNodeClient, ExtKeychain>>;
 	///
 	/// // Wallet LifeCycle Provider provides all functions init wallet and work with seeds, etc...
 	/// let lc = wallet.lc_provider().unwrap();
@@ -150,7 +150,7 @@ where
 	///
 	/// // Wallet must be opened with the password (TBD)
 	/// let pw = ZeroingString::from("wallet_password");
-	/// lc.open_wallet(None, pw, false, false);
+	/// lc.open_wallet(None, pw, false, false, None);
 	///
 	/// // All wallet functions operate on an Arc::Mutex to allow multithreading where needed
 	/// let mut wallet = Arc::new(Mutex::new(wallet));
@@ -619,13 +619,15 @@ where
 	/// let result = api_owner.init_send_tx(
 	/// 	None,
 	/// 	args,
+	/// 	None,
+	/// 	1,
 	/// );
 	///
 	/// if let Ok(slate) = result {
 	/// 	// Send slate somehow
 	/// 	// ...
 	/// 	// Lock our outputs if we're happy the slate was (or is being) sent
-	/// 	api_owner.tx_lock_outputs(None, &slate, 0);
+	/// 	api_owner.tx_lock_outputs(None, &slate, None, 0);
 	/// }
 	/// ```
 
@@ -839,13 +841,15 @@ where
 	/// let result = api_owner.init_send_tx(
 	/// 	None,
 	/// 	args,
+	/// 	None,
+	/// 	1,
 	/// );
 	///
 	/// if let Ok(slate) = result {
 	///		// Send slate somehow
 	///		// ...
 	///		// Lock our outputs if we're happy the slate was (or is being) sent
-	///		api_owner.tx_lock_outputs(None, &slate, 0);
+	///		api_owner.tx_lock_outputs(None, &slate, None, 0);
 	/// }
 	/// ```
 
@@ -904,13 +908,15 @@ where
 	/// let result = api_owner.init_send_tx(
 	/// 	None,
 	/// 	args,
+	/// 	None,
+	/// 	1,
 	/// );
 	///
 	/// if let Ok(slate) = result {
 	///		// Send slate somehow
 	///		// ...
 	///		// Lock our outputs if we're happy the slate was (or is being) sent
-	///		let res = api_owner.tx_lock_outputs(None, &slate, 0);
+	///		let res = api_owner.tx_lock_outputs(None, &slate, None, 0);
 	///		//
 	///		// Retrieve slate back from recipient
 	///		//
@@ -965,13 +971,15 @@ where
 	/// let result = api_owner.init_send_tx(
 	/// 	None,
 	/// 	args,
+	/// 	None,
+	/// 	1,
 	/// );
 	///
 	/// if let Ok(slate) = result {
 	///		// Send slate somehow
 	///		// ...
 	///		// Lock our outputs if we're happy the slate was (or is being) sent
-	///		let res = api_owner.tx_lock_outputs(None, &slate, 0);
+	///		let res = api_owner.tx_lock_outputs(None, &slate, None, 0);
 	///		//
 	///		// Retrieve slate back from recipient
 	///		//
@@ -1037,13 +1045,15 @@ where
 	/// let result = api_owner.init_send_tx(
 	/// 	None,
 	/// 	args,
+	/// 	None,
+	/// 	1,
 	/// );
 	///
 	/// if let Ok(slate) = result {
 	///		// Send slate somehow
 	///		// ...
 	///		// Lock our outputs if we're happy the slate was (or is being) sent
-	///		let res = api_owner.tx_lock_outputs(None, &slate, 0);
+	///		let res = api_owner.tx_lock_outputs(None, &slate, None, 0);
 	///		//
 	///		// We didn't get the slate back, or something else went wrong
 	///		//
@@ -1160,13 +1170,15 @@ where
 	/// let result = api_owner.init_send_tx(
 	/// 	None,
 	/// 	args,
+	/// 	None,
+	/// 	1,
 	/// );
 	///
 	/// if let Ok(slate) = result {
 	///		// Send slate somehow
 	///		// ...
 	///		// Lock our outputs if we're happy the slate was (or is being) sent
-	///		let res = api_owner.tx_lock_outputs(None, &slate, 0);
+	///		let res = api_owner.tx_lock_outputs(None, &slate, None, 0);
 	///		//
 	///		// Retrieve slate back from recipient
 	///		//
@@ -1442,7 +1454,7 @@ where
 	/// let api_owner = Owner::new(wallet.clone());
 	/// let _ = api_owner.set_top_level_directory(dir);
 	///
-	/// let result = api_owner.create_config(&ChainTypes::Mainnet, None, None, None, None);
+	/// let result = api_owner.create_config(&ChainTypes::Mainnet, None, None, None );
 	///
 	/// if let Ok(_) = result {
 	///		//...
@@ -1516,7 +1528,7 @@ where
 	///
 	///	// create new wallet wirh random seed
 	///	let pw = ZeroingString::from("my_password");
-	/// let result = api_owner.create_wallet(None, None, 0, pw);
+	/// let result = api_owner.create_wallet(None, None, 0, pw, None);
 	///
 	/// if let Ok(r) = result {
 	///		//...
@@ -2085,7 +2097,7 @@ macro_rules! doctest_helper_setup_doc_env {
 				>;
 		let lc = wallet.lc_provider().unwrap();
 		let _ = lc.set_top_level_directory(&wallet_config.data_file_dir);
-		lc.open_wallet(None, pw, false, false);
+		lc.open_wallet(None, pw, false, false, None);
 		let mut $wallet = Arc::new(Mutex::new(wallet));
 	};
 }
