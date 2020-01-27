@@ -137,7 +137,7 @@ where
 	/// // These traits can be replaced with alternative implementations if desired
 	///
 	/// let mut wallet = Box::new(DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client.clone()).unwrap())
-	///		as Box<WalletInst<'static, DefaultLCProvider<HTTPNodeClient, ExtKeychain>, HTTPNodeClient, ExtKeychain>>;
+	///		as Box<dyn WalletInst<'static, DefaultLCProvider<HTTPNodeClient, ExtKeychain>, HTTPNodeClient, ExtKeychain>>;
 	///
 	/// // Wallet LifeCycle Provider provides all functions init wallet and work with seeds, etc...
 	/// let lc = wallet.lc_provider().unwrap();
@@ -148,7 +148,7 @@ where
 	///
 	/// // Wallet must be opened with the password (TBD)
 	/// let pw = ZeroingString::from("wallet_password");
-	/// lc.open_wallet(None, pw, false, false);
+	/// lc.open_wallet(None, pw, false, false, None);
 	///
 	/// // All wallet functions operate on an Arc::Mutex to allow multithreading where needed
 	/// let mut wallet = Arc::new(Mutex::new(wallet));
@@ -367,7 +367,7 @@ where
 	///
 	/// // . . .
 	/// // Obtain a sent slate somehow
-	/// let result = api_foreign.receive_tx(&slate, None, None);
+	/// let result = api_foreign.receive_tx(&slate, None, None, None);
 	///
 	/// if let Ok(slate) = result {
 	///		// Send back to recipient somehow
@@ -511,7 +511,7 @@ macro_rules! doctest_helper_setup_doc_env_foreign {
 				>;
 		let lc = wallet.lc_provider().unwrap();
 		let _ = lc.set_top_level_directory(&wallet_config.data_file_dir);
-		lc.open_wallet(None, pw, false, false);
+		lc.open_wallet(None, pw, false, false, None);
 		let mut $wallet = Arc::new(Mutex::new(wallet));
 	};
 }
