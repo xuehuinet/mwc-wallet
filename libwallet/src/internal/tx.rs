@@ -97,6 +97,8 @@ pub fn estimate_send_tx<'a, T: ?Sized, C, K>(
 	num_change_outputs: usize,
 	selection_strategy_is_use_all: bool,
 	parent_key_id: &Identifier,
+	outputs: &Option<Vec<&str>>, // outputs to include into the transaction
+	routputs: usize,             // Number of resulting outputs. Normally it is 1
 ) -> Result<
 	(
 		u64, // total
@@ -112,7 +114,7 @@ where
 	// Get lock height
 	let current_height = wallet.w2n_client().get_chain_tip()?.0;
 	// ensure outputs we're selecting are up to date
-	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false)?;
+	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false, None, None)?;
 
 	// Sender selects outputs into a new slate and save our corresponding keys in
 	// a transaction context. The secret key in our transaction context will be
@@ -130,6 +132,8 @@ where
 		num_change_outputs,
 		selection_strategy_is_use_all,
 		parent_key_id,
+		outputs,
+		routputs,
 	)?;
 	Ok((total, fee))
 }
@@ -148,6 +152,8 @@ pub fn add_inputs_to_slate<'a, T: ?Sized, C, K>(
 	message: Option<String>,
 	is_initator: bool,
 	use_test_rng: bool,
+	outputs: Option<Vec<&str>>, // outputs to include into the transaction
+	routputs: usize,            // Number of resulting outputs. Normally it is 1
 ) -> Result<Context, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -155,7 +161,7 @@ where
 	K: Keychain + 'a,
 {
 	// sender should always refresh outputs
-	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false)?;
+	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false, None, None)?;
 
 	// Sender selects outputs into a new slate and save our corresponding keys in
 	// a transaction context. The secret key in our transaction context will be
@@ -175,6 +181,8 @@ where
 		selection_strategy_is_use_all,
 		parent_key_id.clone(),
 		use_test_rng,
+		&outputs, // outputs to include into the transaction
+		routputs, // Number of resulting outputs. Normally it is 1
 	)?;
 
 	// Generate a kernel offset and subtract from our context's secret key. Store
@@ -208,6 +216,7 @@ pub fn add_output_to_slate<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &mut Slate,
+	address: Option<String>,
 	key_id_opt: Option<&str>,
 	output_amounts: Option<Vec<u64>>,
 	parent_key_id: &Identifier,
@@ -215,6 +224,7 @@ pub fn add_output_to_slate<'a, T: ?Sized, C, K>(
 	message: Option<String>,
 	is_initiator: bool,
 	use_test_rng: bool,
+	num_outputs: usize, // Number of outputs for this transaction. Normally it is 1
 ) -> Result<Context, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -226,10 +236,13 @@ where
 		wallet,
 		keychain_mask,
 		slate,
+		address,
 		parent_key_id.clone(),
+		participant_id,
 		key_id_opt,
 		output_amounts,
 		use_test_rng,
+		num_outputs, // Number of outputs for this transaction. Normally it is 1
 	)?;
 
 	// fill public keys
@@ -237,7 +250,7 @@ where
 		&wallet.keychain(keychain_mask)?,
 		&mut context.sec_key,
 		&context.sec_nonce,
-		1,
+		participant_id,
 		message,
 		use_test_rng,
 	)?;

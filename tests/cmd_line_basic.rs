@@ -447,7 +447,7 @@ fn command_line_test_impl(test_dir: &str) -> Result<(), grin_wallet_controller::
 		"mwc-wallet",
 		"-p",
 		"password",
-		"finalize",
+		"finalize_invoice",
 		"-i",
 		&output_file_name,
 	];

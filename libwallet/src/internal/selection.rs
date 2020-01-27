@@ -45,6 +45,8 @@ pub fn build_send_tx<'a, T: ?Sized, C, K>(
 	selection_strategy_is_use_all: bool,
 	parent_key_id: Identifier,
 	use_test_nonce: bool,
+	outputs: &Option<Vec<&str>>, // outputs to include into the transaction
+	routputs: usize,             // Number of resulting outputs. Normally it is 1
 ) -> Result<Context, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -61,6 +63,8 @@ where
 		change_outputs,
 		selection_strategy_is_use_all,
 		&parent_key_id,
+		outputs,
+		routputs,
 	)?;
 
 	// Update the fee on the slate so we account for this when building the tx.
@@ -77,6 +81,7 @@ where
 		0,
 	);
 
+	context.amount = slate.amount;
 	context.fee = fee;
 
 	// Store our private identifiers for each input
@@ -105,6 +110,7 @@ pub fn lock_tx_context<'a, T: ?Sized, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
 	context: &Context,
+	address: Option<String>,
 ) -> Result<(), Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -143,6 +149,8 @@ where
 		t.stored_tx = Some(filename);
 		t.fee = Some(slate.fee);
 		t.ttl_cutoff_height = slate.ttl_cutoff_height;
+
+		t.address = address;
 
 		match slate.calc_excess(&keychain) {
 			Ok(e) => t.kernel_excess = Some(e),
@@ -222,10 +230,13 @@ pub fn build_recipient_output<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &mut Slate,
+	address: Option<String>,
 	parent_key_id: Identifier,
+	participant_id: usize,
 	key_id_opt: Option<&str>,
 	output_amounts: Option<Vec<u64>>,
 	use_test_rng: bool,
+	num_outputs: usize, // Number of outputs for this transaction. Normally it is 1
 ) -> Result<(Identifier, Context), Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -239,6 +250,7 @@ where
 		// Just calculating the key...
 		let mut i = 0;
 		let output_amounts_unwrapped = output_amounts.clone().unwrap();
+		assert!(num_outputs == output_amounts_unwrapped.len());
 		let mut sum = 0;
 		for oaui in output_amounts_unwrapped {
 			sum = sum + oaui;
@@ -257,14 +269,35 @@ where
 		}
 	} else {
 		// building transaction, apply provided key.
-		let key_id = if key_id_opt.is_some() {
-			let key_str = key_id_opt.unwrap();
-			Identifier::from_hex(key_str).unwrap()
-		} else {
-			keys::next_available_key(wallet, keychain_mask).unwrap()
-		};
-		key_vec_amounts.push((key_id, slate.amount));
+		let amount = slate.amount;
+		let mut remaining_amount = amount;
+		assert!(num_outputs > 0);
+		for i in 0..num_outputs {
+			let key_id = if key_id_opt.is_some() {
+				// Note! No need to handle so far, that is why we have one key_id_opt, so num_outputs can be only 1
+				// If it is not true - likely use case was chnaged.
+				assert!(num_outputs == 1);
+				let key_str = key_id_opt.unwrap();
+				Identifier::from_hex(key_str).unwrap()
+			} else {
+				keys::next_available_key(wallet, keychain_mask).unwrap()
+			};
+
+			let output_amount: u64 = if i == num_outputs - 1 {
+				remaining_amount
+			} else {
+				amount / (num_outputs as u64)
+			};
+			if output_amount > 0 {
+				key_vec_amounts.push((key_id.clone(), output_amount));
+				remaining_amount -= output_amount;
+			}
+		}
 	}
+
+	// Note, it is not very critical, has to match for all normal case,
+	// might faill for edge case if we send very smaller coins amount
+	debug_assert!(key_vec_amounts.len() == num_outputs);
 
 	let keychain = wallet.keychain(keychain_mask)?;
 	let amount = slate.amount;
@@ -288,7 +321,7 @@ where
 			.unwrap(),
 		&parent_key_id,
 		use_test_rng,
-		1,
+		participant_id,
 	);
 
 	for kva in &key_vec_amounts {
@@ -308,6 +341,7 @@ where
 	let mut t = TxLogEntry::new(parent_key_id.clone(), TxLogEntryType::TxReceived, log_id);
 	t.tx_slate_id = Some(slate_id);
 	t.amount_credited = amount;
+	t.address = address;
 	t.num_outputs = key_vec_amounts.len();
 	t.messages = messages;
 	t.ttl_cutoff_height = slate.ttl_cutoff_height;
@@ -356,6 +390,8 @@ pub fn select_send_tx<'a, T: ?Sized, C, K, B>(
 	change_outputs: usize,
 	selection_strategy_is_use_all: bool,
 	parent_key_id: &Identifier,
+	outputs: &Option<Vec<&str>>, // outputs to include into the transaction
+	routputs: usize,             // Number of resulting outputs. Normally it is 1
 ) -> Result<
 	(
 		Vec<Box<build::Append<K, B>>>,
@@ -380,6 +416,8 @@ where
 		change_outputs,
 		selection_strategy_is_use_all,
 		&parent_key_id,
+		outputs,  // outputs to include into the transaction
+		routputs, // Number of resulting outputs. Normally it is 1
 	)?;
 
 	// build transaction skeleton with inputs and change
@@ -399,6 +437,8 @@ pub fn select_coins_and_fee<'a, T: ?Sized, C, K>(
 	change_outputs: usize,
 	selection_strategy_is_use_all: bool,
 	parent_key_id: &Identifier,
+	outputs: &Option<Vec<&str>>, // outputs to include into the transaction
+	routputs: usize,             // Number of resulting outputs. Normally it is 1
 ) -> Result<
 	(
 		Vec<OutputData>,
@@ -422,6 +462,7 @@ where
 		max_outputs,
 		selection_strategy_is_use_all,
 		parent_key_id,
+		outputs, // outputs to include into the transaction
 	);
 
 	// sender is responsible for setting the fee on the partial tx
@@ -455,7 +496,8 @@ where
 		})?;
 	}
 
-	let num_outputs = change_outputs + 1;
+	assert!(routputs >= 1); // Normally it is 1
+	let num_outputs = change_outputs + routputs;
 
 	// We need to add a change address or amount with fee is more than total
 	if total != amount_with_fee {
@@ -484,6 +526,7 @@ where
 				max_outputs,
 				selection_strategy_is_use_all,
 				parent_key_id,
+				outputs,
 			)
 			.1;
 			fee = tx_fee(coins.len(), num_outputs, 1, None);
@@ -580,6 +623,7 @@ pub fn select_coins<'a, T: ?Sized, C, K>(
 	max_outputs: usize,
 	select_all: bool,
 	parent_key_id: &Identifier,
+	outputs: &Option<Vec<&str>>, // outputs to include into the transaction
 ) -> (usize, Vec<OutputData>)
 //    max_outputs_available, Outputs
 where
@@ -595,6 +639,25 @@ where
 				&& out.eligible_to_spend(current_height, minimum_confirmations)
 		})
 		.collect::<Vec<OutputData>>();
+
+	match outputs {
+		// User specify outputs to use. It is caller responsibility to make sure  that anount is enough.
+		// we are not adding more outputs to satisfy amount.
+		Some(outputs) => {
+			eligible = eligible
+				.into_iter()
+				.filter(|out| {
+					if out.commit.is_some() {
+						let commit_str = &*out.commit.clone().unwrap();
+						outputs.contains(&commit_str)
+					} else {
+						false
+					}
+				})
+				.collect::<Vec<OutputData>>();
+		}
+		None => (),
+	}
 
 	let max_available = eligible.len();
 

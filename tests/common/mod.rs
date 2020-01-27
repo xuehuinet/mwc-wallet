@@ -155,7 +155,7 @@ pub fn config_command_wallet(
 				.to_owned(),
 		))?;
 	}
-	default_config.update_paths(&current_dir);
+	default_config.update_paths(&current_dir, None);
 	default_config
 		.write_to_file(config_file_name.to_str().unwrap())
 		.unwrap_or_else(|e| {
@@ -247,7 +247,13 @@ pub fn instantiate_wallet(
 	}
 	let _ = lc.set_top_level_directory(&wallet_config.data_file_dir);
 	let keychain_mask = lc
-		.open_wallet(None, ZeroingString::from(passphrase), true, false)
+		.open_wallet(
+			None,
+			ZeroingString::from(passphrase),
+			true,
+			false,
+			wallet_config.wallet_data_dir.as_deref(),
+		)
 		.unwrap();
 	let wallet_inst = lc.wallet_inst()?;
 	wallet_inst.set_parent_key_id_by_name(account)?;
@@ -308,7 +314,7 @@ where
 {
 	let args = app.clone().get_matches_from(arg_vec);
 	let _ = get_wallet_subcommand(test_dir, wallet_name, args.clone());
-	let config = config::initial_setup_wallet(&ChainTypes::AutomatedTesting, None).unwrap();
+	let config = config::initial_setup_wallet(&ChainTypes::AutomatedTesting, None, None).unwrap();
 	let mut wallet_config = config.clone().members.unwrap().wallet;
 	wallet_config.chain_type = None;
 	wallet_config.api_secret_path = None;

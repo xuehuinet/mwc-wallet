@@ -95,6 +95,8 @@ pub struct InitTxArgs {
 	/// If set, require a payment proof for the particular recipient
 	#[serde(with = "dalek_ser::option_dalek_pubkey_serde")]
 	pub payment_proof_recipient_address: Option<DalekPublicKey>,
+	/// address of another party
+	pub address: Option<String>,
 	/// If true, just return an estimate of the resulting slate, containing fees and amounts
 	/// locked without actually locking outputs or creating the transaction. Note if this is set to
 	/// 'true', the amount field in the slate will contain the total amount locked, not the provided
@@ -135,6 +137,7 @@ impl Default for InitTxArgs {
 			ttl_blocks: None,
 			estimate_only: Some(false),
 			payment_proof_recipient_address: None,
+			address: None,
 			send_args: None,
 		}
 	}
@@ -156,6 +159,8 @@ pub struct IssueInvoiceTxArgs {
 	/// down to the minimum slate version compatible with the current. If `None` the slate
 	/// is generated with the latest version.
 	pub target_slate_version: Option<u16>,
+	/// recipient address
+	pub address: Option<String>,
 }
 
 impl Default for IssueInvoiceTxArgs {
@@ -165,6 +170,7 @@ impl Default for IssueInvoiceTxArgs {
 			amount: 0,
 			message: None,
 			target_slate_version: None,
+			address: None,
 		}
 	}
 }

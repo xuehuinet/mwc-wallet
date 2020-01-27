@@ -24,6 +24,7 @@ use crate::grin_core::{global, ser};
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::grin_util::logger::LoggingConfig;
 use crate::grin_util::secp::key::{PublicKey, SecretKey};
+use crate::grin_util::secp::pedersen::Commitment;
 use crate::grin_util::secp::{self, pedersen, Secp256k1};
 use crate::grin_util::ZeroingString;
 use crate::slate::ParticipantMessages;
@@ -81,6 +82,7 @@ where
 		mnemonic_length: usize,
 		password: ZeroingString,
 		test_mode: bool,
+		wallet_data_dir: Option<&str>,
 	) -> Result<(), Error>;
 
 	///
@@ -90,19 +92,25 @@ where
 		password: ZeroingString,
 		create_mask: bool,
 		use_test_rng: bool,
+		wallet_data_dir: Option<&str>,
 	) -> Result<Option<SecretKey>, Error>;
 
 	///
 	fn close_wallet(&mut self, name: Option<&str>) -> Result<(), Error>;
 
 	/// whether a wallet exists at the given directory
-	fn wallet_exists(&self, name: Option<&str>) -> Result<bool, Error>;
+	fn wallet_exists(
+		&self,
+		name: Option<&str>,
+		wallet_data_dir: Option<&str>,
+	) -> Result<bool, Error>;
 
 	/// return mnemonic of given wallet
 	fn get_mnemonic(
 		&self,
 		name: Option<&str>,
 		password: ZeroingString,
+		wallet_data_dir: Option<&str>,
 	) -> Result<ZeroingString, Error>;
 
 	/// Check whether a provided mnemonic string is valid
@@ -114,6 +122,7 @@ where
 		&self,
 		mnemonic: ZeroingString,
 		password: ZeroingString,
+		wallet_data_dir: Option<&str>,
 	) -> Result<(), Error>;
 
 	/// changes password
@@ -122,6 +131,7 @@ where
 		name: Option<&str>,
 		old: ZeroingString,
 		new: ZeroingString,
+		wallet_data_dir: Option<&str>,
 	) -> Result<(), Error>;
 
 	/// deletes wallet
@@ -140,8 +150,8 @@ where
 	C: NodeClient + 'ck,
 	K: Keychain + 'ck,
 {
-	/// For mwc713. Checking if wallet is open. Return Error if it is not
-	fn check_if_open(&self) -> Result<(), Error>;
+	/// data file directory. mwc713 needs it
+	fn get_data_file_dir(&self) -> &str;
 
 	/// Set the keychain, which should already be initialized
 	/// Optionally return a token value used to XOR the stored
@@ -213,6 +223,9 @@ where
 
 	/// Retrieves a stored transaction from a TxLogEntry
 	fn get_stored_tx(&self, entry: &TxLogEntry) -> Result<Option<Transaction>, Error>;
+
+	/// Load transaction by UUID. Needed for mwc713
+	fn get_stored_tx_by_uuid(&self, uuid: &str) -> Result<Transaction, Error>;
 
 	/// Load a txn from specified file
 	fn load_stored_tx(&self, path: &str) -> Result<Option<Transaction>, Error>;
@@ -350,7 +363,11 @@ pub trait NodeClient: Send + Sync + Clone {
 	fn get_version_info(&mut self) -> Option<NodeVersionInfo>;
 
 	/// retrieves the current tip (height, hash) from the specified grin node
-	fn get_chain_tip(&self) -> Result<(u64, String), Error>;
+	/// (<height>, <hash>, <total difficulty>)
+	fn get_chain_tip(&self) -> Result<(u64, String, u64), Error>;
+
+	/// Return Connected peers
+	fn get_connected_peer_info(&self) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, Error>;
 
 	/// Get a kernel and the height of the block it's included in. Returns
 	/// (tx_kernel, height, mmr_index)
@@ -560,12 +577,21 @@ pub struct Context {
 	/// store my inputs
 	/// Id, mmr_index (if known), amount
 	pub input_ids: Vec<(Identifier, Option<u64>, u64)>,
+	/// store the transaction amount
+	#[serde(default)]
+	pub amount: u64,
 	/// store the calculated fee
 	pub fee: u64,
 	/// keep track of the participant id
 	pub participant_id: usize,
 	/// Payment proof sender address derivation path, if needed
 	pub payment_proof_derivation_index: Option<u32>,
+	/// Output commitments, mwc713 payment proof support.
+	#[serde(default)]
+	pub output_commits: Vec<Commitment>,
+	/// Input commitments, mwc713 payment proof support.
+	#[serde(default)]
+	pub input_commits: Vec<Commitment>,
 }
 
 impl Context {
@@ -587,9 +613,12 @@ impl Context {
 			sec_nonce,
 			input_ids: vec![],
 			output_ids: vec![],
+			amount: 0,
 			fee: 0,
 			participant_id: participant_id,
 			payment_proof_derivation_index: None,
+			output_commits: vec![],
+			input_commits: vec![],
 		}
 	}
 }
@@ -770,6 +799,9 @@ pub struct TxLogEntry {
 	pub tx_slate_id: Option<Uuid>,
 	/// Transaction type (as above)
 	pub tx_type: TxLogEntryType,
+	/// Address of the other party
+	#[serde(default)]
+	pub address: Option<String>,
 	/// Time this tx entry was created
 	/// #[serde(with = "tx_date_format")]
 	pub creation_ts: DateTime<Utc>,
@@ -837,6 +869,7 @@ impl TxLogEntry {
 		TxLogEntry {
 			parent_key_id: parent_key_id,
 			tx_type: t,
+			address: None,
 			id: id,
 			tx_slate_id: None,
 			creation_ts: Utc::now(),
@@ -967,7 +1000,8 @@ impl ser::Readable for ScannedBlockInfo {
 /// Wrapper for reward output and kernel used when building a coinbase for a mining node.
 /// Note: Not serializable, must be converted to necesssary "versioned" representation
 /// before serializing to json to ensure compatibility with mining node.
-#[derive(Debug, Clone)]
+/// NOTE2!!! Serialize, Deserialize needed for mwc713, even no version is present. Json should ease the problem
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CbData {
 	/// Output
 	pub output: Output,
