@@ -154,11 +154,15 @@ where
 				status_send_channel,
 				false,
 			)?;
-			if !self.is_running.load(Ordering::Relaxed) {
-				break;
+
+			let sec = frequency.as_secs();
+
+			for _ in 0..sec {
+				if !self.is_running.load(Ordering::Relaxed) {
+					return Ok(());
+				}
+				thread::sleep(Duration::from_secs(1));
 			}
-			thread::sleep(frequency);
 		}
-		Ok(())
 	}
 }

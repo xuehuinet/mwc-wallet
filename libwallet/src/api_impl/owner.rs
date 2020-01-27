@@ -27,7 +27,9 @@ use crate::api_impl::owner_updater::StatusMessage;
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::internal::{keys, scan, selection, tx, updater};
 use crate::slate::{PaymentInfo, Slate};
-use crate::types::{AcctPathMapping, NodeClient, TxLogEntry, TxWrapper, WalletBackend, WalletInfo};
+use crate::types::{
+	AcctPathMapping, Context, NodeClient, TxLogEntry, TxWrapper, WalletBackend, WalletInfo,
+};
 use crate::{
 	address, wallet_lock, InitTxArgs, IssueInvoiceTxArgs, NodeHeightResult, OutputCommitMapping,
 	ScannedBlockInfo, TxLogEntryType, WalletInitStatus, WalletInst, WalletLCProvider,
@@ -210,6 +212,8 @@ pub fn init_send_tx<'a, T: ?Sized, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	args: InitTxArgs,
 	use_test_rng: bool,
+	outputs: Option<Vec<&str>>, // outputs to include into the transaction
+	routputs: usize,            // Number of resulting outputs. Normally it is 1
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -249,6 +253,8 @@ where
 			args.num_change_outputs as usize,
 			args.selection_strategy_is_use_all,
 			&parent_key_id,
+			&outputs,
+			routputs,
 		)?;
 		slate.amount = total;
 		slate.fee = fee;
@@ -268,6 +274,8 @@ where
 		message,
 		true,
 		use_test_rng,
+		outputs,
+		routputs,
 	)?;
 
 	// Payment Proof, add addresses to slate and save address
@@ -290,6 +298,15 @@ where
 		context.payment_proof_derivation_index = Some(deriv_path);
 	}
 
+	// mwc713 payment proof support.
+	for input in slate.tx.inputs() {
+		context.input_commits.push(input.commit.clone());
+	}
+
+	for output in slate.tx.outputs() {
+		context.output_commits.push(output.commit.clone());
+	}
+
 	// Save the aggsig context in our DB for when we
 	// recieve the transaction back
 	{
@@ -310,6 +327,7 @@ pub fn issue_invoice_tx<'a, T: ?Sized, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	args: IssueInvoiceTxArgs,
 	use_test_rng: bool,
+	num_outputs: usize, // Number of outputs for this transaction. Normally it is 1
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -340,20 +358,23 @@ where
 		&mut *w,
 		keychain_mask,
 		&mut slate,
+		args.address.clone(),
 		None,
 		None,
 		&parent_key_id,
-		1,
+		0, // Participant 0 for mwc713 compatibility
 		message,
 		true,
 		use_test_rng,
+		num_outputs,
 	)?;
 
 	// Save the aggsig context in our DB for when we
 	// recieve the transaction back
 	{
 		let mut batch = w.batch(keychain_mask)?;
-		batch.save_private_context(slate.id.as_bytes(), 1, &context)?;
+		// Participant id is 0 for mwc713 compatibility
+		batch.save_private_context(slate.id.as_bytes(), 0, &context)?;
 		batch.commit()?;
 	}
 
@@ -432,17 +453,20 @@ where
 		args.num_change_outputs as usize,
 		args.selection_strategy_is_use_all,
 		&parent_key_id,
-		0,
+		1, // Participant id 1 for mwc713 compatibility
 		message,
 		false,
 		use_test_rng,
+		None,
+		1,
 	)?;
 
 	// Save the aggsig context in our DB for when we
 	// recieve the transaction back
 	{
 		let mut batch = w.batch(keychain_mask)?;
-		batch.save_private_context(slate.id.as_bytes(), 0, &context)?;
+		// Participant id 1 for mwc713 compatibility
+		batch.save_private_context(slate.id.as_bytes(), 1, &context)?;
 		batch.commit()?;
 	}
 
@@ -458,6 +482,7 @@ pub fn tx_lock_outputs<'a, T: ?Sized, C, K>(
 	w: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
+	address: Option<String>,
 	participant_id: usize,
 ) -> Result<(), Error>
 where
@@ -466,15 +491,16 @@ where
 	K: Keychain + 'a,
 {
 	let context = w.get_private_context(keychain_mask, slate.id.as_bytes(), participant_id)?;
-	selection::lock_tx_context(&mut *w, keychain_mask, slate, &context)
+	selection::lock_tx_context(&mut *w, keychain_mask, slate, &context, address)
 }
 
 /// Finalize slate
+/// Context needed for mwc713 proof of sending funds through mwcmqs
 pub fn finalize_tx<'a, T: ?Sized, C, K>(
 	w: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
-) -> Result<Slate, Error>
+) -> Result<(Slate, Context), Error>
 where
 	T: WalletBackend<'a, C, K>,
 	C: NodeClient + 'a,
@@ -493,7 +519,7 @@ where
 		batch.delete_private_context(sl.id.as_bytes(), 0)?;
 		batch.commit()?;
 	}
-	Ok(sl)
+	Ok((sl, context))
 }
 
 /// cancel tx
@@ -830,7 +856,14 @@ where
 {
 	wallet_lock!(wallet_inst, w);
 	let parent_key_id = w.parent_key_id();
-	match updater::refresh_outputs(&mut **w, keychain_mask, &parent_key_id, update_all) {
+	match updater::refresh_outputs(
+		&mut **w,
+		keychain_mask,
+		&parent_key_id,
+		update_all,
+		None,
+		None,
+	) {
 		Ok(_) => Ok(true),
 		Err(e) => {
 			if let ErrorKind::InvalidKeychainMask = e.kind() {

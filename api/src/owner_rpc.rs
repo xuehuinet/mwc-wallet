@@ -1049,7 +1049,7 @@ pub trait OwnerRpc: Sync + Send {
 				"num_inputs": 2,
 				"num_outputs": 1,
 				"parent_key_id": "0200000000000000000000000000000000",
-				"stored_tx": "0436430c-2b02-624c-2032-570501212b00.grintx",
+				"stored_tx": "0436430c-2b02-624c-2032-570501212b00.mwctx",
 				"tx_slate_id": "0436430c-2b02-624c-2032-570501212b00",
 				"tx_type": "TxSent",
 				"kernel_excess": null,
@@ -1298,7 +1298,7 @@ where
 	}
 
 	fn init_send_tx(&self, args: InitTxArgs) -> Result<VersionedSlate, ErrorKind> {
-		let slate = Owner::init_send_tx(self, None, args).map_err(|e| e.kind())?;
+		let slate = Owner::init_send_tx(self, None, args, None, 1).map_err(|e| e.kind())?;
 		let version = SlateVersion::V3;
 		Ok(VersionedSlate::into_version(slate, version))
 	}
@@ -1332,7 +1332,7 @@ where
 		slate: VersionedSlate,
 		participant_id: usize,
 	) -> Result<(), ErrorKind> {
-		Owner::tx_lock_outputs(self, None, &Slate::from(slate), participant_id)
+		Owner::tx_lock_outputs(self, None, &Slate::from(slate), None, participant_id)
 			.map_err(|e| e.kind())
 	}
 
@@ -1416,10 +1416,17 @@ pub fn run_doctest_owner(
 			>;
 	let lc = wallet1.lc_provider().unwrap();
 	let _ = lc.set_top_level_directory(&format!("{}/wallet1", test_dir));
-	lc.create_wallet(None, Some(rec_phrase_1), 32, empty_string.clone(), false)
-		.unwrap();
+	lc.create_wallet(
+		None,
+		Some(rec_phrase_1),
+		32,
+		empty_string.clone(),
+		false,
+		None,
+	)
+	.unwrap();
 	let mask1 = lc
-		.open_wallet(None, empty_string.clone(), use_token, true)
+		.open_wallet(None, empty_string.clone(), use_token, true, None)
 		.unwrap();
 	let wallet1 = Arc::new(Mutex::new(wallet1));
 
@@ -1451,10 +1458,17 @@ pub fn run_doctest_owner(
 			>;
 	let lc = wallet2.lc_provider().unwrap();
 	let _ = lc.set_top_level_directory(&format!("{}/wallet2", test_dir));
-	lc.create_wallet(None, Some(rec_phrase_2), 32, empty_string.clone(), false)
-		.unwrap();
+	lc.create_wallet(
+		None,
+		Some(rec_phrase_2),
+		32,
+		empty_string.clone(),
+		false,
+		None,
+	)
+	.unwrap();
 	let mask2 = lc
-		.open_wallet(None, empty_string.clone(), use_token, true)
+		.open_wallet(None, empty_string.clone(), use_token, true, None)
 		.unwrap();
 	let wallet2 = Arc::new(Mutex::new(wallet2));
 
@@ -1510,10 +1524,12 @@ pub fn run_doctest_owner(
 			max_outputs: 500,
 			num_change_outputs: 1,
 			selection_strategy_is_use_all: true,
+			address: Some(String::from("testW2")),
 			..Default::default()
 		};
 		let mut slate =
-			api_impl::owner::init_send_tx(&mut **w, (&mask1).as_ref(), args, true).unwrap();
+			api_impl::owner::init_send_tx(&mut **w, (&mask1).as_ref(), args, true, None, 1)
+				.unwrap();
 		println!("INITIAL SLATE");
 		println!("{}", serde_json::to_string_pretty(&slate).unwrap());
 		{
@@ -1523,6 +1539,7 @@ pub fn run_doctest_owner(
 				&mut **w2,
 				(&mask2).as_ref(),
 				&slate,
+				Some(String::from("testW1")),
 				None,
 				None,
 				None,
@@ -1534,12 +1551,21 @@ pub fn run_doctest_owner(
 		}
 		// Spit out slate for input to finalize_tx
 		if lock_tx {
-			api_impl::owner::tx_lock_outputs(&mut **w, (&mask2).as_ref(), &slate, 0).unwrap();
+			api_impl::owner::tx_lock_outputs(
+				&mut **w,
+				(&mask2).as_ref(),
+				&slate,
+				Some(String::from("testW2")),
+				0,
+			)
+			.unwrap();
 		}
 		println!("RECEIPIENT SLATE");
 		println!("{}", serde_json::to_string_pretty(&slate).unwrap());
 		if finalize_tx {
-			slate = api_impl::owner::finalize_tx(&mut **w, (&mask2).as_ref(), &slate).unwrap();
+			slate = api_impl::owner::finalize_tx(&mut **w, (&mask2).as_ref(), &slate)
+				.unwrap()
+				.0;
 			error!("FINALIZED TX SLATE");
 			println!("{}", serde_json::to_string_pretty(&slate).unwrap());
 		}

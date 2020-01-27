@@ -558,6 +558,7 @@ where
 		let out_slate = Foreign::receive_tx(
 			self,
 			&slate_from,
+			None, // We don't want to change RPC. New fields required new version
 			dest_acct_name.as_ref().map(String::as_str),
 			message,
 		)
@@ -637,10 +638,17 @@ pub fn run_doctest_foreign(
 			>;
 	let lc = wallet1.lc_provider().unwrap();
 	let _ = lc.set_top_level_directory(&format!("{}/wallet1", test_dir));
-	lc.create_wallet(None, Some(rec_phrase_1), 32, empty_string.clone(), false)
-		.unwrap();
+	lc.create_wallet(
+		None,
+		Some(rec_phrase_1),
+		32,
+		empty_string.clone(),
+		false,
+		None,
+	)
+	.unwrap();
 	let mask1 = lc
-		.open_wallet(None, empty_string.clone(), use_token, true)
+		.open_wallet(None, empty_string.clone(), use_token, true, None)
 		.unwrap();
 	let wallet1 = Arc::new(Mutex::new(wallet1));
 
@@ -672,10 +680,17 @@ pub fn run_doctest_foreign(
 			>;
 	let lc = wallet2.lc_provider().unwrap();
 	let _ = lc.set_top_level_directory(&format!("{}/wallet2", test_dir));
-	lc.create_wallet(None, Some(rec_phrase_2), 32, empty_string.clone(), false)
-		.unwrap();
+	lc.create_wallet(
+		None,
+		Some(rec_phrase_2),
+		32,
+		empty_string.clone(),
+		false,
+		None,
+	)
+	.unwrap();
 	let mask2 = lc
-		.open_wallet(None, empty_string.clone(), use_token, true)
+		.open_wallet(None, empty_string.clone(), use_token, true, None)
 		.unwrap();
 	let wallet2 = Arc::new(Mutex::new(wallet2));
 
@@ -723,7 +738,7 @@ pub fn run_doctest_foreign(
 				amount,
 				..Default::default()
 			};
-			api_impl::owner::issue_invoice_tx(&mut **w, (&mask2).as_ref(), args, true).unwrap()
+			api_impl::owner::issue_invoice_tx(&mut **w, (&mask2).as_ref(), args, true, 1).unwrap()
 		};
 		slate = {
 			let mut w_lock = wallet1.lock();
@@ -758,7 +773,8 @@ pub fn run_doctest_foreign(
 			selection_strategy_is_use_all: true,
 			..Default::default()
 		};
-		let slate = api_impl::owner::init_send_tx(&mut **w, (&mask1).as_ref(), args, true).unwrap();
+		let slate = api_impl::owner::init_send_tx(&mut **w, (&mask1).as_ref(), args, true, None, 1)
+			.unwrap();
 		println!("INIT SLATE");
 		// Spit out slate for input to finalize_tx
 		println!("{}", serde_json::to_string_pretty(&slate).unwrap());

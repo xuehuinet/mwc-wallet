@@ -115,9 +115,9 @@ fn file_repost_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error>
 			selection_strategy_is_use_all: true,
 			..Default::default()
 		};
-		let slate = api.init_send_tx(m, args)?;
+		let slate = api.init_send_tx(m, args, None, 1)?;
 		PathToSlate((&send_file).into()).put_tx(&slate)?;
-		api.tx_lock_outputs(m, &slate, 0)?;
+		api.tx_lock_outputs(m, &slate, None, 0)?;
 		Ok(())
 	})?;
 
@@ -132,7 +132,7 @@ fn file_repost_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error>
 
 	wallet::controller::foreign_single_use(wallet1.clone(), mask1_i.clone(), |api| {
 		slate = PathToSlate((&send_file).into()).get_tx()?;
-		slate = api.receive_tx(&slate, None, None)?;
+		slate = api.receive_tx(&slate, None, None, None)?;
 		PathToSlate((&receive_file).into()).put_tx(&slate)?;
 		Ok(())
 	})?;
@@ -208,9 +208,9 @@ fn file_repost_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error>
 			selection_strategy_is_use_all: true,
 			..Default::default()
 		};
-		let slate_i = sender_api.init_send_tx(m, args)?;
+		let slate_i = sender_api.init_send_tx(m, args, None, 1)?;
 		slate = client1.send_tx_slate_direct("wallet2", &slate_i)?;
-		sender_api.tx_lock_outputs(m, &slate, 0)?;
+		sender_api.tx_lock_outputs(m, &slate, None, 0)?;
 		slate = sender_api.finalize_tx(m, &mut slate)?;
 		Ok(())
 	})?;

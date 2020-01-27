@@ -259,14 +259,10 @@ impl Client {
 		let mut builder = Request::builder();
 
 		if basic_auth_key.is_some() && api_secret.is_some() {
-			let basic_auth = format!(
-				"Basic {}",
-				to_base64(&format!(
-					"{}:{}",
-					basic_auth_key.unwrap(),
-					api_secret.unwrap()
-				))
-			);
+			let auth_key = format!("{}:{}", basic_auth_key.unwrap(), api_secret.unwrap());
+			let base64_key = to_base64(&auth_key);
+			let basic_auth = format!("Basic {}", base64_key);
+
 			builder.header(AUTHORIZATION, basic_auth);
 		}
 

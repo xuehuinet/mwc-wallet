@@ -1104,7 +1104,7 @@ pub trait OwnerRpcS {
 				"num_inputs": 2,
 				"num_outputs": 1,
 				"parent_key_id": "0200000000000000000000000000000000",
-				"stored_tx": "0436430c-2b02-624c-2032-570501212b00.grintx",
+				"stored_tx": "0436430c-2b02-624c-2032-570501212b00.mwctx",
 				"tx_slate_id": "0436430c-2b02-624c-2032-570501212b00",
 				"tx_type": "TxSent",
 				"kernel_excess": null,
@@ -1959,7 +1959,7 @@ where
 	}
 
 	fn init_send_tx(&self, token: Token, args: InitTxArgs) -> Result<VersionedSlate, ErrorKind> {
-		let slate = Owner::init_send_tx(self, (&token.keychain_mask).as_ref(), args)
+		let slate = Owner::init_send_tx(self, (&token.keychain_mask).as_ref(), args, None, 1)
 			.map_err(|e| e.kind())?;
 		let version = SlateVersion::V3;
 		Ok(VersionedSlate::into_version(slate, version))
@@ -2018,6 +2018,7 @@ where
 			self,
 			(&token.keychain_mask).as_ref(),
 			&Slate::from(in_slate),
+			None, // RPC doesn't support address
 			participant_id,
 		)
 		.map_err(|e| e.kind())
@@ -2134,13 +2135,20 @@ where
 			Some(s) => Some(ZeroingString::from(s)),
 			None => None,
 		};
-		Owner::create_wallet(self, n, m, mnemonic_length, ZeroingString::from(password))
-			.map_err(|e| e.kind())
+		Owner::create_wallet(
+			self,
+			n,
+			m,
+			mnemonic_length,
+			ZeroingString::from(password),
+			None,
+		)
+		.map_err(|e| e.kind())
 	}
 
 	fn open_wallet(&self, name: Option<String>, password: String) -> Result<Token, ErrorKind> {
 		let n = name.as_ref().map(|s| s.as_str());
-		let sec_key = Owner::open_wallet(self, n, ZeroingString::from(password), true)
+		let sec_key = Owner::open_wallet(self, n, ZeroingString::from(password), true, None)
 			.map_err(|e| e.kind())?;
 		Ok(Token {
 			keychain_mask: sec_key,
@@ -2154,8 +2162,8 @@ where
 
 	fn get_mnemonic(&self, name: Option<String>, password: String) -> Result<String, ErrorKind> {
 		let n = name.as_ref().map(|s| s.as_str());
-		let res =
-			Owner::get_mnemonic(self, n, ZeroingString::from(password)).map_err(|e| e.kind())?;
+		let res = Owner::get_mnemonic(self, n, ZeroingString::from(password), None)
+			.map_err(|e| e.kind())?;
 		Ok(format!("{}", &*res))
 	}
 
@@ -2166,8 +2174,14 @@ where
 		new: String,
 	) -> Result<(), ErrorKind> {
 		let n = name.as_ref().map(|s| s.as_str());
-		Owner::change_password(self, n, ZeroingString::from(old), ZeroingString::from(new))
-			.map_err(|e| e.kind())
+		Owner::change_password(
+			self,
+			n,
+			ZeroingString::from(old),
+			ZeroingString::from(new),
+			None,
+		)
+		.map_err(|e| e.kind())
 	}
 
 	fn delete_wallet(&self, name: Option<String>) -> Result<(), ErrorKind> {

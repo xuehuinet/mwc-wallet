@@ -61,6 +61,7 @@ pub fn init<L, C, K>(
 	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>,
 	g_args: &GlobalArgs,
 	args: InitArgs,
+	wallet_data_dir: Option<&str>,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'static, C, K> + 'static,
@@ -82,9 +83,10 @@ where
 		args.list_length,
 		args.password.clone(),
 		false,
+		wallet_data_dir.clone(),
 	)?;
 
-	let m = p.get_mnemonic(None, args.password)?;
+	let m = p.get_mnemonic(None, args.password, wallet_data_dir)?;
 	grin_wallet_impls::lifecycle::show_recovery_phrase(m);
 	Ok(())
 }
@@ -97,6 +99,7 @@ pub struct RecoverArgs {
 pub fn recover<L, C, K>(
 	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>,
 	args: RecoverArgs,
+	wallet_data_dir: Option<&str>,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'static, C, K> + 'static,
@@ -105,7 +108,7 @@ where
 {
 	let mut w_lock = wallet.lock();
 	let p = w_lock.lc_provider()?;
-	let m = p.get_mnemonic(None, args.passphrase)?;
+	let m = p.get_mnemonic(None, args.passphrase, wallet_data_dir)?;
 	grin_wallet_impls::lifecycle::show_recovery_phrase(m);
 	Ok(())
 }
@@ -275,7 +278,7 @@ where
 						estimate_only: Some(true),
 						..Default::default()
 					};
-					let slate = api.init_send_tx(m, init_args).unwrap();
+					let slate = api.init_send_tx(m, init_args, None, 1).unwrap();
 					(strategy, slate.amount, slate.fee)
 				})
 				.collect();
@@ -299,7 +302,7 @@ where
 				send_args: None,
 				..Default::default()
 			};
-			let result = api.init_send_tx(m, init_args);
+			let result = api.init_send_tx(m, init_args, None, 1);
 			let mut slate = match result {
 				Ok(s) => {
 					info!(
@@ -319,24 +322,29 @@ where
 			match args.method.as_str() {
 				"file" => {
 					PathToSlate((&args.dest).into()).put_tx(&slate)?;
-					api.tx_lock_outputs(m, &slate, 0)?;
+					api.tx_lock_outputs(m, &slate, Some(String::from("file")), 0)?;
 					return Ok(());
 				}
 				"self" => {
-					api.tx_lock_outputs(m, &slate, 0)?;
+					api.tx_lock_outputs(m, &slate, Some(String::from("self")), 0)?;
 					let km = match keychain_mask.as_ref() {
 						None => None,
 						Some(&m) => Some(m.to_owned()),
 					};
 					controller::foreign_single_use(wallet, km, |api| {
-						slate = api.receive_tx(&slate, Some(&args.dest), None)?;
+						slate = api.receive_tx(
+							&slate,
+							Some(String::from("self")),
+							Some(&args.dest),
+							None,
+						)?;
 						Ok(())
 					})?;
 				}
 				method => {
 					let sender = create_sender(method, &args.dest, tor_config)?;
 					slate = sender.send_tx(&slate)?;
-					api.tx_lock_outputs(m, &slate, 0)?;
+					api.tx_lock_outputs(m, &slate, Some(args.dest.clone()), 0)?;
 				}
 			}
 
@@ -389,7 +397,12 @@ where
 			error!("Error validating participant messages: {}", e);
 			return Err(e);
 		}
-		slate = api.receive_tx(&slate, Some(&g_args.account), args.message.clone())?;
+		slate = api.receive_tx(
+			&slate,
+			Some(String::from("file")),
+			Some(&g_args.account),
+			args.message.clone(),
+		)?;
 		Ok(())
 	})?;
 	PathToSlate(format!("{}.response", args.input).into()).put_tx(&slate)?;
@@ -412,6 +425,7 @@ pub fn finalize<L, C, K>(
 	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
 	args: FinalizeArgs,
+	is_invoice: bool,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'static, C, K> + 'static,
@@ -420,23 +434,9 @@ where
 {
 	let mut slate = PathToSlate((&args.input).into()).get_tx()?;
 
-	// Rather than duplicating the entire command, we'll just
-	// try to determine what kind of finalization this is
-	// based on the slate contents
-	// for now, we can tell this is an invoice transaction
-	// if the receipient (participant 1) hasn't completed sigs
-	let part_data = slate.participant_with_id(1);
-	let is_invoice = {
-		match part_data {
-			None => {
-				error!("Expected slate participant data missing");
-				return Err(ErrorKind::ArgumentError(
-					"Expected Slate participant data missing".into(),
-				))?;
-			}
-			Some(p) => !p.is_complete(),
-		}
-	};
+	// Note!!! grin wallet was able to detect if it is invoice by using 'different' participant Ids (issuer use 1, fouset 0)
+	//    Unfortunatelly it is breaks mwc713 backward compatibility (issuer Participant Id 0, fouset 1)
+	//    We choose backward compatibility as more impotant, that is why we need 'is_invoice' flag to compensate that.
 
 	if is_invoice {
 		let km = match keychain_mask.as_ref() {
@@ -555,7 +555,7 @@ where
 						estimate_only: Some(true),
 						..Default::default()
 					};
-					let slate = api.init_send_tx(m, init_args).unwrap();
+					let slate = api.init_send_tx(m, init_args, None, 1).unwrap();
 					(strategy, slate.amount, slate.fee)
 				})
 				.collect();
@@ -598,10 +598,10 @@ where
 				"file" => {
 					let slate_putter = PathToSlate((&args.dest).into());
 					slate_putter.put_tx(&slate)?;
-					api.tx_lock_outputs(m, &slate, 0)?;
+					api.tx_lock_outputs(m, &slate, Some(String::from("file")), 1)?;
 				}
 				"self" => {
-					api.tx_lock_outputs(m, &slate, 0)?;
+					api.tx_lock_outputs(m, &slate, Some(String::from("self")), 1)?;
 					let km = match keychain_mask.as_ref() {
 						None => None,
 						Some(&m) => Some(m.to_owned()),
@@ -614,7 +614,7 @@ where
 				method => {
 					let sender = create_sender(method, &args.dest, tor_config)?;
 					slate = sender.send_tx(&slate)?;
-					api.tx_lock_outputs(m, &slate, 0)?;
+					api.tx_lock_outputs(m, &slate, Some(args.dest.clone()), 1)?;
 				}
 			}
 		}

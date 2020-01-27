@@ -378,6 +378,7 @@ where
 	pub fn receive_tx(
 		&self,
 		slate: &Slate,
+		address: Option<String>,
 		dest_acct_name: Option<&str>,
 		message: Option<String>,
 	) -> Result<Slate, Error> {
@@ -394,6 +395,7 @@ where
 			&mut **w,
 			(&self.keychain_mask).as_ref(),
 			slate,
+			address,
 			None,
 			None,
 			dest_acct_name,

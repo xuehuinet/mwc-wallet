@@ -229,6 +229,7 @@ where
 				&mut **w,
 				(&mask).as_ref(),
 				&Slate::from(slate),
+				Some(String::from(m.dest.clone())),
 				None,
 				None,
 				None,
@@ -456,7 +457,7 @@ impl NodeClient for LocalWalletClient {
 	}
 
 	/// Return the chain tip from a given node
-	fn get_chain_tip(&self) -> Result<(u64, String), libwallet::Error> {
+	fn get_chain_tip(&self) -> Result<(u64, String, u64), libwallet::Error> {
 		let m = WalletProxyMessage {
 			sender_id: self.id.clone(),
 			dest: self.node_url().to_owned(),
@@ -479,7 +480,15 @@ impl NodeClient for LocalWalletClient {
 				"Parsing get_height response".to_owned(),
 			))?;
 		let split: Vec<&str> = res.split(",").collect();
-		Ok((split[0].parse::<u64>().unwrap(), split[1].to_owned()))
+		Ok((split[0].parse::<u64>().unwrap(), split[1].to_owned(), 1))
+	}
+
+	/// Return Connected peers
+	fn get_connected_peer_info(
+		&self,
+	) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error> {
+		trace!("get_connected_peer_info called at the test client. Skipped.");
+		return Ok(Vec::new());
 	}
 
 	/// Retrieve outputs from node
