@@ -130,6 +130,8 @@ pub fn txs(
 	txs: &Vec<TxLogEntry>,
 	include_status: bool,
 	dark_background_color_scheme: bool,
+	show_full_info: bool,
+	has_proof: impl Fn(&TxLogEntry) -> bool,
 ) -> Result<(), Error> {
 	let title = format!(
 		"Transaction Log - Account '{}' - Block Height: {}",
@@ -147,31 +149,59 @@ pub fn txs(
 
 	let mut table = table!();
 
-	table.set_titles(row![
-		bMG->"Id",
-		bMG->"Type",
-		bMG->"Shared Transaction Id",
-		bMG->"Creation Time",
-		bMG->"TTL Cutoff Height",
-		bMG->"Confirmed?",
-		bMG->"Height",
-		bMG->"Confirmation Time",
-		bMG->"Num. \nInputs",
-		bMG->"Num. \nOutputs",
-		bMG->"Amount \nCredited",
-		bMG->"Amount \nDebited",
-		bMG->"Fee",
-		bMG->"Net \nDifference",
-		bMG->"Payment \nProof",
-		bMG->"Kernel",
-		bMG->"Tx \nData",
-	]);
+	if show_full_info {
+		table.set_titles(row![
+			bMG->"Id",
+			bMG->"Type",
+			bMG->"Shared Transaction Id",
+			bMG->"Address",
+			bMG->"Creation Time",
+			bMG->"TTL Cutoff Height",
+			bMG->"Confirmed?",
+			bMG->"Height",
+			bMG->"Confirmation Time",
+			bMG->"Num. \nInputs",
+			bMG->"Num. \nOutputs",
+			bMG->"Amount \nCredited",
+			bMG->"Amount \nDebited",
+			bMG->"Fee",
+			bMG->"Net \nDifference",
+			bMG->"Payment \nProof",
+			bMG->"Kernel",
+			bMG->"Tx \nData",
+		]);
+	}
+	else {
+		// 'short' format is used by mwc 713 wallet
+		table.set_titles(row![
+			bMG->"Id",
+			bMG->"Type",
+			bMG->"TXID", // short 'Shared Transaction Id' value
+			bMG->"Address",
+			bMG->"Creation Time",
+			bMG->"Confirmed?",
+			bMG->"Height",
+			bMG->"Confirmation Time",
+			bMG->"Net \nDifference",
+			bMG->"Proof?",
+		]);
+	}
 
 	for t in txs {
 		let id = format!("{}", t.id);
 		let slate_id = match t.tx_slate_id {
 			Some(m) => format!("{}", m),
 			None => "None".to_owned(),
+		};
+		// mwc713 (short) representation of ID
+		let short_slate_id = match t.tx_slate_id {
+			Some(m) => util::to_hex(m.as_bytes()[..4].to_vec()),
+			None => String::from(""),
+		};
+
+		let address = match &t.address {
+			Some(addr) => addr,
+			None => "",
 		};
 		let entry_type = format!("{}", t.tx_type);
 		let creation_ts = format!("{}", t.creation_ts.format("%Y-%m-%d %H:%M:%S"));
@@ -213,70 +243,93 @@ pub fn txs(
 			Some(e) => util::to_hex(e.0.to_vec()),
 			None => "None".to_owned(),
 		};
-		let payment_proof = match t.payment_proof {
-			Some(_) => "Yes".to_owned(),
-			None => "None".to_owned(),
+		let payment_proof = if has_proof(t) {
+			"Yes".to_owned()
+		}
+		else {
+			"None".to_owned()
 		};
-		if dark_background_color_scheme {
-			table.add_row(row![
-				bFC->id,
-				bFC->entry_type,
-				bFC->slate_id,
-				bFB->creation_ts,
-				bFB->ttl_cutoff_height,
-				bFC->confirmed,
-				bFC->height,
-				bFB->confirmation_ts,
-				bFC->num_inputs,
-				bFC->num_outputs,
-				bFG->amount_credited_str,
-				bFR->amount_debited_str,
-				bFR->fee,
-				bFY->net_diff,
-				bfG->payment_proof,
-				bFB->kernel_excess,
-				bFb->tx_data,
-			]);
-		} else {
-			if t.confirmed {
+
+		if show_full_info {
+			if dark_background_color_scheme {
 				table.add_row(row![
-					bFD->id,
-					bFb->entry_type,
-					bFD->slate_id,
+					bFC->id,
+					bFC->entry_type,
+					bFC->slate_id,
+					bFC->address,
 					bFB->creation_ts,
-					bFg->confirmed,
-					bFg->height,
+					bFB->ttl_cutoff_height,
+					bFC->confirmed,
+					bFC->height,
 					bFB->confirmation_ts,
-					bFD->num_inputs,
-					bFD->num_outputs,
+					bFC->num_inputs,
+					bFC->num_outputs,
 					bFG->amount_credited_str,
-					bFD->amount_debited_str,
-					bFD->fee,
-					bFG->net_diff,
+					bFR->amount_debited_str,
+					bFR->fee,
+					bFY->net_diff,
 					bfG->payment_proof,
 					bFB->kernel_excess,
-					bFB->tx_data,
+					bFb->tx_data,
 				]);
 			} else {
-				table.add_row(row![
-					bFD->id,
-					bFb->entry_type,
-					bFD->slate_id,
-					bFB->creation_ts,
-					bFR->confirmed,
-					bFR->height,
-					bFB->confirmation_ts,
-					bFD->num_inputs,
-					bFD->num_outputs,
-					bFG->amount_credited_str,
-					bFD->amount_debited_str,
-					bFD->fee,
-					bFG->net_diff,
-					bfG->payment_proof,
-					bFB->kernel_excess,
-					bFB->tx_data,
-				]);
+				if t.confirmed {
+					table.add_row(row![
+						bFD->id,
+						bFb->entry_type,
+						bFD->slate_id,
+						bFD->address,
+						bFB->creation_ts,
+						bFg->confirmed,
+						bFg->height,
+						bFB->confirmation_ts,
+						bFD->num_inputs,
+						bFD->num_outputs,
+						bFG->amount_credited_str,
+						bFD->amount_debited_str,
+						bFD->fee,
+						bFG->net_diff,
+						bfG->payment_proof,
+						bFB->kernel_excess,
+						bFB->tx_data,
+					]);
+				} else {
+					table.add_row(row![
+						bFD->id,
+						bFb->entry_type,
+						bFD->slate_id,
+						bFD->address,
+						bFB->creation_ts,
+						bFR->confirmed,
+						bFR->height,
+						bFB->confirmation_ts,
+						bFD->num_inputs,
+						bFD->num_outputs,
+						bFG->amount_credited_str,
+						bFD->amount_debited_str,
+						bFD->fee,
+						bFG->net_diff,
+						bfG->payment_proof,
+						bFB->kernel_excess,
+						bFB->tx_data,
+					]);
+				}
 			}
+		}
+		else {
+			// Short supports only dark scheme, we really don't need more
+			table.add_row(row![
+				bFC->id,
+                bFC->entry_type,
+                bFB->short_slate_id,
+                bFC->address,
+                bFB->creation_ts,
+                bFG->confirmed,
+                bFG->height,
+                bFB->confirmation_ts,
+                bFY->net_diff,
+                bFG->payment_proof,
+			]);
 		}
 	}
 
