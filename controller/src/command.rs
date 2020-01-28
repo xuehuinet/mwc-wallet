@@ -34,6 +34,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use uuid::Uuid;
+use grin_wallet_libwallet::TxLogEntry;
 
 /// Arguments common to all wallet commands
 #[derive(Clone)]
@@ -697,6 +698,8 @@ where
 			&txs,
 			include_status,
 			dark_scheme,
+			true, // mwc-wallet alwways show the full info because it is advanced tool
+			|tx: &TxLogEntry| tx.payment_proof.is_some(), // it is how mwc-wallet address proofs feature
 		)?;
 
 		// if given a particular transaction id or uuid, also get and display associated
