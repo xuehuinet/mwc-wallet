@@ -100,7 +100,7 @@ pub fn start_updater_console_thread(rx: Receiver<StatusMessage>) -> Result<(), E
 						println!("{}, {}% complete", s, m);
 					}
 					StatusMessage::ScanningComplete(s) => println!("{}", s),
-					StatusMessage::UpdateWarning(s) => println!("{}", s),
+					StatusMessage::UpdateWarning(s) => println!("Warning: {}", s),
 				}
 			}
 			thread::sleep(Duration::from_millis(500));
