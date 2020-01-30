@@ -899,7 +899,7 @@ where
 			node_client,
 		)
 		.unwrap_or_else(|e| {
-			println!("{}", e);
+			println!("Error: {}", e);
 			std::process::exit(1);
 		});
 
