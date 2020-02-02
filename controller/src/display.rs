@@ -19,8 +19,7 @@ use crate::libwallet::{
 };
 use crate::util;
 use prettytable;
-use std::io::prelude::Write;
-use term;
+use colored::*;
 
 /// Display outputs in a pretty way
 pub fn outputs(
@@ -30,19 +29,11 @@ pub fn outputs(
 	outputs: Vec<OutputCommitMapping>,
 	dark_background_color_scheme: bool,
 ) -> Result<(), Error> {
-	let title = format!(
-		"Wallet Outputs - Account '{}' - Block Height: {}",
-		account, cur_height
-	);
 	println!();
-	if term::stdout().is_none() {
-		println!("Could not open terminal");
-		return Ok(());
-	}
-	let mut t = term::stdout().unwrap();
-	t.fg(term::color::MAGENTA).unwrap();
-	writeln!(t, "{}", title).unwrap();
-	t.reset().unwrap();
+    println!("{}", format!(
+        "Wallet Outputs - Account '{}' - Block Height: {}",
+        account, cur_height
+    ).magenta());
 
 	let mut table = table!();
 
@@ -133,19 +124,11 @@ pub fn txs(
 	show_full_info: bool,
 	has_proof: impl Fn(&TxLogEntry) -> bool,
 ) -> Result<(), Error> {
-	let title = format!(
-		"Transaction Log - Account '{}' - Block Height: {}",
-		account, cur_height
-	);
 	println!();
-	if term::stdout().is_none() {
-		println!("Could not open terminal");
-		return Ok(());
-	}
-	let mut t = term::stdout().unwrap();
-	t.fg(term::color::MAGENTA).unwrap();
-	writeln!(t, "{}", title).unwrap();
-	t.reset().unwrap();
+    println!("{}", format!(
+        "Transaction Log - Account '{}' - Block Height: {}",
+        account, cur_height
+    ).magenta());
 
 	let mut table = table!();
 
@@ -499,29 +482,19 @@ pub fn accounts(acct_mappings: Vec<AcctPathMapping>) {
 
 /// Display transaction log messages
 pub fn tx_messages(tx: &TxLogEntry, dark_background_color_scheme: bool) -> Result<(), Error> {
-	let title = format!("Transaction Messages - Transaction '{}'", tx.id,);
 	println!();
-	if term::stdout().is_none() {
-		println!("Could not open terminal");
-		return Ok(());
-	}
-	let mut t = term::stdout().unwrap();
-	t.fg(term::color::MAGENTA).unwrap();
-	writeln!(t, "{}", title).unwrap();
-	t.reset().unwrap();
+    println!("{}", format!("Transaction Messages - Transaction '{}'", tx.id,).magenta());
 
 	let msgs = match tx.messages.clone() {
 		None => {
-			writeln!(t, "{}", "None").unwrap();
-			t.reset().unwrap();
+            println!("{}", "None");
 			return Ok(());
 		}
 		Some(m) => m.clone(),
 	};
 
 	if msgs.messages.is_empty() {
-		writeln!(t, "{}", "None").unwrap();
-		t.reset().unwrap();
+		println!("{}", "None");
 		return Ok(());
 	}
 
@@ -577,28 +550,17 @@ pub fn tx_messages(tx: &TxLogEntry, dark_background_color_scheme: bool) -> Resul
 
 /// Display individual Payment Proof
 pub fn payment_proof(tx: &TxLogEntry) -> Result<(), Error> {
-	let title = format!("Payment Proof - Transaction '{}'", tx.id,);
 	println!();
-	if term::stdout().is_none() {
-		println!("Could not open terminal");
-		return Ok(());
-	}
-	let mut t = term::stdout().unwrap();
-	t.fg(term::color::MAGENTA).unwrap();
-	writeln!(t, "{}", title).unwrap();
-	t.reset().unwrap();
+    println!("{}", format!("Payment Proof - Transaction '{}'", tx.id,).magenta());
 
 	let pp = match &tx.payment_proof {
 		None => {
-			writeln!(t, "{}", "None").unwrap();
-			t.reset().unwrap();
+			println!("{}", "None");
 			return Ok(());
 		}
 		Some(p) => p.clone(),
 	};
 
-	t.fg(term::color::WHITE).unwrap();
-	writeln!(t).unwrap();
 	let receiver_address = util::to_hex(pp.receiver_address.to_bytes().to_vec());
 	let receiver_onion_address = address::onion_v3_from_pubkey(&pp.receiver_address)?;
 	let receiver_signature = match pp.receiver_signature {
@@ -629,16 +591,14 @@ pub fn payment_proof(tx: &TxLogEntry) -> Result<(), Error> {
 		None => "None".to_owned(),
 	};
 
-	writeln!(t, "Receiver Address: {}", receiver_address).unwrap();
-	writeln!(t, "Receiver Address (Onion V3): {}", receiver_onion_address).unwrap();
-	writeln!(t, "Receiver Signature: {}", receiver_signature).unwrap();
-	writeln!(t, "Amount: {}", amount).unwrap();
-	writeln!(t, "Kernel Excess: {}", kernel_excess).unwrap();
-	writeln!(t, "Sender Address: {}", sender_address).unwrap();
-	writeln!(t, "Sender Signature: {}", sender_signature).unwrap();
-	writeln!(t, "Sender Address (Onion V3): {}", sender_onion_address).unwrap();
-
-	t.reset().unwrap();
+    println!("Receiver Address: {}", receiver_address);
+    println!("Receiver Address (Onion V3): {}", receiver_onion_address);
+    println!("Receiver Signature: {}", receiver_signature);
+    println!("Amount: {}", amount);
+    println!("Kernel Excess: {}", kernel_excess);
+    println!("Sender Address: {}", sender_address);
+    println!("Sender Signature: {}", sender_signature);
+    println!("Sender Address (Onion V3): {}", sender_onion_address);
 
 	println!();
 
