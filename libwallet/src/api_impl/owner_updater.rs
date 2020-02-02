@@ -27,6 +27,7 @@ use crate::api_impl::owner;
 use crate::types::NodeClient;
 use crate::Error;
 use crate::{WalletInst, WalletLCProvider};
+use std::thread::JoinHandle;
 
 const MESSAGE_QUEUE_MAX_LEN: usize = 10_000;
 
@@ -51,6 +52,7 @@ pub enum StatusMessage {
 }
 
 /// Helper function that starts a simple log thread for updater messages
+/// Note! This loop will never end
 pub fn start_updater_log_thread(
 	rx: Receiver<StatusMessage>,
 	queue: Arc<Mutex<Vec<StatusMessage>>>,
@@ -86,27 +88,34 @@ pub fn start_updater_log_thread(
 }
 
 /// Helper function that starts a simple console printing thread for updater messages
-/// Used by mwc713
-pub fn start_updater_console_thread(rx: Receiver<StatusMessage>) -> Result<(), Error> {
-	let _ = thread::Builder::new()
+/// Used by mwc713. This loop MUST end
+pub fn start_updater_console_thread(rx: Receiver<StatusMessage>, running_state: Arc<AtomicBool> ) -> Result<JoinHandle<()>, Error> {
+	let handle = thread::Builder::new()
 		.name("wallet-console-updater-status".to_string())
-		.spawn(move || loop {
-			while let Ok(m) = rx.try_recv() {
-				match m {
-					StatusMessage::UpdatingOutputs(s) => println!("{}", s),
-					StatusMessage::UpdatingTransactions(s) => println!("{}", s),
-					StatusMessage::FullScanWarn(s) => println!("{}", s),
-					StatusMessage::Scanning(s, m) => {
-						println!("{}, {}% complete", s, m);
+		.spawn(move || {
+			loop {
+				let running = running_state.load(Ordering::Relaxed);
+				while let Ok(m) = rx.try_recv() {
+					match m {
+						StatusMessage::UpdatingOutputs(s) => println!("{}", s),
+						StatusMessage::UpdatingTransactions(s) => println!("{}", s),
+						StatusMessage::FullScanWarn(s) => println!("{}", s),
+						StatusMessage::Scanning(s, m) => {
+							println!("{}, {}% complete", s, m);
+						}
+						StatusMessage::ScanningComplete(s) => println!("{}", s),
+						StatusMessage::UpdateWarning(s) => println!("Warning: {}", s),
 					}
-					StatusMessage::ScanningComplete(s) => println!("{}", s),
-					StatusMessage::UpdateWarning(s) => println!("Warning: {}", s),
 				}
-			}
-			thread::sleep(Duration::from_millis(500));
+				if !running { // Need to check first, then read, and exit
+					break;
+				}
+				thread::sleep(Duration::from_millis(100));
+			};
+			()
 		})?;
 
-	Ok(())
+	Ok(handle)
 }
 
 /// Handles and launches a background update thread
