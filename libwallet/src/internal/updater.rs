@@ -427,7 +427,7 @@ where
 		let mut batch = wallet.batch(keychain_mask)?;
 		for (commit, (id, mmr_index)) in wallet_outputs.iter() {
 			if let Ok(mut output) = batch.get(id, mmr_index) {
-				let parent_key_id = &output.key_id;
+				let parent_key_id = &output.root_key_id; // it is Account Key ID.
 				match api_outputs.get(&commit) {
 					Some(o) => {
 						// if this is a coinbase tx being confirmed, it's recordable in tx log
