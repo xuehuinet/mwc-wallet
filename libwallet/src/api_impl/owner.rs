@@ -112,11 +112,17 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
+		let parent_key_id = {
+			wallet_lock!(wallet_inst, w);
+			w.parent_key_id()
+		};
+
 		validated = update_wallet_state(
 			wallet_inst.clone(),
 			keychain_mask,
 			status_send_channel,
 			false,
+			Some(&parent_key_id),
 		)?;
 	}
 
@@ -153,11 +159,17 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
+		let parent_key_id = {
+			wallet_lock!(wallet_inst, w);
+			w.parent_key_id()
+		};
+
 		validated = update_wallet_state(
 			wallet_inst.clone(),
 			keychain_mask,
 			status_send_channel,
 			false,
+			Some(&parent_key_id),
 		)?;
 	}
 
@@ -192,11 +204,17 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
+		let parent_key_id = {
+			wallet_lock!(wallet_inst, w);
+			w.parent_key_id()
+		};
+
 		validated = update_wallet_state(
 			wallet_inst.clone(),
 			keychain_mask,
 			status_send_channel,
 			false,
+			Some(&parent_key_id),
 		)?;
 	}
 
@@ -535,18 +553,23 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
+	let parent_key_id = {
+		wallet_lock!(wallet_inst, w);
+		w.parent_key_id()
+	};
+
 	if !update_wallet_state(
 		wallet_inst.clone(),
 		keychain_mask,
 		status_send_channel,
 		false,
+		Some(&parent_key_id),
 	)? {
 		return Err(ErrorKind::TransactionCancellationError(
 			"Can't contact running MWC node. Not Cancelling.",
 		))?;
 	}
 	wallet_lock!(wallet_inst, w);
-	let parent_key_id = w.parent_key_id();
 	tx::cancel_tx(&mut **w, keychain_mask, &parent_key_id, tx_id, tx_slate_id)
 }
 
@@ -617,7 +640,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	update_outputs(wallet_inst.clone(), keychain_mask, true)?;
+	update_outputs(wallet_inst.clone(), keychain_mask, true, None)?;
 	let tip = {
 		wallet_lock!(wallet_inst, w);
 		w.w2n_client().get_chain_tip()?
@@ -686,16 +709,13 @@ pub fn update_wallet_state<'a, L, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 	update_all: bool,
+	parent_key_id: Option<&Identifier>, // None - Update all Accounts
 ) -> Result<bool, Error>
 where
 	L: WalletLCProvider<'a, C, K>,
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let parent_key_id = {
-		wallet_lock!(wallet_inst, w);
-		w.parent_key_id().clone()
-	};
 	let client = {
 		wallet_lock!(wallet_inst, w);
 		w.w2n_client().clone()
@@ -707,7 +727,12 @@ where
 			"Updating outputs from node".to_owned(),
 		));
 	}
-	let mut result = update_outputs(wallet_inst.clone(), keychain_mask, update_all)?;
+	let mut result = update_outputs(
+		wallet_inst.clone(),
+		keychain_mask,
+		update_all,
+		parent_key_id.clone(),
+	)?;
 
 	if !result {
 		if let Some(ref s) = status_send_channel {
@@ -732,7 +757,7 @@ where
 			keychain_mask,
 			None,
 			None,
-			Some(&parent_key_id),
+			parent_key_id,
 			true,
 			None,
 			None,
@@ -817,8 +842,13 @@ where
 		if let Some(e) = tx.ttl_cutoff_height {
 			if tip.0 >= e {
 				wallet_lock!(wallet_inst, w);
-				let parent_key_id = w.parent_key_id();
-				tx::cancel_tx(&mut **w, keychain_mask, &parent_key_id, Some(tx.id), None)?;
+				tx::cancel_tx(
+					&mut **w,
+					keychain_mask,
+					&tx.parent_key_id,
+					Some(tx.id),
+					None,
+				)?;
 			}
 		}
 	}
@@ -848,6 +878,7 @@ fn update_outputs<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
 	update_all: bool,
+	parent_key_id: Option<&Identifier>, // None - Update all Accounts
 ) -> Result<bool, Error>
 where
 	L: WalletLCProvider<'a, C, K>,
@@ -855,11 +886,10 @@ where
 	K: Keychain + 'a,
 {
 	wallet_lock!(wallet_inst, w);
-	let parent_key_id = w.parent_key_id();
 	match updater::refresh_outputs(
 		&mut **w,
 		keychain_mask,
-		&parent_key_id,
+		parent_key_id,
 		update_all,
 		None,
 		None,
@@ -885,11 +915,6 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let parent_key_id = {
-		wallet_lock!(wallet_inst, w);
-		w.parent_key_id().clone()
-	};
-
 	let mut client = {
 		wallet_lock!(wallet_inst, w);
 		w.w2n_client().clone()
@@ -919,7 +944,7 @@ where
 				let mut batch = w.batch(keychain_mask)?;
 				tx.confirmed = true;
 				tx.update_confirmation_ts();
-				batch.save_tx_log_entry(tx.clone(), &parent_key_id)?;
+				batch.save_tx_log_entry(tx.clone(), &tx.parent_key_id)?;
 				batch.commit()?;
 			}
 		} else {

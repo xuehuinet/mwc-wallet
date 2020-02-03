@@ -89,7 +89,10 @@ pub fn start_updater_log_thread(
 
 /// Helper function that starts a simple console printing thread for updater messages
 /// Used by mwc713. This loop MUST end
-pub fn start_updater_console_thread(rx: Receiver<StatusMessage>, running_state: Arc<AtomicBool> ) -> Result<JoinHandle<()>, Error> {
+pub fn start_updater_console_thread(
+	rx: Receiver<StatusMessage>,
+	running_state: Arc<AtomicBool>,
+) -> Result<JoinHandle<()>, Error> {
 	let handle = thread::Builder::new()
 		.name("wallet-console-updater-status".to_string())
 		.spawn(move || {
@@ -107,11 +110,12 @@ pub fn start_updater_console_thread(rx: Receiver<StatusMessage>, running_state: 
 						StatusMessage::UpdateWarning(s) => println!("Warning: {}", s),
 					}
 				}
-				if !running { // Need to check first, then read, and exit
+				if !running {
+					// Need to check first, then read, and exit
 					break;
 				}
 				thread::sleep(Duration::from_millis(100));
-			};
+			}
 			()
 		})?;
 
@@ -162,6 +166,7 @@ where
 				(&keychain_mask).as_ref(),
 				status_send_channel,
 				false,
+				None, // In background make sense to update all accounts
 			)?;
 
 			let sec = frequency.as_secs();

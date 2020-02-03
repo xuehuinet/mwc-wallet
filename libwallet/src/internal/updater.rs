@@ -248,7 +248,7 @@ where
 pub fn refresh_outputs<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
-	parent_key_id: &Identifier,
+	parent_key_id: Option<&Identifier>, // None - Update all Accounts
 	update_all: bool,
 	height: Option<u64>,
 	node_outputs: Option<Vec<grin_api::Output>>,
@@ -283,7 +283,7 @@ where
 pub fn map_wallet_outputs<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
-	parent_key_id: &Identifier,
+	parent_key_id: Option<&Identifier>, // None - Update all Accounts
 	update_all: bool,
 ) -> Result<HashMap<pedersen::Commitment, (Identifier, Option<u64>)>, Error>
 where
@@ -294,17 +294,23 @@ where
 	let mut wallet_outputs: HashMap<pedersen::Commitment, (Identifier, Option<u64>)> =
 		HashMap::new();
 	let keychain = wallet.keychain(keychain_mask)?;
-	let unspents: Vec<OutputData> = wallet
-		.iter()
-		.filter(|x| x.root_key_id == *parent_key_id && x.status != OutputStatus::Spent)
-		.collect();
+	let unspents: Vec<OutputData> = match parent_key_id.clone() {
+		Some(parent_key_id) => wallet
+			.iter()
+			.filter(|x| x.root_key_id == *parent_key_id && x.status != OutputStatus::Spent)
+			.collect(),
+		None => wallet
+			.iter()
+			.filter(|x| x.status != OutputStatus::Spent)
+			.collect(),
+	};
 
 	let tx_entries = retrieve_txs(
 		wallet,
 		keychain_mask,
 		None,
 		None,
-		Some(&parent_key_id),
+		parent_key_id,
 		true,
 		None,
 		None,
@@ -384,7 +390,7 @@ pub fn apply_api_outputs<'a, T: ?Sized, C, K>(
 	wallet_outputs: &HashMap<pedersen::Commitment, (Identifier, Option<u64>)>,
 	api_outputs: &HashMap<pedersen::Commitment, (String, u64, u64)>,
 	height: u64,
-	parent_key_id: &Identifier,
+	prnt_key_id: Option<&Identifier>,
 ) -> Result<(), Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -396,6 +402,18 @@ where
 	// Note: minimizing the time we spend holding the wallet lock.
 	{
 		let last_confirmed_height = wallet.last_confirmed_height()?;
+
+		// mwc-wallet tracks updates on account level, We don't want to break that.
+		// Alternative is allways do all accounts, but that might be too much for non QT wallet
+		let updated_parent_key_id: Vec<Identifier> = match prnt_key_id {
+			Some(par_id) => vec![par_id.clone()],
+			None =>
+			// all accounts need to be updated
+			{
+				wallet.acct_path_iter().map(|m| m.path).collect()
+			}
+		};
+
 		// If the server height is less than our confirmed height, don't apply
 		// these changes as the chain is syncing, incorrect or forking
 		if height < last_confirmed_height {
@@ -409,6 +427,7 @@ where
 		let mut batch = wallet.batch(keychain_mask)?;
 		for (commit, (id, mmr_index)) in wallet_outputs.iter() {
 			if let Ok(mut output) = batch.get(id, mmr_index) {
+				let parent_key_id = &output.key_id;
 				match api_outputs.get(&commit) {
 					Some(o) => {
 						// if this is a coinbase tx being confirmed, it's recordable in tx log
@@ -436,7 +455,7 @@ where
 							}
 							t.update_confirmation_ts();
 							output.tx_log_entry = Some(log_id);
-							batch.save_tx_log_entry(t, &parent_key_id)?;
+							batch.save_tx_log_entry(t, parent_key_id)?;
 						}
 						// also mark the transaction in which this output is involved as confirmed
 						// note that one involved input/output confirmation SHOULD be enough
@@ -450,7 +469,7 @@ where
 								t.update_confirmation_ts();
 								t.confirmed = true;
 								t.output_height = output.height;
-								batch.save_tx_log_entry(t, &parent_key_id)?;
+								batch.save_tx_log_entry(t, parent_key_id)?;
 							}
 						}
 						output.height = o.1;
@@ -462,7 +481,10 @@ where
 			}
 		}
 		{
-			batch.save_last_confirmed_height(parent_key_id, height)?;
+			// Updating 'done' job for all accounts that was involved
+			for par_id in &updated_parent_key_id {
+				batch.save_last_confirmed_height(par_id, height)?;
+			}
 		}
 		batch.commit()?;
 	}
@@ -475,7 +497,7 @@ pub fn refresh_output_state<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	height: u64,
-	parent_key_id: &Identifier,
+	parent_key_id: Option<&Identifier>, // None - Update all Accounts
 	update_all: bool,
 	node_outputs: Option<Vec<grin_api::Output>>,
 ) -> Result<(), Error>
@@ -488,7 +510,8 @@ where
 
 	// build a local map of wallet outputs keyed by commit
 	// and a list of outputs we want to query the node for
-	let wallet_outputs = map_wallet_outputs(wallet, keychain_mask, parent_key_id, update_all)?;
+	let wallet_outputs =
+		map_wallet_outputs(wallet, keychain_mask, parent_key_id.clone(), update_all)?;
 
 	let wallet_output_keys = wallet_outputs.keys().map(|commit| commit.clone()).collect();
 

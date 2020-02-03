@@ -114,7 +114,14 @@ where
 	// Get lock height
 	let current_height = wallet.w2n_client().get_chain_tip()?.0;
 	// ensure outputs we're selecting are up to date
-	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false, None, None)?;
+	updater::refresh_outputs(
+		wallet,
+		keychain_mask,
+		Some(parent_key_id),
+		false,
+		None,
+		None,
+	)?;
 
 	// Sender selects outputs into a new slate and save our corresponding keys in
 	// a transaction context. The secret key in our transaction context will be
@@ -161,7 +168,14 @@ where
 	K: Keychain + 'a,
 {
 	// sender should always refresh outputs
-	updater::refresh_outputs(wallet, keychain_mask, parent_key_id, false, None, None)?;
+	updater::refresh_outputs(
+		wallet,
+		keychain_mask,
+		Some(parent_key_id),
+		false,
+		None,
+		None,
+	)?;
 
 	// Sender selects outputs into a new slate and save our corresponding keys in
 	// a transaction context. The secret key in our transaction context will be
