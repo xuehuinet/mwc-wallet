@@ -22,8 +22,8 @@ use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::slate_versions::v3::TransactionV3;
 use crate::libwallet::{
 	AcctPathMapping, ErrorKind, InitTxArgs, IssueInvoiceTxArgs, NodeClient, NodeHeightResult,
-	OutputCommitMapping, Slate, StatusMessage, TxLogEntry, VersionedSlate,
-	WalletInfo, WalletLCProvider,
+	OutputCommitMapping, Slate, StatusMessage, TxLogEntry, VersionedSlate, WalletInfo,
+	WalletLCProvider,
 };
 use crate::util::logger::LoggingConfig;
 use crate::util::secp::key::{PublicKey, SecretKey};

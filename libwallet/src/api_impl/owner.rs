@@ -641,7 +641,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	update_outputs(wallet_inst.clone(), keychain_mask, true, height,None)?;
+	update_outputs(wallet_inst.clone(), keychain_mask, true, height, None)?;
 	let tip = {
 		wallet_lock!(wallet_inst, w);
 		w.w2n_client().get_chain_tip()?
@@ -722,17 +722,13 @@ where
 	let height = {
 		wallet_lock!(wallet_inst, w);
 
-		let height =
-			w.w2n_client().get_chain_tip()?.0;
-
-		// Collect all info that wallet has from the past scans
-		let last_confirmed_height = w.last_confirmed_height()?;
+		let height = w.w2n_client().get_chain_tip()?.0;
 
 		let last_scanned_height = w.last_scanned_block()?.height;
 
 		// If the server height is less than our confirmed height, don't apply
 		// these changes as the chain is syncing, incorrect or forking
-		if height==0 || height < last_confirmed_height {
+		if height == 0 || height < last_scanned_height {
 			if let Some(ref s) = status_send_channel {
 				let _ = s.send(StatusMessage::UpdateWarning(
 					String::from("Wallet Update is skipped, please wait for sync on node to complete or fork to resolve.")
