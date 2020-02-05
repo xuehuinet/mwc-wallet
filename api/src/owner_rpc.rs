@@ -20,8 +20,7 @@ use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::slate_versions::v3::TransactionV3;
 use crate::libwallet::{
 	AcctPathMapping, ErrorKind, InitTxArgs, IssueInvoiceTxArgs, NodeClient, NodeHeightResult,
-	OutputCommitMapping, Slate, TxLogEntry, VersionedSlate, WalletInfo,
-	WalletLCProvider,
+	OutputCommitMapping, Slate, TxLogEntry, VersionedSlate, WalletInfo, WalletLCProvider,
 };
 use crate::util::Mutex;
 use crate::{Owner, OwnerRpcS};
@@ -1300,7 +1299,7 @@ where
 	fn init_send_tx(&self, args: InitTxArgs) -> Result<VersionedSlate, ErrorKind> {
 		let slate = Owner::init_send_tx(self, None, args, None, 1).map_err(|e| e.kind())?;
 		let version = slate.lowest_version();
-		Ok(VersionedSlate::into_version(slate, version ))
+		Ok(VersionedSlate::into_version(slate, version))
 	}
 
 	fn issue_invoice_tx(&self, args: IssueInvoiceTxArgs) -> Result<VersionedSlate, ErrorKind> {
