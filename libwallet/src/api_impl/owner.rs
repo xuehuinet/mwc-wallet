@@ -634,13 +634,14 @@ pub fn scan<'a, L, C, K>(
 	start_height: Option<u64>,
 	delete_unconfirmed: bool,
 	status_send_channel: &Option<Sender<StatusMessage>>,
+	height: Option<u64>,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'a, C, K>,
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	update_outputs(wallet_inst.clone(), keychain_mask, true, None)?;
+	update_outputs(wallet_inst.clone(), keychain_mask, true, height,None)?;
 	let tip = {
 		wallet_lock!(wallet_inst, w);
 		w.w2n_client().get_chain_tip()?
@@ -716,9 +717,30 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let client = {
+	// Wallet update logic doesn't handle trancating of the blockchain. That happen when node in sync or in reorg-sync
+	// In this case better to inform user and do nothing. Sync is useless in any case.
+	let height = {
 		wallet_lock!(wallet_inst, w);
-		w.w2n_client().clone()
+
+		let height =
+			w.w2n_client().get_chain_tip()?.0;
+
+		// Collect all info that wallet has from the past scans
+		let last_confirmed_height = w.last_confirmed_height()?;
+
+		let last_scanned_height = w.last_scanned_block()?.height;
+
+		// If the server height is less than our confirmed height, don't apply
+		// these changes as the chain is syncing, incorrect or forking
+		if height==0 || height < last_confirmed_height {
+			if let Some(ref s) = status_send_channel {
+				let _ = s.send(StatusMessage::UpdateWarning(
+					String::from("Wallet Update is skipped, please wait for sync on node to complete or fork to resolve.")
+				));
+			}
+			return Ok(false);
+		}
+		height
 	};
 
 	// Step 1: Update outputs and transactions purely based on UTXO state
@@ -731,6 +753,7 @@ where
 		wallet_inst.clone(),
 		keychain_mask,
 		update_all,
+		Some(height),
 		parent_key_id.clone(),
 	)?;
 
@@ -774,6 +797,11 @@ where
 	}
 
 	// Step 3: Scan back a bit on the chain
+	let client = {
+		wallet_lock!(wallet_inst, w);
+		w.w2n_client().clone()
+	};
+
 	let res = client.get_chain_tip();
 	// if we can't get the tip, don't continue
 	let tip = match res {
@@ -878,6 +906,7 @@ fn update_outputs<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
 	update_all: bool,
+	height: Option<u64>,
 	parent_key_id: Option<&Identifier>, // None - Update all Accounts
 ) -> Result<bool, Error>
 where
@@ -891,7 +920,7 @@ where
 		keychain_mask,
 		parent_key_id,
 		update_all,
-		None,
+		height,
 		None,
 	) {
 		Ok(_) => Ok(true),

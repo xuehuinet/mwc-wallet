@@ -49,6 +49,7 @@ use crate::slate_versions::v3::{
 };
 // use crate::slate_versions::{CURRENT_SLATE_VERSION, GRIN_BLOCK_HEADER_VERSION};
 use crate::types::CbData;
+use crate::SlateVersion;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentInfo {
@@ -261,6 +262,16 @@ impl Slate {
 				block_header_version: 1, // GRIN_BLOCK_HEADER_VERSION,
 			},
 			payment_proof: None,
+		}
+	}
+
+	/// Calculate minimal Slate version. For exchange we want to keep the varsion as low as possible
+	/// because there are might be many non upgraded wallets and we want ot be friendly to them.
+	pub fn lowest_version(&self) -> SlateVersion {
+		if self.payment_proof.is_some() || self.ttl_cutoff_height.is_some() {
+			SlateVersion::V3
+		} else {
+			SlateVersion::V2
 		}
 	}
 
