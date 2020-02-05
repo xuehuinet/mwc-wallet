@@ -20,7 +20,7 @@ use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::slate_versions::v3::TransactionV3;
 use crate::libwallet::{
 	AcctPathMapping, ErrorKind, InitTxArgs, IssueInvoiceTxArgs, NodeClient, NodeHeightResult,
-	OutputCommitMapping, Slate, SlateVersion, TxLogEntry, VersionedSlate, WalletInfo,
+	OutputCommitMapping, Slate, TxLogEntry, VersionedSlate, WalletInfo,
 	WalletLCProvider,
 };
 use crate::util::Mutex;
@@ -1299,13 +1299,13 @@ where
 
 	fn init_send_tx(&self, args: InitTxArgs) -> Result<VersionedSlate, ErrorKind> {
 		let slate = Owner::init_send_tx(self, None, args, None, 1).map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
-		Ok(VersionedSlate::into_version(slate, version))
+		let version = slate.lowest_version();
+		Ok(VersionedSlate::into_version(slate, version ))
 	}
 
 	fn issue_invoice_tx(&self, args: IssueInvoiceTxArgs) -> Result<VersionedSlate, ErrorKind> {
 		let slate = Owner::issue_invoice_tx(self, None, args).map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
+		let version = slate.lowest_version();
 		Ok(VersionedSlate::into_version(slate, version))
 	}
 
@@ -1316,14 +1316,14 @@ where
 	) -> Result<VersionedSlate, ErrorKind> {
 		let out_slate = Owner::process_invoice_tx(self, None, &Slate::from(in_slate), args)
 			.map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
+		let version = out_slate.lowest_version();
 		Ok(VersionedSlate::into_version(out_slate, version))
 	}
 
 	fn finalize_tx(&self, in_slate: VersionedSlate) -> Result<VersionedSlate, ErrorKind> {
 		let out_slate =
 			Owner::finalize_tx(self, None, &Slate::from(in_slate)).map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
+		let version = out_slate.lowest_version();
 		Ok(VersionedSlate::into_version(out_slate, version))
 	}
 

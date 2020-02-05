@@ -540,7 +540,7 @@ where
 
 	fn build_coinbase(&self, block_fees: &BlockFees) -> Result<VersionedCoinbase, ErrorKind> {
 		let cb: CbData = Foreign::build_coinbase(self, block_fees).map_err(|e| e.kind())?;
-		Ok(VersionedCoinbase::into_version(cb, SlateVersion::V3))
+		Ok(VersionedCoinbase::into_version(cb, SlateVersion::V2))
 	}
 
 	fn verify_slate_messages(&self, slate: VersionedSlate) -> Result<(), ErrorKind> {

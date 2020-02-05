@@ -22,7 +22,7 @@ use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::slate_versions::v3::TransactionV3;
 use crate::libwallet::{
 	AcctPathMapping, ErrorKind, InitTxArgs, IssueInvoiceTxArgs, NodeClient, NodeHeightResult,
-	OutputCommitMapping, Slate, SlateVersion, StatusMessage, TxLogEntry, VersionedSlate,
+	OutputCommitMapping, Slate, StatusMessage, TxLogEntry, VersionedSlate,
 	WalletInfo, WalletLCProvider,
 };
 use crate::util::logger::LoggingConfig;
@@ -1961,7 +1961,7 @@ where
 	fn init_send_tx(&self, token: Token, args: InitTxArgs) -> Result<VersionedSlate, ErrorKind> {
 		let slate = Owner::init_send_tx(self, (&token.keychain_mask).as_ref(), args, None, 1)
 			.map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
+		let version = slate.lowest_version();
 		Ok(VersionedSlate::into_version(slate, version))
 	}
 
@@ -1972,7 +1972,7 @@ where
 	) -> Result<VersionedSlate, ErrorKind> {
 		let slate = Owner::issue_invoice_tx(self, (&token.keychain_mask).as_ref(), args)
 			.map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
+		let version = slate.lowest_version();
 		Ok(VersionedSlate::into_version(slate, version))
 	}
 
@@ -1989,7 +1989,7 @@ where
 			args,
 		)
 		.map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
+		let version = out_slate.lowest_version();
 		Ok(VersionedSlate::into_version(out_slate, version))
 	}
 
@@ -2004,7 +2004,7 @@ where
 			&Slate::from(in_slate),
 		)
 		.map_err(|e| e.kind())?;
-		let version = SlateVersion::V3;
+		let version = out_slate.lowest_version();
 		Ok(VersionedSlate::into_version(out_slate, version))
 	}
 

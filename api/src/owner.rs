@@ -1267,6 +1267,7 @@ where
 			start_height,
 			delete_unconfirmed,
 			&tx,
+			None,
 		)
 	}
 
