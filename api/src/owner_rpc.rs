@@ -1404,7 +1404,7 @@ pub fn run_doctest_owner(
 
 	let client1 = LocalWalletClient::new("wallet1", wallet_proxy.tx.clone());
 	let mut wallet1 =
-		Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100,client1.clone()).unwrap())
+		Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100, client1.clone()).unwrap())
 			as Box<
 				dyn WalletInst<
 					'static,
@@ -1446,7 +1446,7 @@ pub fn run_doctest_owner(
 	);
 	let client2 = LocalWalletClient::new("wallet2", wallet_proxy.tx.clone());
 	let mut wallet2 =
-		Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100,client2.clone()).unwrap())
+		Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100, client2.clone()).unwrap())
 			as Box<
 				dyn WalletInst<
 					'static,
