@@ -27,6 +27,7 @@ use crate::libwallet::{
 use crate::util::secp::key::SecretKey;
 use crate::util::{to_hex, Mutex, ZeroingString};
 use crate::{controller, display};
+use grin_wallet_libwallet::TxLogEntry;
 use serde_json as json;
 use std::fs::File;
 use std::io::Write;
@@ -34,7 +35,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use uuid::Uuid;
-use grin_wallet_libwallet::TxLogEntry;
 
 /// Arguments common to all wallet commands
 #[derive(Clone)]
@@ -936,6 +936,33 @@ where
 			}
 			Err(e) => {
 				error!("Addres retrieval failed: {}", e);
+				error!("Backtrace: {}", e.backtrace().unwrap());
+				Err(e)
+			}
+		}
+	})?;
+	Ok(())
+}
+
+// Payment Proof Address
+pub fn dump_wallet_data<L, C, K>(
+	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+) -> Result<(), Error>
+where
+	L: WalletLCProvider<'static, C, K> + 'static,
+	C: NodeClient + 'static,
+	K: keychain::Keychain + 'static,
+{
+	controller::owner_single_use(wallet.clone(), keychain_mask, |api, _m| {
+		let result = api.dump_wallet_data();
+		match result {
+			Ok(_) => {
+				warn!("Data dump is finished, please check the logs for results",);
+				Ok(())
+			}
+			Err(e) => {
+				error!("Wallet Data dump failed: {}", e);
 				error!("Backtrace: {}", e.backtrace().unwrap());
 				Err(e)
 			}

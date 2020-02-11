@@ -1141,6 +1141,7 @@ dependencies = [
  "failure",
  "failure_derive",
  "grin_api",
+ "grin_core",
  "grin_p2p",
  "grin_wallet_config",
  "grin_wallet_util",

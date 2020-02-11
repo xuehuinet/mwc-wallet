@@ -49,6 +49,8 @@ pub enum StatusMessage {
 	ScanningComplete(String),
 	/// Warning of issues that may have occured during an update
 	UpdateWarning(String),
+	/// Generic info message
+	Info(String),
 }
 
 /// Helper function that starts a simple log thread for updater messages
@@ -79,6 +81,7 @@ pub fn start_updater_log_thread(
 					}
 					StatusMessage::ScanningComplete(s) => warn!("{}", s),
 					StatusMessage::UpdateWarning(s) => warn!("{}", s),
+					StatusMessage::Info(s) => info!("{}", s),
 				}
 			}
 			thread::sleep(Duration::from_millis(500));
@@ -108,6 +111,7 @@ pub fn start_updater_console_thread(
 						}
 						StatusMessage::ScanningComplete(s) => println!("{}", s),
 						StatusMessage::UpdateWarning(s) => println!("Warning: {}", s),
+						StatusMessage::Info(s) => println!("{}", s),
 					}
 				}
 				if !running {
