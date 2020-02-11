@@ -443,6 +443,11 @@ pub struct OutputData {
 	/// key_id (2 wallets using same seed, for instance
 	#[serde(with = "secp_ser::opt_string_or_u64")]
 	pub mmr_index: Option<u64>,
+	/// PMMR Index as we see it at the chain. Used for 'sync' operations.
+	/// Thios index can be updated at any time (reorgs) and represent real valued for
+	/// that output at the network.
+	#[serde(with = "secp_ser::opt_string_or_u64")]
+	pub mmr_chain_index: Option<u64>,
 	/// Value of the output, necessary to rebuild the commitment
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub value: u64,
@@ -533,12 +538,21 @@ impl OutputData {
 			_ => (),
 		}
 	}
+
+	/// Check if this output is potentionally spendable
+	pub fn is_spendable(&self) -> bool {
+		match self.status {
+			OutputStatus::Unspent => true,
+			OutputStatus::Locked => true,
+			_ => false,
+		}
+	}
 }
 /// Status of an output that's being tracked by the wallet. Can either be
 /// unconfirmed, spent, unspent, or locked (when it's been used to generate
 /// a transaction but we don't have confirmation that the transaction was
 /// broadcasted or mined).
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum OutputStatus {
 	/// Unconfirmed
 	Unconfirmed,
@@ -906,6 +920,12 @@ impl TxLogEntry {
 	/// Return zero height - mean unknown. Needed for backward compatibility
 	pub fn default_output_height() -> u64 {
 		0
+	}
+
+	/// Return true if transaction cancelled
+	pub fn is_cancelled(&self) -> bool {
+		return self.tx_type == TxLogEntryType::TxReceivedCancelled
+			|| self.tx_type == TxLogEntryType::TxSentCancelled;
 	}
 }
 

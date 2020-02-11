@@ -37,6 +37,8 @@ use crate::{
 use crate::{Error, ErrorKind};
 use ed25519_dalek::PublicKey as DalekPublicKey;
 
+use std::fs::File;
+use std::io::Write;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
@@ -704,6 +706,90 @@ where
 		}
 	}
 }
+
+// write infor into the file or channel
+fn write_info(
+	message: String,
+	file: Option<&mut File>,
+	status_send_channel: &Sender<StatusMessage>,
+) {
+	match file {
+		Some(file) => {
+			let _ = write!(file, "{}\n", message);
+		}
+		None => {
+			let _ = status_send_channel.send(StatusMessage::Info(message));
+		}
+	};
+}
+
+/// Print wallet status into send channel. This data suppose to be used for troubleshouting only
+pub fn dump_wallet_data<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	status_send_channel: &Sender<StatusMessage>,
+	file_name: Option<String>,
+) -> Result<(), Error>
+where
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	wallet_lock!(wallet_inst, w);
+
+	let fn_copy = file_name.clone();
+
+	let mut file: Option<File> = match file_name {
+		Some(file_name) => Some(File::create(file_name)?),
+		None => None,
+	};
+
+	write_info(
+		String::from("Wallet Outputs:"),
+		file.as_mut(),
+		status_send_channel,
+	);
+	for output in w.iter() {
+		write_info(format!("{:?}", output), file.as_mut(), status_send_channel);
+	}
+
+	write_info(
+		String::from("Wallet Transactions:"),
+		file.as_mut(),
+		status_send_channel,
+	);
+	for tx_log in w.tx_log_iter() {
+		write_info(format!("{:?}", tx_log), file.as_mut(), status_send_channel);
+		// Checking if Slate is available
+		if let Some(uuid) = tx_log.tx_slate_id {
+			let uuid_str = uuid.to_string();
+			match w.get_stored_tx_by_uuid(&uuid_str) {
+				Ok(t) => {
+					write_info(format!("{:?}", tx_log), file.as_mut(), status_send_channel);
+					write_info(
+						format!("   Slate for {}: {:?}", uuid_str, t),
+						file.as_mut(),
+						status_send_channel,
+					);
+				}
+				Err(_) => write_info(
+					format!("   Slate for {} not found", uuid_str),
+					file.as_mut(),
+					status_send_channel,
+				),
+			}
+		}
+	}
+
+	if let Some(f) = fn_copy {
+		let _ = status_send_channel.send(StatusMessage::Info(format!(
+			"Wallet dump is stored at  {}",
+			f
+		)));
+	}
+
+	Ok(())
+}
+
 /// Experimental, wrap the entire definition of how a wallet's state is updated
 pub fn update_wallet_state<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,

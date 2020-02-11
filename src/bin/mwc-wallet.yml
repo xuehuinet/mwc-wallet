@@ -398,3 +398,5 @@ subcommands:
             long: start_height
             default_value: "1"
             takes_value: true
+  - dump-wallet-data:
+      about: Print wallet internal data (transactions, outputs)

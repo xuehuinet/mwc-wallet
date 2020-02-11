@@ -1271,6 +1271,16 @@ where
 		)
 	}
 
+	/// Dump wallet data (outputs,transactions) into the logs
+	pub fn dump_wallet_data(&self) -> Result<(), Error> {
+		let tx = {
+			let t = self.status_tx.lock();
+			t.clone()
+		};
+
+		owner::dump_wallet_data(self.wallet_inst.clone(), &tx.unwrap(), None)
+	}
+
 	/// Retrieves the last known height known by the wallet. This is determined as follows:
 	/// * If the wallet can successfully contact its configured node, the reported node
 	/// height is returned, and the `updated_from_node` field in the response is `true`
