@@ -104,12 +104,12 @@ fn perform_refresh_from_node<'a, L, C, K>(
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) -> Result<bool, Error>
 where
-		L: WalletLCProvider<'a, C, K>,
-		C: NodeClient + 'a,
-		K: Keychain + 'a,
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	let parent_key_id = {
-		 wallet_lock!(wallet_inst, w);
+		wallet_lock!(wallet_inst, w);
 		w.parent_key_id()
 	};
 
@@ -118,7 +118,7 @@ where
 		keychain_mask,
 		status_send_channel,
 		false,
-		Some(&parent_key_id)
+		Some(&parent_key_id),
 	)?;
 
 	Ok(validated)
@@ -140,9 +140,8 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
-		validated = perform_refresh_from_node(wallet_inst.clone(),
-				keychain_mask,
-				status_send_channel)?;
+		validated =
+			perform_refresh_from_node(wallet_inst.clone(), keychain_mask, status_send_channel)?;
 	}
 
 	wallet_lock!(wallet_inst, w);
@@ -178,9 +177,8 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
-		validated = perform_refresh_from_node(wallet_inst.clone(),
-											  keychain_mask,
-											  status_send_channel)?;
+		validated =
+			perform_refresh_from_node(wallet_inst.clone(), keychain_mask, status_send_channel)?;
 	}
 
 	wallet_lock!(wallet_inst, w);
@@ -214,9 +212,8 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
-		validated = perform_refresh_from_node(wallet_inst.clone(),
-						  keychain_mask,
-						  status_send_channel)?;
+		validated =
+			perform_refresh_from_node(wallet_inst.clone(), keychain_mask, status_send_channel)?;
 	}
 
 	wallet_lock!(wallet_inst, w);
@@ -554,11 +551,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-
-	if !perform_refresh_from_node(wallet_inst.clone(),
-											  keychain_mask,
-											  status_send_channel)?
-	{
+	if !perform_refresh_from_node(wallet_inst.clone(), keychain_mask, status_send_channel)? {
 		return Err(ErrorKind::TransactionCancellationError(
 			"Can't contact running MWC node. Not Cancelling.",
 		))?;

@@ -228,14 +228,15 @@ pub fn instantiate_wallet(
 	grin_wallet_controller::Error,
 > {
 	wallet_config.chain_type = None;
-	let mut wallet = Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100,node_client).unwrap())
-		as Box<
-			dyn WalletInst<
-				DefaultLCProvider<'static, LocalWalletClient, ExtKeychain>,
-				LocalWalletClient,
-				ExtKeychain,
-			>,
-		>;
+	let mut wallet =
+		Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100, node_client).unwrap())
+			as Box<
+				dyn WalletInst<
+					DefaultLCProvider<'static, LocalWalletClient, ExtKeychain>,
+					LocalWalletClient,
+					ExtKeychain,
+				>,
+			>;
 	let lc = wallet.lc_provider().unwrap();
 	// legacy hack to avoid the need for changes in existing mwc-wallet.toml files
 	// remove `wallet_data` from end of path as

@@ -356,7 +356,11 @@ impl SlateReceiver for KeybaseAllChannels {
 	) -> Result<(), Error> {
 		let node_client = HTTPNodeClient::new(&config.check_node_api_http_addr, node_api_secret);
 		let mut wallet = Box::new(
-			DefaultWalletImpl::<'static, HTTPNodeClient>::new( config.get_max_reorg_len(), node_client.clone()).unwrap(),
+			DefaultWalletImpl::<'static, HTTPNodeClient>::new(
+				config.get_max_reorg_len(),
+				node_client.clone(),
+			)
+			.unwrap(),
 		)
 			as Box<
 				dyn WalletInst<
