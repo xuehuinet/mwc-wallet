@@ -64,6 +64,9 @@ where
 	/// default is assumed to be ~/.grin/main/wallet_data (or floonet equivalent)
 	fn get_top_level_directory(&self) -> Result<String, Error>;
 
+	/// Max expected reorg Len for the wallet
+	fn get_max_reorg_len(&self) -> u64;
+
 	/// Output a grin-wallet.toml file into the current top-level system wallet directory
 	fn create_config(
 		&self,
@@ -443,11 +446,6 @@ pub struct OutputData {
 	/// key_id (2 wallets using same seed, for instance
 	#[serde(with = "secp_ser::opt_string_or_u64")]
 	pub mmr_index: Option<u64>,
-	/// PMMR Index as we see it at the chain. Used for 'sync' operations.
-	/// Thios index can be updated at any time (reorgs) and represent real valued for
-	/// that output at the network.
-	#[serde(with = "secp_ser::opt_string_or_u64")]
-	pub mmr_chain_index: Option<u64>,
 	/// Value of the output, necessary to rebuild the commitment
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub value: u64,

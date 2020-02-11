@@ -67,8 +67,8 @@ impl<'a, C> DefaultWalletImpl<'a, C>
 where
 	C: NodeClient + 'a,
 {
-	pub fn new(node_client: C) -> Result<Self, Error> {
-		let lc_provider = DefaultLCProvider::new(node_client);
+	pub fn new(max_reorg_len: u64, node_client: C) -> Result<Self, Error> {
+		let lc_provider = DefaultLCProvider::new(max_reorg_len, node_client);
 		Ok(DefaultWalletImpl {
 			lc_provider: lc_provider,
 		})

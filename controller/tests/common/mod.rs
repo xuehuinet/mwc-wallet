@@ -112,7 +112,7 @@ pub fn create_local_wallet(
 	>,
 	Option<SecretKey>,
 ) {
-	let mut wallet = Box::new(DefaultWalletImpl::<LocalWalletClient>::new(client).unwrap())
+	let mut wallet = Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100,client).unwrap())
 		as Box<
 			dyn WalletInst<
 				DefaultLCProvider<'static, LocalWalletClient, ExtKeychain>,
@@ -151,7 +151,7 @@ pub fn open_local_wallet(
 	>,
 	Option<SecretKey>,
 ) {
-	let mut wallet = Box::new(DefaultWalletImpl::<LocalWalletClient>::new(client).unwrap())
+	let mut wallet = Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100,client).unwrap())
 		as Box<
 			dyn WalletInst<
 				DefaultLCProvider<'static, LocalWalletClient, ExtKeychain>,

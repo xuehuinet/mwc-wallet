@@ -45,6 +45,9 @@ fn comments() -> HashMap<String, String> {
 #private key for the TLS certificate
 #tls_certificate_key = \"\"
 
+#Length of maximum expected reorg length
+#max_reorg_len = 100
+
 #port for wallet listener
 "
 		.to_string(),

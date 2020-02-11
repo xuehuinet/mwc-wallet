@@ -37,6 +37,7 @@ where
 	K: Keychain + 'a,
 {
 	data_dir: String,
+	max_reorg_len: u64,
 	node_client: C,
 	backend: Option<Box<dyn WalletBackend<'a, C, K> + 'a>>,
 }
@@ -47,10 +48,11 @@ where
 	K: Keychain + 'a,
 {
 	/// Create new provider
-	pub fn new(node_client: C) -> Self {
+	pub fn new(max_reorg_len: u64, node_client: C) -> Self {
 		DefaultLCProvider {
 			node_client,
 			data_dir: "default".to_owned(),
+			max_reorg_len,
 			backend: None,
 		}
 	}
@@ -69,6 +71,10 @@ where
 	fn get_top_level_directory(&self) -> Result<String, Error> {
 		Ok(self.data_dir.to_owned())
 	}
+
+
+	/// Max expected reorg Len for the wallet
+	fn get_max_reorg_len(&self) -> u64 {self.max_reorg_len}
 
 	fn create_config(
 		&self,

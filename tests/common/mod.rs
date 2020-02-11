@@ -228,7 +228,7 @@ pub fn instantiate_wallet(
 	grin_wallet_controller::Error,
 > {
 	wallet_config.chain_type = None;
-	let mut wallet = Box::new(DefaultWalletImpl::<LocalWalletClient>::new(node_client).unwrap())
+	let mut wallet = Box::new(DefaultWalletImpl::<LocalWalletClient>::new(100,node_client).unwrap())
 		as Box<
 			dyn WalletInst<
 				DefaultLCProvider<'static, LocalWalletClient, ExtKeychain>,

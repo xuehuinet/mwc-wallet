@@ -268,7 +268,6 @@ where
 		key_id: output.key_id,
 		n_child: output.n_child,
 		mmr_index: Some(output.mmr_index),
-		mmr_chain_index: Some(output.mmr_index),
 		commit: commit,
 		value: output.value,
 		status: OutputStatus::Unspent,
@@ -631,8 +630,8 @@ where
 
 				// Updating mmr Index for output. It can be changes because of reorg
 				// It is normal routine event, no need to notify the user.
-				if w_out.output.mmr_chain_index != Some(ch_out.mmr_index) {
-					w_out.output.mmr_chain_index = Some(ch_out.mmr_index);
+				if w_out.output.height != ch_out.height {
+					w_out.output.height = ch_out.height;
 					w_out.updated = true;
 				}
 
@@ -692,12 +691,7 @@ where
 	// Process Coin based not found at the chain but expected outputs.
 	for w_out in outputs_coinbased.values_mut() {
 		// Checking if output in this sync renge period if
-		let output_in_range = match w_out.output.mmr_chain_index {
-			Some(mmr_idx) => mmr_idx > pmmr_range.0,
-			None => w_out.output.height > start_height,
-		};
-
-		if output_in_range && !w_out.at_chain {
+		if w_out.output.height > start_height && !w_out.at_chain {
 			match w_out.output.status {
 				OutputStatus::Spent => (), // Spent not expected to be found at the chain
 				OutputStatus::Unconfirmed => (), // Unconfirmed not expected as well
@@ -788,13 +782,7 @@ where
 	// Process not found at the chain but expected outputs.
 	// It is a normal case when send transaction was finalized
 	for w_out in outputs_slates.values_mut() {
-		// Checking if output in this sync renge period if
-		let output_in_range = match w_out.output.mmr_chain_index {
-			Some(mmr_idx) => mmr_idx > pmmr_range.0,
-			None => w_out.output.height > start_height,
-		};
-
-		if output_in_range && !w_out.at_chain {
+		if w_out.output.height > start_height && !w_out.at_chain {
 			match w_out.output.status {
 				OutputStatus::Spent => (), // Spent not expected to be found at the chain
 				OutputStatus::Unconfirmed => (), // Unconfirmed not expected as well
@@ -824,7 +812,7 @@ where
 		}
 	}
 
-	// We are done with outputs, let's process transactions... Just need to update 'confirmed flag'
+	// We are done with outputs, let's process transactions... Just need to update 'confirmed flag' and height
 	// We don't want to cancel the transactions. Let's user do that.
 	for tx_info in transactions_slates.values_mut() {
 		let tx_type = tx_info.tx_log.tx_type.clone();
@@ -839,16 +827,25 @@ where
 		// Collecting known (belong to this wallet) inputs and outputs
 		let mut inputs_status: HashSet<OutputStatus> = HashSet::new();
 		let mut output_status: HashSet<OutputStatus> = HashSet::new();
+		let mut tx_height = tx_info.tx_log.output_height;
 
 		for out in &tx_info.input_commit {
 			if let Some(out) = outputs_slates.get(out) {
 				inputs_status.insert(out.output.status.clone());
+
+				if tx_height < out.output.height {
+					tx_height = out.output.height;
+				}
 			}
 		}
 
 		for out in &tx_info.output_commit {
 			if let Some(out) = outputs_slates.get(out) {
 				output_status.insert(out.output.status.clone());
+
+				if tx_height < out.output.height {
+					tx_height = out.output.height;
+				}
 			}
 		}
 
@@ -897,6 +894,12 @@ where
 				)));
 			}
 			tx_info.tx_log.confirmed = tx_confirmation;
+			tx_info.updated = true;
+		}
+
+		// Updating height if needed
+		if tx_height != tx_info.tx_log.output_height {
+			tx_info.tx_log.output_height = tx_height;
 			tx_info.updated = true;
 		}
 	}
