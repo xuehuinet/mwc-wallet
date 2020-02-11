@@ -98,6 +98,32 @@ where
 	Ok(address::ed25519_keypair(&sec_addr_key)?.1)
 }
 
+fn perform_refresh_from_node<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	status_send_channel: &Option<Sender<StatusMessage>>,
+) -> Result<bool, Error>
+where
+		L: WalletLCProvider<'a, C, K>,
+		C: NodeClient + 'a,
+		K: Keychain + 'a,
+{
+	let parent_key_id = {
+		 wallet_lock!(wallet_inst, w);
+		w.parent_key_id()
+	};
+
+	let validated = update_wallet_state(
+		wallet_inst.clone(),
+		keychain_mask,
+		status_send_channel,
+		false,
+		Some(&parent_key_id)
+	)?;
+
+	Ok(validated)
+}
+
 /// retrieve outputs
 pub fn retrieve_outputs<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
@@ -114,18 +140,9 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
-		let parent_key_id = {
-			wallet_lock!(wallet_inst, w);
-			w.parent_key_id()
-		};
-
-		validated = update_wallet_state(
-			wallet_inst.clone(),
-			keychain_mask,
-			status_send_channel,
-			false,
-			Some(&parent_key_id),
-		)?;
+		validated = perform_refresh_from_node(wallet_inst.clone(),
+				keychain_mask,
+				status_send_channel)?;
 	}
 
 	wallet_lock!(wallet_inst, w);
@@ -161,18 +178,9 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
-		let parent_key_id = {
-			wallet_lock!(wallet_inst, w);
-			w.parent_key_id()
-		};
-
-		validated = update_wallet_state(
-			wallet_inst.clone(),
-			keychain_mask,
-			status_send_channel,
-			false,
-			Some(&parent_key_id),
-		)?;
+		validated = perform_refresh_from_node(wallet_inst.clone(),
+											  keychain_mask,
+											  status_send_channel)?;
 	}
 
 	wallet_lock!(wallet_inst, w);
@@ -206,18 +214,9 @@ where
 {
 	let mut validated = false;
 	if refresh_from_node {
-		let parent_key_id = {
-			wallet_lock!(wallet_inst, w);
-			w.parent_key_id()
-		};
-
-		validated = update_wallet_state(
-			wallet_inst.clone(),
-			keychain_mask,
-			status_send_channel,
-			false,
-			Some(&parent_key_id),
-		)?;
+		validated = perform_refresh_from_node(wallet_inst.clone(),
+						  keychain_mask,
+						  status_send_channel)?;
 	}
 
 	wallet_lock!(wallet_inst, w);
@@ -555,23 +554,17 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let parent_key_id = {
-		wallet_lock!(wallet_inst, w);
-		w.parent_key_id()
-	};
 
-	if !update_wallet_state(
-		wallet_inst.clone(),
-		keychain_mask,
-		status_send_channel,
-		false,
-		Some(&parent_key_id),
-	)? {
+	if !perform_refresh_from_node(wallet_inst.clone(),
+											  keychain_mask,
+											  status_send_channel)?
+	{
 		return Err(ErrorKind::TransactionCancellationError(
 			"Can't contact running MWC node. Not Cancelling.",
 		))?;
 	}
 	wallet_lock!(wallet_inst, w);
+	let parent_key_id = w.parent_key_id();
 	tx::cancel_tx(&mut **w, keychain_mask, &parent_key_id, tx_id, tx_slate_id)
 }
 
@@ -918,7 +911,15 @@ where
 		}
 	};
 
-	let start_index = last_scanned_block.height.saturating_sub(100);
+	let max_reorg_len = {
+		// similar to what wallet_lock! does
+		let inst = wallet_inst.clone();
+		let mut w_lock = inst.lock();
+		let w_provider = w_lock.lc_provider()?;
+		w_provider.get_max_reorg_len()
+	};
+
+	let start_index = last_scanned_block.height.saturating_sub(max_reorg_len);
 
 	if last_scanned_block.height == 0 {
 		let msg = format!("This wallet has not been scanned against the current chain. Beginning full scan... (this first scan may take a while, but subsequent scans will be much quicker)");

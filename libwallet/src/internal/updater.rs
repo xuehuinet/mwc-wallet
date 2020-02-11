@@ -695,7 +695,6 @@ where
 			key_id: key_id.clone(),
 			n_child: key_id.to_path().last_path_index(),
 			mmr_index: None,
-			mmr_chain_index: None,
 			commit: commit,
 			value: amount,
 			status: OutputStatus::Unconfirmed,
