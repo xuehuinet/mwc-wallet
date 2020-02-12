@@ -22,9 +22,10 @@ use crate::grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
 use crate::grin_util::secp::key::SecretKey;
 use crate::grin_util::secp::pedersen;
 use crate::grin_util::Mutex;
+use crate::grin_util::static_secp_instance;
 use crate::internal::keys;
 use crate::types::*;
-use crate::{wallet_lock, Error};
+use crate::{wallet_lock, Error, ErrorKind};
 use grin_core::core::Transaction;
 use grin_wallet_util::grin_util as util;
 use std::cmp;
@@ -992,7 +993,7 @@ where
 	// Here we are done with all state changes of Outputs and transactions. Now we need to vase them at the DB
 	// Note, unknown new outputs are not here because we handle them in the beginning by 'restore'.
 
-	// Apply kast data updates and saving the data into DB.
+	// Apply last data updates and saving the data into DB.
 	{
 		wallet_lock!(wallet_inst, w);
 		let mut batch = w.batch(keychain_mask)?;
@@ -1053,6 +1054,49 @@ where
 		for output in outputs_coinbased.values() {
 			if output.updated {
 				batch.save(output.output.clone())?;
+			}
+		}
+
+
+		// It is very normal that Wallet has outputs without Transactions.
+		// It is a coinbase transactions. Let's create coinbase transactions if they don't exist yet
+		// See what updater::apply_api_outputs does
+		for w_out in outputs_coinbased.values_mut() {
+			if !transactions_coinbased.contains_key(&w_out.output.height) {
+
+				let parent_key_id = &w_out.output.root_key_id; // it is Account Key ID.
+
+				let log_id = batch.next_tx_log_id(parent_key_id)?;
+				let mut t = TxLogEntry::new(
+					parent_key_id.clone(),
+					TxLogEntryType::ConfirmedCoinbase,
+					log_id,
+				);
+				t.confirmed = true;
+				t.output_height = w_out.output.height;
+				t.amount_credited = w_out.output.value;
+				t.amount_debited = 0;
+				t.num_outputs = 1;
+				// calculate kernel excess for coinbase
+				if w_out.output.commit.is_some()
+				{
+					let secp = static_secp_instance();
+					let secp = secp.lock();
+					let over_commit = secp.commit_value(w_out.output.value)?;
+					let commit = pedersen::Commitment::from_vec(
+						util::from_hex( w_out.output.commit.clone().unwrap() )
+								.map_err(|e| Error::from(ErrorKind::GenericError( format!("Output commit parse error {:?}",e)) ))?
+					);
+					let excess =
+						secp.commit_sum(vec![commit], vec![over_commit])?;
+					t.kernel_excess = Some(excess);
+					t.kernel_lookup_min_height = Some(w_out.output.height);
+				}
+				t.update_confirmation_ts();
+				w_out.output.tx_log_entry = Some(log_id);
+
+				batch.save_tx_log_entry(t, parent_key_id)?;
+				batch.save(w_out.output.clone())?;
 			}
 		}
 
