@@ -13,6 +13,7 @@
 // limitations under the License.
 //! Functions to restore a wallet's outputs from just the master seed
 
+use crate::api_impl::owner;
 use crate::api_impl::owner_updater::StatusMessage;
 use crate::grin_core::consensus::{valid_header_version, WEEK_HEIGHT};
 use crate::grin_core::core::HeaderVersion;
@@ -30,10 +31,9 @@ use grin_core::core::Transaction;
 use grin_wallet_util::grin_util as util;
 use std::cmp;
 use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::iter::FromIterator;
-use crate::api_impl::owner;
 
 /// Utility struct for return values from below
 #[derive(Debug, Clone)]
@@ -466,10 +466,10 @@ where
 	// Really hard to say why Output can be without commit. Probably same non complete or failed data.
 	// In any case we can't use it for recovering.
 	for w_out in w.iter() {
-			outputs.insert(
-				w_out.commit.clone().unwrap(),
-				WalletOutputInfo::new(w_out.clone()),
-			);
+		outputs.insert(
+			w_out.commit.clone().unwrap(),
+			WalletOutputInfo::new(w_out.clone()),
+		);
 	}
 
 	// Wallet's transactions with extended info
@@ -732,7 +732,12 @@ where
 
 	// Let's clean output based transactions that are orphans
 	// Just mark them as non confirmed,
-	let coinbased_heights : HashSet<u64> = HashSet::from_iter( outputs.values().filter(|o| o.output.is_coinbase).map(|o| o.output.height ));
+	let coinbased_heights: HashSet<u64> = HashSet::from_iter(
+		outputs
+			.values()
+			.filter(|o| o.output.is_coinbase)
+			.map(|o| o.output.height),
+	);
 
 	for w_tx in transactions_coinbased.values_mut() {
 		if !coinbased_heights.contains(&w_tx.tx_log.output_height) {
@@ -878,7 +883,7 @@ where
 
 		match w_out.output.status {
 			OutputStatus::Locked => {
-				if in_active==0 {
+				if in_active == 0 {
 					// it is not Locked, it must be active output
 					if let Some(ref s) = status_send_channel {
 						let _ = match &w_out.output.commit {
@@ -943,8 +948,7 @@ where
 
 	// Delete any unconfirmed outputs, unlock any locked outputs and delete (cancel) associated transactions
 	if delete_unconfirmed {
-
-		let mut transaction2cancel : HashSet<String> = HashSet::new();
+		let mut transaction2cancel: HashSet<String> = HashSet::new();
 
 		for w_out in outputs.values_mut() {
 			match w_out.output.status {
@@ -958,15 +962,14 @@ where
 					w_out.output.status = OutputStatus::Unspent;
 					w_out.updated = true;
 					for uuid in &w_out.tx_input_uuid {
-						transaction2cancel.insert(uuid.clone() );
+						transaction2cancel.insert(uuid.clone());
 					}
-
-				},
+				}
 				OutputStatus::Unconfirmed => {
 					for uuid in &w_out.tx_output_uuid {
-						transaction2cancel.insert(uuid.clone() );
+						transaction2cancel.insert(uuid.clone());
 					}
-				},
+				}
 				OutputStatus::Unspent | OutputStatus::Spent => (),
 			}
 		}
@@ -978,15 +981,18 @@ where
 					match tx.tx_log.tx_type {
 						TxLogEntryType::TxSent => {
 							tx.tx_log.tx_type = TxLogEntryType::TxSentCancelled;
-						},
+						}
 						TxLogEntryType::TxReceived => {
 							tx.tx_log.tx_type = TxLogEntryType::TxReceivedCancelled;
-						},
+						}
 						_ => assert!(false), // Not expected, must be logical issue
 					}
 					tx.updated = true;
 					if let Some(ref s) = status_send_channel {
-						let _ = s.send(StatusMessage::Info(format!("Warning: Cancelling transaction {}", tx_uuid)));
+						let _ = s.send(StatusMessage::Info(format!(
+							"Warning: Cancelling transaction {}",
+							tx_uuid
+						)));
 					}
 				}
 			}
@@ -1057,7 +1063,9 @@ where
 		// It is a coinbase transactions. Let's create coinbase transactions if they don't exist yet
 		// See what updater::apply_api_outputs does
 		for w_out in outputs.values_mut() {
-			if w_out.output.is_coinbase && !transactions_coinbased.contains_key(&w_out.output.height) {
+			if w_out.output.is_coinbase
+				&& !transactions_coinbased.contains_key(&w_out.output.height)
+			{
 				let parent_key_id = &w_out.output.root_key_id; // it is Account Key ID.
 
 				let log_id = batch.next_tx_log_id(parent_key_id)?;
@@ -1128,7 +1136,7 @@ where
 		}
 	}
 
-/*	{
+	/*	{
 		// Dump chain outputs...
 		for ch_out in &chain_outs {
 			println!("End Chain output: {:?}", ch_out );
@@ -1154,7 +1162,6 @@ where
 			let _ = owner::dump_wallet_data(wallet_inst.clone(), s, Some(String::from("/tmp/end.txt")) );
 		}
 	}*/
-
 
 	if let Some(ref s) = status_send_channel {
 		let _ = s.send(StatusMessage::ScanningComplete(
