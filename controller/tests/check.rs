@@ -147,8 +147,9 @@ fn scan_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 
 	// check we have a problem now
 	wallet::controller::owner_single_use(wallet1.clone(), mask1, |api, m| {
-		let (_, wallet1_info) = api.retrieve_summary_info(m, true, 1)?;
-		let (_, txs) = api.retrieve_txs(m, true, None, None)?;
+		// For MWC we don't 'refresh_from_node'. Otherwise issue will be corrected
+		let (_, wallet1_info) = api.retrieve_summary_info(m, false, 1)?;
+		let (_, txs) = api.retrieve_txs(m, false, None, None)?;
 		let (c, _) = libwallet::TxLogEntry::sum_confirmed(&txs);
 		assert!(wallet1_info.total != c);
 		Ok(())
@@ -195,8 +196,9 @@ fn scan_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 
 	// check we're all locked
 	wallet::controller::owner_single_use(wallet1.clone(), mask1, |api, m| {
-		let (wallet1_refreshed, wallet1_info) = api.retrieve_summary_info(m, true, 1)?;
-		assert!(wallet1_refreshed);
+		// For MWC we don't 'refresh_from_node'. Otherwise issue will be corrected
+		let (wallet1_refreshed, wallet1_info) = api.retrieve_summary_info(m, false, 1)?;
+		assert!(!wallet1_refreshed); // mwc implementation must be without refresh to see an issue. Refresh will fix everything
 		assert!(wallet1_info.amount_currently_spendable == 0);
 		Ok(())
 	})?;

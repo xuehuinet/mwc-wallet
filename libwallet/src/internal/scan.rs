@@ -21,8 +21,8 @@ use crate::grin_core::libtx::proof;
 use crate::grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
 use crate::grin_util::secp::key::SecretKey;
 use crate::grin_util::secp::pedersen;
-use crate::grin_util::Mutex;
 use crate::grin_util::static_secp_instance;
+use crate::grin_util::Mutex;
 use crate::internal::keys;
 use crate::types::*;
 use crate::{wallet_lock, Error, ErrorKind};
@@ -32,6 +32,8 @@ use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::iter::FromIterator;
+use crate::api_impl::owner;
 
 /// Utility struct for return values from below
 #[derive(Debug, Clone)]
@@ -404,8 +406,7 @@ fn get_wallet_and_chain_data<'a, L, C, K>(
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) -> Result<
 	(
-		HashMap<String, WalletOutputInfo>, // Slate based Outputs. Key: Commit
-		HashMap<u64, WalletOutputInfo>,    // Coin Based Outputs. Key: height
+		HashMap<String, WalletOutputInfo>, // Outputs. Key: Commit
 		Vec<OutputResult>,                 // Chain outputs
 		HashMap<String, WalletTxInfo>,     // Slate based Transaction. Key: tx uuid
 		HashMap<u64, WalletTxInfo>,        // Coin Based Transaction.  Key: height
@@ -459,21 +460,16 @@ where
 
 	// Resulting wallet's outputs with extended info
 	// Key: commit
-	let mut outputs_slates: HashMap<String, WalletOutputInfo> = HashMap::new();
-	let mut outputs_coinbased: HashMap<u64, WalletOutputInfo> = HashMap::new();
+	let mut outputs: HashMap<String, WalletOutputInfo> = HashMap::new();
 
 	// Collecting Outputs with known commits only.
 	// Really hard to say why Output can be without commit. Probably same non complete or failed data.
 	// In any case we can't use it for recovering.
 	for w_out in w.iter() {
-		if w_out.is_coinbase {
-			outputs_coinbased.insert(w_out.height, WalletOutputInfo::new(w_out.clone()));
-		} else {
-			outputs_slates.insert(
+			outputs.insert(
 				w_out.commit.clone().unwrap(),
 				WalletOutputInfo::new(w_out.clone()),
 			);
-		}
 	}
 
 	// Wallet's transactions with extended info
@@ -499,12 +495,12 @@ where
 
 				// updated output vs Transactions mapping
 				for com in &wtx.input_commit {
-					if let Some(w_out) = outputs_slates.get_mut(com) {
+					if let Some(w_out) = outputs.get_mut(com) {
 						w_out.add_tx_input_uuid(&uuid_str);
 					}
 				}
 				for com in &wtx.output_commit {
-					if let Some(w_out) = outputs_slates.get_mut(com) {
+					if let Some(w_out) = outputs.get_mut(com) {
 						w_out.add_tx_output_uuid(&uuid_str);
 					}
 				}
@@ -520,7 +516,7 @@ where
 
 	// Apply Output to transaction mapping from Outputs
 	// Normally Outputs suppose to have transaction Id.
-	for w_out in outputs_slates.values_mut() {
+	for w_out in outputs.values_mut() {
 		let commit = w_out.commit.clone();
 		if let Some(tx_id) = w_out.output.tx_log_entry {
 			if let Some(tx_uuid) = transactions_id2uuid.get_mut(&tx_id) {
@@ -536,8 +532,7 @@ where
 	}
 
 	Ok((
-		outputs_slates,
-		outputs_coinbased,
+		outputs,
 		chain_outs,
 		transactions_slate,
 		transactions_coinbase,
@@ -552,7 +547,7 @@ where
 pub fn scan<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
-	_delete_unconfirmed: bool,
+	delete_unconfirmed: bool,
 	start_height: u64,
 	end_height: u64,
 	status_send_channel: &Option<Sender<StatusMessage>>,
@@ -568,8 +563,7 @@ where
 	}
 
 	let (
-		mut outputs_slates,
-		mut outputs_coinbased,
+		mut outputs,
 		chain_outs,
 		mut transactions_slates,
 		mut transactions_coinbased,
@@ -591,12 +585,8 @@ where
 			println!("Chain output: {:?}", ch_out );
 		}
 
-		println!("outputs_slates len is {}", outputs_slates.len());
-		for o in &outputs_slates {
-			println!("{}  =>  {:?}", o.0, o.1 );
-		}
-		println!("outputs_coinbased len is {}", outputs_coinbased.len());
-		for o in &outputs_coinbased {
+		println!("outputs len is {}", outputs.len());
+		for o in &outputs {
 			println!("{}  =>  {:?}", o.0, o.1 );
 		}
 
@@ -616,14 +606,9 @@ where
 	// Update wallet outputs with found at the chain outputs
 	// Check how sync they are
 	for ch_out in &chain_outs {
-		let output_res = if ch_out.is_coinbase {
-			outputs_coinbased.get_mut(&ch_out.height)
-		} else {
-			let commit = util::to_hex(ch_out.commit.0.to_vec());
-			outputs_slates.get_mut(&commit)
-		};
+		let commit = util::to_hex(ch_out.commit.0.to_vec());
 
-		match output_res {
+		match outputs.get_mut(&commit) {
 			Some(w_out) => {
 				// w_out - is wallet outputs that match chain output ch_out.
 				// It is mean that w_out does exist at the chain (confirmed) and doing well
@@ -686,12 +671,9 @@ where
 		}
 	}
 
-	// -------------------------------------------------------
-	// Processing coinbased data
-
-	// Process Coin based not found at the chain but expected outputs.
-	for w_out in outputs_coinbased.values_mut() {
-		// Checking if output in this sync renge period if
+	// Process not found at the chain but expected outputs.
+	// It is a normal case when send transaction was finalized
+	for w_out in outputs.values_mut() {
 		if w_out.output.height > start_height && !w_out.at_chain {
 			match w_out.output.status {
 				OutputStatus::Spent => (), // Spent not expected to be found at the chain
@@ -719,48 +701,30 @@ where
 					w_out.output.status = OutputStatus::Spent;
 				}
 			};
+		}
+	}
 
-			// Updating coinbase transaction as well.
-			if let Some(w_tx) = transactions_coinbased.get_mut(&w_out.output.height) {
-				if w_tx.tx_log.confirmed {
-					if let Some(ref s) = status_send_channel {
-						let _ = s.send(StatusMessage::Info(format!(
-							"Warning: Marked coin base transaction at height {} is not confirmed.",
-							w_out.output.height
-						)));
-					}
-					w_tx.tx_log.confirmed = false;
-					w_tx.updated = true;
-				}
-			} else {
-				if let Some(ref s) = status_send_channel {
-					let _ = s.send(StatusMessage::UpdateWarning(format!(
-						"Found non confirmed coin base output at height {} without transaction.",
-						w_out.output.height
-					)));
-				}
-			}
-		} else {
-			// Sync up transaction state with Output state
-			let transaction_confirmed = match w_out.output.status {
-				OutputStatus::Unconfirmed => false,
-				OutputStatus::Unspent | OutputStatus::Locked | OutputStatus::Spent => true,
-			};
+	// -------------------------------------------------------
+	// Sync up coinbase outputs and transactions
 
+	// Process Coin based not found at the chain but expected outputs.
+	for w_out in outputs.values_mut() {
+		// Checking if output in this sync renge period if
+		if w_out.output.is_coinbase {
+			// Updating coinbase transaction
 			if let Some(w_tx) = transactions_coinbased.get_mut(&w_out.output.height) {
-				if w_tx.tx_log.confirmed != transaction_confirmed {
-					if let Some(ref s) = status_send_channel {
-						let _ = s.send(StatusMessage::Info(format!("Warning: Change confirmation status for coin base transaction at height {} from {} to {}.", w_out.output.height, w_tx.tx_log.confirmed, transaction_confirmed )));
+				let confirmed = w_out.output.status != OutputStatus::Unconfirmed;
+				if w_tx.tx_log.confirmed != confirmed {
+					if w_tx.tx_log.confirmed {
+						if let Some(ref s) = status_send_channel {
+							let _ = s.send(StatusMessage::Info(format!(
+								"Warning: Marked coin base transaction at height {} is not confirmed.",
+								w_out.output.height
+							)));
+						}
 					}
-					w_tx.tx_log.confirmed = transaction_confirmed;
+					w_tx.tx_log.confirmed = confirmed;
 					w_tx.updated = true;
-				}
-			} else {
-				if let Some(ref s) = status_send_channel {
-					let _ = s.send(StatusMessage::UpdateWarning(format!(
-						"Found non confirmed coin base output at height {} without transaction.",
-						w_out.output.height
-					)));
 				}
 			}
 		}
@@ -768,48 +732,14 @@ where
 
 	// Let's clean output based transactions that are orphans
 	// Just mark them as non confirmed,
+	let coinbased_heights : HashSet<u64> = HashSet::from_iter( outputs.values().filter(|o| o.output.is_coinbase).map(|o| o.output.height ));
+
 	for w_tx in transactions_coinbased.values_mut() {
-		if !outputs_coinbased.contains_key(&w_tx.tx_log.output_height) {
+		if !coinbased_heights.contains(&w_tx.tx_log.output_height) {
 			if w_tx.tx_log.confirmed {
 				w_tx.tx_log.confirmed = false;
 				w_tx.updated = true;
 			}
-		}
-	}
-
-	// ------------------------------------------------------------------
-	// Processing Slate based data
-
-	// Process not found at the chain but expected outputs.
-	// It is a normal case when send transaction was finalized
-	for w_out in outputs_slates.values_mut() {
-		if w_out.output.height > start_height && !w_out.at_chain {
-			match w_out.output.status {
-				OutputStatus::Spent => (), // Spent not expected to be found at the chain
-				OutputStatus::Unconfirmed => (), // Unconfirmed not expected as well
-				OutputStatus::Unspent => {
-					// Unspent not found - likely it is reorg and that is why the last transaction can't be confirmed now.
-					if let Some(ref s) = status_send_channel {
-						let _ = s.send(StatusMessage::Info(format!(
-							"Warning: Changing status for output {} from Unspent to Unconfirmed",
-							w_out.commit
-						)));
-					}
-					w_out.updated = true;
-					w_out.output.status = OutputStatus::Unconfirmed;
-				}
-				OutputStatus::Locked => {
-					// Locked is not on the chain is expected, It is mean that our send transaction was confirmed.
-					if let Some(ref s) = status_send_channel {
-						let _ = s.send(StatusMessage::Info(format!(
-							"Info: Changing status for output {} from Locked to Spent",
-							w_out.commit
-						)));
-					}
-					w_out.updated = true;
-					w_out.output.status = OutputStatus::Spent;
-				}
-			};
 		}
 	}
 
@@ -818,7 +748,7 @@ where
 	for tx_info in transactions_slates.values_mut() {
 		let tx_type = tx_info.tx_log.tx_type.clone();
 
-		// Skipping cancelled transactions, thay processed below
+		// Skipping cancelled transactions, they processed below
 		if tx_type == TxLogEntryType::TxReceivedCancelled
 			|| tx_type == TxLogEntryType::TxSentCancelled
 		{
@@ -831,17 +761,13 @@ where
 		let mut tx_height = tx_info.tx_log.output_height;
 
 		for out in &tx_info.input_commit {
-			if let Some(out) = outputs_slates.get(out) {
+			if let Some(out) = outputs.get(out) {
 				inputs_status.insert(out.output.status.clone());
-
-				if tx_height < out.output.height {
-					tx_height = out.output.height;
-				}
 			}
 		}
 
 		for out in &tx_info.output_commit {
-			if let Some(out) = outputs_slates.get(out) {
+			if let Some(out) = outputs.get(out) {
 				output_status.insert(out.output.status.clone());
 
 				if tx_height < out.output.height {
@@ -852,12 +778,6 @@ where
 
 		// Validating transaction confirmation flag. True - flag is falid. False - need to be chaged
 		let tx_confirmation = match tx_type {
-			TxLogEntryType::ConfirmedCoinbase => {
-				// Confirmed Coinbase expected allways exist. If it is gone, mean miner got orphan block. That need to be cancelled.
-				output_status.contains(&OutputStatus::Unspent)
-					|| output_status.contains(&OutputStatus::Locked)
-					|| output_status.contains(&OutputStatus::Spent)
-			}
 			TxLogEntryType::TxSent => {
 				// Confirmed send expected that Inputs are NOT VALID;  Outputs are VALID
 				if inputs_status.len() == 0
@@ -886,7 +806,7 @@ where
 			}
 		};
 
-		// Checking if transaction 'confirmed' flag match excpected.
+		// Checking if transaction 'confirmed' flag match expected.
 		if tx_info.tx_log.confirmed != tx_confirmation {
 			if let Some(ref s) = status_send_channel {
 				let _ = s.send(StatusMessage::Info(format!(
@@ -907,7 +827,7 @@ where
 
 	// Checking for output to transaction mapping. We don't want to see active outputs without trsansaction or with cancelled transactions
 	// we might unCancel transaction if output was found but all mapped transactions are cancelled (user just a cheater)
-	for w_out in outputs_slates.values() {
+	for w_out in outputs.values_mut() {
 		// For every output checking to how many transaction it belong as Input and Output
 		let in_cancelled = w_out
 			.tx_input_uuid
@@ -933,7 +853,7 @@ where
 					.is_cancelled()
 			})
 			.count();
-		let out_active = w_out.tx_output_uuid.len() - in_cancelled;
+		let out_active = w_out.tx_output_uuid.len() - out_cancelled;
 
 		// Commit can belong to 1 transaction only. Other wise it is a transaction issue.
 		// Fortunatelly transaction issue doesn't affect the balance of send logic.
@@ -942,7 +862,7 @@ where
 			report_transaction_collision(
 				status_send_channel,
 				&w_out.tx_output_uuid,
-				&mut transactions_slates,
+				&transactions_slates,
 				false,
 			);
 		}
@@ -951,13 +871,33 @@ where
 			report_transaction_collision(
 				status_send_channel,
 				&w_out.tx_input_uuid,
-				&mut transactions_slates,
+				&transactions_slates,
 				true,
 			);
 		}
 
 		match w_out.output.status {
-			OutputStatus::Locked | OutputStatus::Spent => {
+			OutputStatus::Locked => {
+				if in_active==0 {
+					// it is not Locked, it must be active output
+					if let Some(ref s) = status_send_channel {
+						let _ = match &w_out.output.commit {
+							Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Locked to Unspent", commit))),
+							None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Locked to Unspent", w_out.output.height))),
+						};
+					}
+					w_out.output.status = OutputStatus::Unspent;
+					w_out.updated = true;
+				}
+				if out_active == 0 && out_cancelled > 0 {
+					recover_first_cancelled(
+						status_send_channel,
+						&w_out.tx_input_uuid,
+						&mut transactions_slates,
+					);
+				}
+			}
+			OutputStatus::Spent => {
 				// output have to have some valid transation. User cancel all of them?
 				if out_active == 0 && out_cancelled > 0 {
 					recover_first_cancelled(
@@ -979,10 +919,21 @@ where
 			}
 			OutputStatus::Unspent => {
 				// output have to have some valid transaction that created it. User cancel all of them?
+				if in_active > 0 {
+					// it is not Locked, it must be active output
+					if let Some(ref s) = status_send_channel {
+						let _ = match &w_out.output.commit {
+							Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Unspent to Locked", commit))),
+							None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Unspent to Locked", w_out.output.height))),
+						};
+					}
+					w_out.output.status = OutputStatus::Locked;
+					w_out.updated = true;
+				}
 				if out_active == 0 && out_cancelled > 0 {
 					recover_first_cancelled(
 						status_send_channel,
-						&w_out.tx_output_uuid,
+						&w_out.tx_input_uuid,
 						&mut transactions_slates,
 					);
 				}
@@ -990,7 +941,59 @@ where
 		}
 	}
 
-	// Here we are done with all state changes of Outputs and transactions. Now we need to vase them at the DB
+	// Delete any unconfirmed outputs, unlock any locked outputs and delete (cancel) associated transactions
+	if delete_unconfirmed {
+
+		let mut transaction2cancel : HashSet<String> = HashSet::new();
+
+		for w_out in outputs.values_mut() {
+			match w_out.output.status {
+				OutputStatus::Locked => {
+					if let Some(ref s) = status_send_channel {
+						let _ = match &w_out.output.commit {
+							Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Locked to Unspent", commit))),
+							None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Locked to Unspent", w_out.output.height))),
+						};
+					}
+					w_out.output.status = OutputStatus::Unspent;
+					w_out.updated = true;
+					for uuid in &w_out.tx_input_uuid {
+						transaction2cancel.insert(uuid.clone() );
+					}
+
+				},
+				OutputStatus::Unconfirmed => {
+					for uuid in &w_out.tx_output_uuid {
+						transaction2cancel.insert(uuid.clone() );
+					}
+				},
+				OutputStatus::Unspent | OutputStatus::Spent => (),
+			}
+		}
+
+		for tx_uuid in &transaction2cancel {
+			if let Some(tx) = transactions_slates.get_mut(tx_uuid) {
+				if !tx.tx_log.is_cancelled() {
+					// let's cancell transaction
+					match tx.tx_log.tx_type {
+						TxLogEntryType::TxSent => {
+							tx.tx_log.tx_type = TxLogEntryType::TxSentCancelled;
+						},
+						TxLogEntryType::TxReceived => {
+							tx.tx_log.tx_type = TxLogEntryType::TxReceivedCancelled;
+						},
+						_ => assert!(false), // Not expected, must be logical issue
+					}
+					tx.updated = true;
+					if let Some(ref s) = status_send_channel {
+						let _ = s.send(StatusMessage::Info(format!("Warning: Cancelling transaction {}", tx_uuid)));
+					}
+				}
+			}
+		}
+	}
+
+	// Here we are done with all state changes of Outputs and transactions. Now we need to save them at the DB
 	// Note, unknown new outputs are not here because we handle them in the beginning by 'restore'.
 
 	// Apply last data updates and saving the data into DB.
@@ -1002,7 +1005,7 @@ where
 		for tx in transactions_slates.values() {
 			// Cancel orphan transactions (transaction without know outputs in this wallet)
 			// It is edge case, normally wallet save outputs into DB.
-			if tx.is_orphan_transaction(&outputs_slates) {
+			if tx.is_orphan_transaction(&outputs) {
 				if let Some(ref s) = status_send_channel {
 					let _ = s.send(StatusMessage::Info(format!(
 						"Warning: Cancelling orphan transaction {}",
@@ -1036,7 +1039,7 @@ where
 		}
 
 		// Save Slate Outputs to DB
-		for output in outputs_slates.values() {
+		for output in outputs.values() {
 			if output.updated {
 				batch.save(output.output.clone())?;
 			}
@@ -1050,20 +1053,11 @@ where
 			}
 		}
 
-		// Save coin based Outputs to DB
-		for output in outputs_coinbased.values() {
-			if output.updated {
-				batch.save(output.output.clone())?;
-			}
-		}
-
-
 		// It is very normal that Wallet has outputs without Transactions.
 		// It is a coinbase transactions. Let's create coinbase transactions if they don't exist yet
 		// See what updater::apply_api_outputs does
-		for w_out in outputs_coinbased.values_mut() {
-			if !transactions_coinbased.contains_key(&w_out.output.height) {
-
+		for w_out in outputs.values_mut() {
+			if w_out.output.is_coinbase && !transactions_coinbased.contains_key(&w_out.output.height) {
 				let parent_key_id = &w_out.output.root_key_id; // it is Account Key ID.
 
 				let log_id = batch.next_tx_log_id(parent_key_id)?;
@@ -1078,17 +1072,19 @@ where
 				t.amount_debited = 0;
 				t.num_outputs = 1;
 				// calculate kernel excess for coinbase
-				if w_out.output.commit.is_some()
-				{
+				if w_out.output.commit.is_some() {
 					let secp = static_secp_instance();
 					let secp = secp.lock();
 					let over_commit = secp.commit_value(w_out.output.value)?;
 					let commit = pedersen::Commitment::from_vec(
-						util::from_hex( w_out.output.commit.clone().unwrap() )
-								.map_err(|e| Error::from(ErrorKind::GenericError( format!("Output commit parse error {:?}",e)) ))?
+						util::from_hex(w_out.output.commit.clone().unwrap()).map_err(|e| {
+							Error::from(ErrorKind::GenericError(format!(
+								"Output commit parse error {:?}",
+								e
+							)))
+						})?,
 					);
-					let excess =
-						secp.commit_sum(vec![commit], vec![over_commit])?;
+					let excess = secp.commit_sum(vec![commit], vec![over_commit])?;
 					t.kernel_excess = Some(excess);
 					t.kernel_lookup_min_height = Some(w_out.output.height);
 				}
@@ -1132,6 +1128,34 @@ where
 		}
 	}
 
+/*	{
+		// Dump chain outputs...
+		for ch_out in &chain_outs {
+			println!("End Chain output: {:?}", ch_out );
+		}
+
+		println!("End outputs len is {}", outputs.len());
+		for o in &outputs {
+			println!("{}  =>  {:?}", o.0, o.1 );
+		}
+
+		println!("End transactions_slates len is {}", transactions_slates.len());
+		for t in &transactions_slates {
+			println!("{}  =>  {:?}", t.0, t.1 );
+		}
+
+		println!("End transactions_coinbased len is {}", transactions_coinbased.len());
+		for t in &transactions_coinbased {
+			println!("{}  =>  {:?}", t.0, t.1 );
+		}
+		println!("------------------ scan END -----------------------------" );
+		// Dump the same from the DB.
+		if let Some(ref s) = status_send_channel {
+			let _ = owner::dump_wallet_data(wallet_inst.clone(), s, Some(String::from("/tmp/end.txt")) );
+		}
+	}*/
+
+
 	if let Some(ref s) = status_send_channel {
 		let _ = s.send(StatusMessage::ScanningComplete(
 			"Scanning Complete".to_owned(),
@@ -1150,7 +1174,7 @@ where
 fn report_transaction_collision(
 	status_send_channel: &Option<Sender<StatusMessage>>,
 	tx_uuid: &Vec<String>,
-	transactions: &mut HashMap<String, WalletTxInfo>,
+	transactions: &HashMap<String, WalletTxInfo>,
 	inputs: bool,
 ) {
 	if let Some(ref s) = status_send_channel {
