@@ -136,7 +136,7 @@ where
 	/// // by the reference wallet implementation.
 	/// // These traits can be replaced with alternative implementations if desired
 	///
-	/// let mut wallet = Box::new(DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client.clone()).unwrap())
+	/// let mut wallet = Box::new(DefaultWalletImpl::<'static, HTTPNodeClient>::new(100, node_client.clone()).unwrap())
 	///		as Box<dyn WalletInst<'static, DefaultLCProvider<HTTPNodeClient, ExtKeychain>, HTTPNodeClient, ExtKeychain>>;
 	///
 	/// // Wallet LifeCycle Provider provides all functions init wallet and work with seeds, etc...
@@ -499,7 +499,7 @@ macro_rules! doctest_helper_setup_doc_env_foreign {
 
 		let node_client = HTTPNodeClient::new(&wallet_config.check_node_api_http_addr, None);
 		let mut wallet = Box::new(
-			DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client.clone()).unwrap(),
+			DefaultWalletImpl::<'static, HTTPNodeClient>::new(100, node_client.clone()).unwrap(),
 			)
 			as Box<
 				WalletInst<
