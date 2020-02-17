@@ -37,7 +37,7 @@ where
 	K: Keychain + 'a,
 {
 	data_dir: String,
-	max_reorg_len: u64,
+	max_reorg_height: u64,
 	node_client: C,
 	backend: Option<Box<dyn WalletBackend<'a, C, K> + 'a>>,
 }
@@ -48,11 +48,11 @@ where
 	K: Keychain + 'a,
 {
 	/// Create new provider
-	pub fn new(max_reorg_len: u64, node_client: C) -> Self {
+	pub fn new(max_reorg_height: u64, node_client: C) -> Self {
 		DefaultLCProvider {
 			node_client,
 			data_dir: "default".to_owned(),
-			max_reorg_len,
+			max_reorg_height,
 			backend: None,
 		}
 	}
@@ -73,8 +73,8 @@ where
 	}
 
 	/// Max expected reorg Len for the wallet
-	fn get_max_reorg_len(&self) -> u64 {
-		self.max_reorg_len
+	fn get_max_reorg_height(&self) -> u64 {
+		self.max_reorg_height
 	}
 
 	fn create_config(
@@ -200,7 +200,7 @@ where
 		let _ = WalletSeed::init_file(&data_dir_name, mnemonic_length, mnemonic.clone(), password);
 		info!("Wallet seed file created");
 		let mut wallet: LMDBBackend<'a, C, K> =
-			match LMDBBackend::new(&data_dir_name, self.node_client.clone()) {
+			match LMDBBackend::new(&data_dir_name, self.node_client.clone(), self.get_max_reorg_height()) {
 				Err(e) => {
 					let msg = format!("Error creating wallet: {}, Data Dir: {}", e, &data_dir_name);
 					error!("{}", msg);
@@ -231,7 +231,7 @@ where
 		data_dir_name.push(wallet_data_dir.unwrap_or(GRIN_WALLET_DIR));
 		let data_dir_name = data_dir_name.to_str().unwrap();
 		let mut wallet: LMDBBackend<'a, C, K> =
-			match LMDBBackend::new(&data_dir_name, self.node_client.clone()) {
+			match LMDBBackend::new(&data_dir_name, self.node_client.clone(), self.get_max_reorg_height() ) {
 				Err(e) => {
 					let msg = format!("Error opening wallet: {}, Data Dir: {}", e, &data_dir_name);
 					return Err(ErrorKind::Lifecycle(msg).into());

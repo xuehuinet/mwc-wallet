@@ -232,7 +232,7 @@ where
 	K: keychain::Keychain + 'static,
 {
 	let mut wallet = Box::new(
-		DefaultWalletImpl::<'static, C>::new(config.get_max_reorg_len(), node_client.clone())
+		DefaultWalletImpl::<'static, C>::new(config.get_max_reorg_height(), node_client.clone())
 			.unwrap(),
 	) as Box<dyn WalletInst<'static, L, C, K>>;
 	let lc = wallet.lc_provider().unwrap();

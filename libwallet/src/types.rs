@@ -65,7 +65,7 @@ where
 	fn get_top_level_directory(&self) -> Result<String, Error>;
 
 	/// Max expected reorg Len for the wallet
-	fn get_max_reorg_len(&self) -> u64;
+	fn get_max_reorg_height(&self) -> u64;
 
 	/// Output a grin-wallet.toml file into the current top-level system wallet directory
 	fn create_config(
@@ -256,6 +256,9 @@ where
 
 	/// Flag whether the wallet needs a full UTXO scan on next update attempt
 	fn init_status<'a>(&mut self) -> Result<WalletInitStatus, Error>;
+
+	/// Get max nicely acceptable reorg length
+	fn get_max_reorg_height(&self) -> u64;
 }
 
 /// Batch trait to update the output data backend atomically. Trying to use a

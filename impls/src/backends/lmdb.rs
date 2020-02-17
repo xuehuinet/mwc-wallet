@@ -103,6 +103,7 @@ where
 {
 	db: store::Store,
 	data_file_dir: String,
+	max_reorg_height: u64,
 	/// Keychain
 	pub keychain: Option<K>,
 	/// Check value for XORed keychain seed
@@ -120,7 +121,7 @@ where
 	C: NodeClient + 'ck,
 	K: Keychain + 'ck,
 {
-	pub fn new(data_file_dir: &str, n_client: C) -> Result<Self, Error> {
+	pub fn new(data_file_dir: &str, n_client: C, max_reorg_height: u64) -> Result<Self, Error> {
 		let db_path = path::Path::new(data_file_dir).join(DB_DIR);
 		fs::create_dir_all(&db_path).expect("Couldn't create wallet backend directory!");
 
@@ -151,6 +152,7 @@ where
 		let res = LMDBBackend {
 			db: store,
 			data_file_dir: data_file_dir.to_owned(),
+			max_reorg_height,
 			keychain: None,
 			master_checksum: Box::new(None),
 			parent_key_id: LMDBBackend::<C, K>::default_path(),
@@ -511,6 +513,10 @@ where
 			None => WalletInitStatus::InitComplete,
 		};
 		Ok(status)
+	}
+
+	fn get_max_reorg_height(&self) -> u64 {
+		self.max_reorg_height
 	}
 }
 

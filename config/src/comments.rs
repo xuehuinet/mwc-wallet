@@ -46,7 +46,7 @@ fn comments() -> HashMap<String, String> {
 #tls_certificate_key = \"\"
 
 #Length of maximum expected reorg length
-#max_reorg_len = 100
+#max_reorg_height = 100
 
 #port for wallet listener
 "
