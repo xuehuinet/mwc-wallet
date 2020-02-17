@@ -12,7 +12,7 @@ version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "743ad5a418686aad3b87fd14c43badd828cf26e214a00f92a384291cf22e1811"
 dependencies = [
- "memchr 2.3.0",
+ "memchr 2.3.2",
 ]
 
 [[package]]
@@ -139,21 +139,25 @@ checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "bindgen"
-version = "0.37.4"
+version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b25ab82877ea8fe6ce1ce1f8ac54361f0218bad900af9eb11803994bf67c221"
+checksum = "f1c85344eb535a31b62f0af37be84441ba9e7f0f4111eb0530f43d15e513fe57"
 dependencies = [
+ "bitflags 1.2.1",
  "cexpr",
  "cfg-if",
  "clang-sys",
  "clap",
- "env_logger",
+ "env_logger 0.7.1",
  "lazy_static",
+ "lazycell",
  "log",
  "peeking_take_while",
- "proc-macro2 0.3.5",
- "quote 0.5.2",
+ "proc-macro2 1.0.8",
+ "quote 1.0.2",
  "regex",
+ "rustc-hash",
+ "shlex",
  "which",
 ]
 
@@ -294,11 +298,11 @@ dependencies = [
 
 [[package]]
 name = "cexpr"
-version = "0.2.3"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42aac45e9567d97474a834efdee3081b3c942b2205be932092f53354ce503d6c"
+checksum = "fce5b5fb86b0c57c20c834c1b412fd09c77c8a59b9473f86272709e78874cd1d"
 dependencies = [
- "nom 3.2.1",
+ "nom",
 ]
 
 [[package]]
@@ -321,9 +325,9 @@ dependencies = [
 
 [[package]]
 name = "clang-sys"
-version = "0.23.0"
+version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7f7c04e52c35222fffcc3a115b5daf5f7e2bfb71c13c4e2321afe1fc71859c2"
+checksum = "81de550971c976f176130da4b2978d3b524eaa0fd9ac31f3ceb5ae1231fb4853"
 dependencies = [
  "glob",
  "libc",
@@ -392,19 +396,20 @@ dependencies = [
 
 [[package]]
 name = "croaring"
-version = "0.3.9"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71152d60cec9dfdc5d9d793bccfa9ad95927372b80cd00e983db5eb2ce103e3b"
+checksum = "52e9057c1caf8e9debd6f938a12ff24028f3c7f85d24f502f46f3c9601905464"
 dependencies = [
+ "byteorder",
  "croaring-sys",
  "libc",
 ]
 
 [[package]]
 name = "croaring-sys"
-version = "0.3.9"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac84a4f975e67fc418be3911b7ca9aa74ee8a9717ca75452da7d6839421e2d67"
+checksum = "b7d3b66d75dc466ec547604de0517eb4e1a51fd79a83eaff4409f81167dacdc8"
 dependencies = [
  "bindgen",
  "cc",
@@ -432,7 +437,7 @@ dependencies = [
  "crossbeam-utils",
  "lazy_static",
  "memoffset",
- "scopeguard 1.0.0",
+ "scopeguard 1.1.0",
 ]
 
 [[package]]
@@ -659,6 +664,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_logger"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
+dependencies = [
+ "atty",
+ "humantime",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
 name = "failure"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -792,14 +810,14 @@ dependencies = [
 
 [[package]]
 name = "glob"
-version = "0.2.11"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8be18de09a56b60ed0edf84bc9df007e30040691af7acd1c41874faac5895bfb"
+checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "grin_api"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "easy-jsonrpc-mw",
  "failure",
@@ -833,7 +851,7 @@ dependencies = [
 [[package]]
 name = "grin_chain"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "bit-vec",
  "bitflags 1.2.1",
@@ -857,7 +875,7 @@ dependencies = [
 [[package]]
 name = "grin_core"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -884,7 +902,7 @@ dependencies = [
 [[package]]
 name = "grin_keychain"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -907,7 +925,7 @@ dependencies = [
 [[package]]
 name = "grin_p2p"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "bitflags 1.2.1",
  "bytes",
@@ -930,7 +948,7 @@ dependencies = [
 [[package]]
 name = "grin_pool"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "blake2-rfc",
  "chrono",
@@ -964,12 +982,12 @@ dependencies = [
 [[package]]
 name = "grin_store"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "bit-vec",
  "byteorder",
  "croaring",
- "env_logger",
+ "env_logger 0.5.13",
  "failure",
  "failure_derive",
  "grin_core",
@@ -986,7 +1004,7 @@ dependencies = [
 [[package]]
 name = "grin_util"
 version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#1c8e99133e04d08013240b7832ca96e73701307b"
+source = "git+https://github.com/mwcproject/mwc-node#2c5f8547ab586f7f3799a683dbbaa01080c94a09"
 dependencies = [
  "backtrace",
  "base64 0.9.3",
@@ -1393,6 +1411,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
+name = "lazycell"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
+
+[[package]]
 name = "libc"
 version = "0.2.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1487,7 +1511,7 @@ version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79b2de95ecb4691949fea4716ca53cdbcfccb2c612e19644a8bad05edcf9f47b"
 dependencies = [
- "scopeguard 1.0.0",
+ "scopeguard 1.1.0",
 ]
 
 [[package]]
@@ -1563,9 +1587,9 @@ dependencies = [
 
 [[package]]
 name = "memchr"
-version = "2.3.0"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3197e20c7edb283f87c071ddfc7a2cca8f8e0b888c242959846a6fce03c72223"
+checksum = "53445de381a1f436797497c61d851644d0e8e88e6140f22872ad33a704933978"
 
 [[package]]
 name = "memmap"
@@ -1726,20 +1750,11 @@ checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
 name = "nom"
-version = "3.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05aec50c70fd288702bcd93284a8444607f3292dbdf2a30de5ea5dcdbe72287b"
-dependencies = [
- "memchr 1.0.2",
-]
-
-[[package]]
-name = "nom"
 version = "4.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ad2a91a8e869eeb30b9cb3119ae87773a8f4ae617f41b1eb9c154b2905f7bd6"
 dependencies = [
- "memchr 2.3.0",
+ "memchr 2.3.2",
  "version_check",
 ]
 
@@ -2082,15 +2097,6 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77997c53ae6edd6d187fec07ec41b207063b5ee6f33680e9fa86d405cdd313d4"
-dependencies = [
- "unicode-xid 0.1.0",
-]
-
-[[package]]
-name = "proc-macro2"
 version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
@@ -2112,15 +2118,6 @@ name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
-
-[[package]]
-name = "quote"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9949cfe66888ffe1d53e6ec9d9f3b70714083854be20fd5e271b232a017401e8"
-dependencies = [
- "proc-macro2 0.3.5",
-]
 
 [[package]]
 name = "quote"
@@ -2370,7 +2367,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "322cf97724bea3ee221b78fe25ac9c46114ebb51747ad5babd51a2fc6a8235a8"
 dependencies = [
  "aho-corasick",
- "memchr 2.3.0",
+ "memchr 2.3.2",
  "regex-syntax",
  "thread_local",
 ]
@@ -2445,6 +2442,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"
 
 [[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
 name = "rustc-serialize"
 version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2517,9 +2520,9 @@ checksum = "94258f53601af11e6a49f722422f6e3425c52b06245a5cf9bc09908b174f5e27"
 
 [[package]]
 name = "scopeguard"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b42e15e59b18a828bbf5c58ea01debb36b9b096346de35d941dcb89009f24a0d"
+checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "sct"
@@ -2584,9 +2587,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.47"
+version = "1.0.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15913895b61e0be854afd32fd4163fcd2a3df34142cf2cb961b310ce694cbf90"
+checksum = "9371ade75d4c2d6cb154141b9752cf3781ec9c05e0e5cf35060e1e70ee7b9c25"
 dependencies = [
  "itoa",
  "ryu",
@@ -2641,6 +2644,12 @@ dependencies = [
  "keccak",
  "opaque-debug",
 ]
+
+[[package]]
+name = "shlex"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fdf1b9db47230893d76faad238fd6097fd6d6a9245cd7a4d90dbd639536bbd2"
 
 [[package]]
 name = "siphasher"
@@ -2835,7 +2844,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e51065bafd2abe106b6036483b69d1741f4a1ec56ce8a2378de341637de689e"
 dependencies = [
  "fnv",
- "nom 4.2.3",
+ "nom",
  "phf",
  "phf_codegen",
 ]
@@ -3364,9 +3373,9 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "1.0.5"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e84a603e7e0b1ce1aa1ee2b109c7be00155ce52df5081590d1ffb93f4f515cb2"
+checksum = "5475d47078209a02e60614f7ba5e645ef3ed60f771920ac1906d7c1cc65024c8"
 dependencies = [
  "libc",
 ]
