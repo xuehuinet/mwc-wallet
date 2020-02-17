@@ -904,15 +904,15 @@ where
 		}
 	};
 
-	let max_reorg_len = {
+	let max_reorg_height = {
 		// similar to what wallet_lock! does
 		let inst = wallet_inst.clone();
 		let mut w_lock = inst.lock();
 		let w_provider = w_lock.lc_provider()?;
-		w_provider.get_max_reorg_len()
+		w_provider.get_max_reorg_height()
 	};
 
-	let start_index = last_scanned_block.height.saturating_sub(max_reorg_len);
+	let start_index = last_scanned_block.height.saturating_sub(max_reorg_height);
 
 	if last_scanned_block.height == 0 {
 		let msg = format!("This wallet has not been scanned against the current chain. Beginning full scan... (this first scan may take a while, but subsequent scans will be much quicker)");

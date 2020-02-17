@@ -75,8 +75,14 @@ where
 	outputs.sort_by_key(|out| out.n_child);
 	let keychain = wallet.keychain(keychain_mask)?;
 
+	// Key: tx_log id;  Value: true if active, false if cancelled
+	let tx_log_cancellation_status : HashMap<u32, bool> = wallet.tx_log_iter().map(|tx_log| (tx_log.id, !tx_log.is_cancelled()) ).collect();
+
 	let res: Vec<OutputCommitMapping> = outputs
 		.into_iter()
+		// Filtering out Unconfirmed from cancelled (not active) transactions
+		.filter(|output| !( output.status==OutputStatus::Unconfirmed &&
+				! tx_log_cancellation_status.get(&output.tx_log_entry.clone().unwrap_or(std::u32::MAX) ).unwrap_or(&true) ) )
 		.map(|output| {
 			let commit = match output.commit.clone() {
 				Some(c) => pedersen::Commitment::from_vec(util::from_hex(c).unwrap()),
@@ -363,9 +369,9 @@ where
 
 	for mut o in outputs {
 		// unlock locked outputs
-		if o.status == OutputStatus::Unconfirmed {
-			batch.delete(&o.key_id, &o.mmr_index)?;
-		}
+		//if o.status == OutputStatus::Unconfirmed {   WMC don't delete outputs, we want to keep them mapped to cancelled trasactions
+		//	batch.delete(&o.key_id, &o.mmr_index)?;
+		//}
 		if o.status == OutputStatus::Locked {
 			o.status = OutputStatus::Unspent;
 			batch.save(o)?;
@@ -553,14 +559,16 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	if height < 50 {
+    let max_reorg_height= wallet.get_max_reorg_height();
+
+	if height < max_reorg_height {
 		return Ok(());
 	}
 	let mut ids_to_del = vec![];
 	for out in wallet.iter() {
 		if out.status == OutputStatus::Unconfirmed
 			&& out.height > 0
-			&& out.height < height - 50
+			&& out.height < height - max_reorg_height
 			&& out.is_coinbase
 		{
 			ids_to_del.push(out.key_id.clone())
@@ -591,6 +599,9 @@ where
 		.iter()
 		.filter(|out| out.root_key_id == *parent_key_id);
 
+	// Key: tx_log id;  Value: true if active, false if cancelled
+	let tx_log_cancellation_status : HashMap<u32, bool> = wallet.tx_log_iter().map(|tx_log| (tx_log.id, !tx_log.is_cancelled()) ).collect();
+
 	let mut unspent_total = 0;
 	let mut immature_total = 0;
 	let mut awaiting_finalization_total = 0;
@@ -611,6 +622,12 @@ where
 			}
 			OutputStatus::Unconfirmed => {
 				// We ignore unconfirmed coinbase outputs completely.
+				if let Some(tx_log_id) = out.tx_log_entry {
+					if !tx_log_cancellation_status.get(&tx_log_id).unwrap_or(&true) {
+						continue;
+					}
+				}
+
 				if !out.is_coinbase {
 					if minimum_confirmations == 0 {
 						unconfirmed_total += out.value;
