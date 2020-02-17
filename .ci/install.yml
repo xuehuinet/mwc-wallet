@@ -5,6 +5,7 @@ steps:
     displayName: Windows Install Rust
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
   - script: |
+      brew uninstall llvm
       curl https://sh.rustup.rs -sSf | sh -s -- -y
       echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
     displayName: macOS Install Rust
