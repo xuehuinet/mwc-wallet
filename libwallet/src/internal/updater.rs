@@ -76,13 +76,20 @@ where
 	let keychain = wallet.keychain(keychain_mask)?;
 
 	// Key: tx_log id;  Value: true if active, false if cancelled
-	let tx_log_cancellation_status : HashMap<u32, bool> = wallet.tx_log_iter().map(|tx_log| (tx_log.id, !tx_log.is_cancelled()) ).collect();
+	let tx_log_cancellation_status: HashMap<u32, bool> = wallet
+		.tx_log_iter()
+		.map(|tx_log| (tx_log.id, !tx_log.is_cancelled()))
+		.collect();
 
 	let res: Vec<OutputCommitMapping> = outputs
 		.into_iter()
 		// Filtering out Unconfirmed from cancelled (not active) transactions
-		.filter(|output| !( output.status==OutputStatus::Unconfirmed &&
-				! tx_log_cancellation_status.get(&output.tx_log_entry.clone().unwrap_or(std::u32::MAX) ).unwrap_or(&true) ) )
+		.filter(|output| {
+			!(output.status == OutputStatus::Unconfirmed
+				&& !tx_log_cancellation_status
+					.get(&output.tx_log_entry.clone().unwrap_or(std::u32::MAX))
+					.unwrap_or(&true))
+		})
 		.map(|output| {
 			let commit = match output.commit.clone() {
 				Some(c) => pedersen::Commitment::from_vec(util::from_hex(c).unwrap()),
@@ -559,7 +566,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-    let max_reorg_height= wallet.get_max_reorg_height();
+	let max_reorg_height = wallet.get_max_reorg_height();
 
 	if height < max_reorg_height {
 		return Ok(());
@@ -600,7 +607,10 @@ where
 		.filter(|out| out.root_key_id == *parent_key_id);
 
 	// Key: tx_log id;  Value: true if active, false if cancelled
-	let tx_log_cancellation_status : HashMap<u32, bool> = wallet.tx_log_iter().map(|tx_log| (tx_log.id, !tx_log.is_cancelled()) ).collect();
+	let tx_log_cancellation_status: HashMap<u32, bool> = wallet
+		.tx_log_iter()
+		.map(|tx_log| (tx_log.id, !tx_log.is_cancelled()))
+		.collect();
 
 	let mut unspent_total = 0;
 	let mut immature_total = 0;
