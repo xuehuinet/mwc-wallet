@@ -750,7 +750,6 @@ where
 			let uuid_str = uuid.to_string();
 			match w.get_stored_tx_by_uuid(&uuid_str) {
 				Ok(t) => {
-					write_info(format!("{:?}", tx_log), file.as_mut(), status_send_channel);
 					write_info(
 						format!("   Slate for {}: {:?}", uuid_str, t),
 						file.as_mut(),
