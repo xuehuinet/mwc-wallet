@@ -784,9 +784,11 @@ where
 		// Validating transaction confirmation flag. True - flag is falid. False - need to be chaged
 		let tx_confirmation = match tx_type {
 			TxLogEntryType::TxSent => {
-				// Confirmed send expected that Inputs are NOT VALID;  Outputs are VALID
-				if inputs_status.len() == 0
-					|| inputs_status.contains(&OutputStatus::Unspent)
+                // Confirmed send expected that Inputs are NOT VALID;  Outputs are VALID
+                if inputs_status.len() == 0 {
+                    tx_info.tx_log.confirmed
+                }
+                else if inputs_status.contains(&OutputStatus::Unspent)
 					|| inputs_status.contains(&OutputStatus::Locked)
 					|| inputs_status.contains(&OutputStatus::Unconfirmed)
 				{
@@ -799,7 +801,10 @@ where
 			}
 			TxLogEntryType::TxReceived => {
 				// Confirmed receive expect that Output are VALID or Spent
-				if output_status.len() == 0 || output_status.contains(&OutputStatus::Unconfirmed) {
+				if output_status.len() == 0 {
+                    tx_info.tx_log.confirmed
+                }
+                else if output_status.contains(&OutputStatus::Unconfirmed) {
 					false
 				} else {
 					true
