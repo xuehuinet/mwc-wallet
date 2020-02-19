@@ -294,7 +294,7 @@ struct WalletOutputInfo {
 	updated: bool,  // true if data was updated, we need push it into DB
 	at_chain: bool, // true if this Output was founf at the Chain
 	output: OutputData,
-	commit: String,              // commit as a string. output.output value
+	commit: String,                  // commit as a string. output.output value
 	tx_input_uuid: HashSet<String>,  // transactions where this commit is input
 	tx_output_uuid: HashSet<String>, // transactions where this commit is output
 }
