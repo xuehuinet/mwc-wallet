@@ -392,21 +392,28 @@ where
 		}
 	}
 
+	// mwc need to suport extentions mwctx and grintx because 2.4 version has grintx, 3.0 mwctx
 	fn get_stored_tx_by_uuid(&self, uuid: &str) -> Result<Transaction, Error> {
-		let filename = format!("{}.mwctx", uuid);
+		let get_stored_tx_by_uuid_ext =
+			|uuid: &str, extention: &str| -> Result<Transaction, Error> {
+				let filename = format!("{}.{}", uuid, extention);
 
-		let path = path::Path::new(&self.data_file_dir)
-			.join(TX_SAVE_DIR)
-			.join(filename);
+				let path = path::Path::new(&self.data_file_dir)
+					.join(TX_SAVE_DIR)
+					.join(filename);
 
-		let trans = match path.to_str() {
-			Some(s) => self.load_stored_tx(s)?,
-			None => Err(ErrorKind::GenericError(
-				"Unable to build transaction path".to_string(),
-			))?,
-		};
+				let trans = match path.to_str() {
+					Some(s) => self.load_stored_tx(s)?,
+					None => Err(ErrorKind::GenericError(
+						"Unable to build transaction path".to_string(),
+					))?,
+				};
 
-		Ok(trans.unwrap())
+				Ok(trans.unwrap())
+			};
+
+		get_stored_tx_by_uuid_ext(uuid, "mwctx")
+			.or_else(|_| get_stored_tx_by_uuid_ext(uuid, "grintx"))
 	}
 
 	fn load_stored_tx(&self, path: &str) -> Result<Option<Transaction>, Error> {
