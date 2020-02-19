@@ -295,8 +295,8 @@ struct WalletOutputInfo {
 	at_chain: bool, // true if this Output was founf at the Chain
 	output: OutputData,
 	commit: String,              // commit as a string. output.output value
-	tx_input_uuid: Vec<String>,  // transactions where this commit is input
-	tx_output_uuid: Vec<String>, // transactions where this commit is output
+	tx_input_uuid: HashSet<String>,  // transactions where this commit is input
+	tx_output_uuid: HashSet<String>, // transactions where this commit is output
 }
 
 impl WalletOutputInfo {
@@ -307,17 +307,17 @@ impl WalletOutputInfo {
 			at_chain: false,
 			output,
 			commit,
-			tx_input_uuid: Vec::new(),
-			tx_output_uuid: Vec::new(),
+			tx_input_uuid: HashSet::new(),
+			tx_output_uuid: HashSet::new(),
 		}
 	}
 
 	pub fn add_tx_input_uuid(&mut self, uuid: &str) {
-		self.tx_input_uuid.push(String::from(uuid));
+		self.tx_input_uuid.insert(String::from(uuid));
 	}
 
 	pub fn add_tx_output_uuid(&mut self, uuid: &str) {
-		self.tx_output_uuid.push(String::from(uuid));
+		self.tx_output_uuid.insert(String::from(uuid));
 	}
 
 	// Output that is not active and not mapped to any transaction.
@@ -333,8 +333,8 @@ struct WalletTxInfo {
 	updated: bool,   // true if data was updated, we need push it into DB
 	tx_uuid: String, // transaction uuid, full name
 	tx_log: TxLogEntry,
-	input_commit: Vec<String>,  // Commits from input (if found)
-	output_commit: Vec<String>, // Commits from output (if found)
+	input_commit: HashSet<String>,  // Commits from input (if found)
+	output_commit: HashSet<String>, // Commits from output (if found)
 }
 
 impl WalletTxInfo {
@@ -346,8 +346,8 @@ impl WalletTxInfo {
 				None => String::new(),
 			},
 			tx_log,
-			input_commit: Vec::new(),
-			output_commit: Vec::new(),
+			input_commit: HashSet::new(),
+			output_commit: HashSet::new(),
 		}
 	}
 
@@ -355,12 +355,12 @@ impl WalletTxInfo {
 	pub fn add_transaction(&mut self, tx: Transaction) {
 		for input in &tx.body.inputs {
 			self.input_commit
-				.push(util::to_hex(input.commit.0.to_vec()));
+				.insert(util::to_hex(input.commit.0.to_vec()));
 		}
 
 		for output in tx.body.outputs {
 			self.output_commit
-				.push(util::to_hex(output.commit.0.to_vec()));
+				.insert(util::to_hex(output.commit.0.to_vec()));
 		}
 	}
 
@@ -369,7 +369,7 @@ impl WalletTxInfo {
 		if self.input_commit.contains(commit) || self.output_commit.contains(commit) {
 			false
 		} else {
-			self.output_commit.push(commit.clone());
+			self.output_commit.insert(commit.clone());
 			true
 		}
 	}
@@ -1180,7 +1180,7 @@ where
 // Report to user about transactions that point to the same output.
 fn report_transaction_collision(
 	status_send_channel: &Option<Sender<StatusMessage>>,
-	tx_uuid: &Vec<String>,
+	tx_uuid: &HashSet<String>,
 	transactions: &HashMap<String, WalletTxInfo>,
 	inputs: bool,
 ) {
@@ -1211,7 +1211,7 @@ fn report_transaction_collision(
 // We don't want to implement complicated algorithm to handle that. User suppose to be sane and not cancell transactions without reason.
 fn recover_first_cancelled(
 	status_send_channel: &Option<Sender<StatusMessage>>,
-	tx_uuid: &Vec<String>,
+	tx_uuid: &HashSet<String>,
 	transactions: &mut HashMap<String, WalletTxInfo>,
 ) {
 	// let's revert first non cancelled
