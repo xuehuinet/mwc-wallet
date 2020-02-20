@@ -294,9 +294,9 @@ struct WalletOutputInfo {
 	updated: bool,  // true if data was updated, we need push it into DB
 	at_chain: bool, // true if this Output was founf at the Chain
 	output: OutputData,
-	commit: String,              // commit as a string. output.output value
-	tx_input_uuid: Vec<String>,  // transactions where this commit is input
-	tx_output_uuid: Vec<String>, // transactions where this commit is output
+	commit: String,                  // commit as a string. output.output value
+	tx_input_uuid: HashSet<String>,  // transactions where this commit is input
+	tx_output_uuid: HashSet<String>, // transactions where this commit is output
 }
 
 impl WalletOutputInfo {
@@ -307,17 +307,17 @@ impl WalletOutputInfo {
 			at_chain: false,
 			output,
 			commit,
-			tx_input_uuid: Vec::new(),
-			tx_output_uuid: Vec::new(),
+			tx_input_uuid: HashSet::new(),
+			tx_output_uuid: HashSet::new(),
 		}
 	}
 
 	pub fn add_tx_input_uuid(&mut self, uuid: &str) {
-		self.tx_input_uuid.push(String::from(uuid));
+		self.tx_input_uuid.insert(String::from(uuid));
 	}
 
 	pub fn add_tx_output_uuid(&mut self, uuid: &str) {
-		self.tx_output_uuid.push(String::from(uuid));
+		self.tx_output_uuid.insert(String::from(uuid));
 	}
 
 	// Output that is not active and not mapped to any transaction.
@@ -333,8 +333,8 @@ struct WalletTxInfo {
 	updated: bool,   // true if data was updated, we need push it into DB
 	tx_uuid: String, // transaction uuid, full name
 	tx_log: TxLogEntry,
-	input_commit: Vec<String>,  // Commits from input (if found)
-	output_commit: Vec<String>, // Commits from output (if found)
+	input_commit: HashSet<String>,  // Commits from input (if found)
+	output_commit: HashSet<String>, // Commits from output (if found)
 }
 
 impl WalletTxInfo {
@@ -346,8 +346,8 @@ impl WalletTxInfo {
 				None => String::new(),
 			},
 			tx_log,
-			input_commit: Vec::new(),
-			output_commit: Vec::new(),
+			input_commit: HashSet::new(),
+			output_commit: HashSet::new(),
 		}
 	}
 
@@ -355,12 +355,12 @@ impl WalletTxInfo {
 	pub fn add_transaction(&mut self, tx: Transaction) {
 		for input in &tx.body.inputs {
 			self.input_commit
-				.push(util::to_hex(input.commit.0.to_vec()));
+				.insert(util::to_hex(input.commit.0.to_vec()));
 		}
 
 		for output in tx.body.outputs {
 			self.output_commit
-				.push(util::to_hex(output.commit.0.to_vec()));
+				.insert(util::to_hex(output.commit.0.to_vec()));
 		}
 	}
 
@@ -369,7 +369,7 @@ impl WalletTxInfo {
 		if self.input_commit.contains(commit) || self.output_commit.contains(commit) {
 			false
 		} else {
-			self.output_commit.push(commit.clone());
+			self.output_commit.insert(commit.clone());
 			true
 		}
 	}
@@ -757,6 +757,11 @@ where
 		if tx_type == TxLogEntryType::TxReceivedCancelled
 			|| tx_type == TxLogEntryType::TxSentCancelled
 		{
+			if tx_info.tx_log.confirmed {
+				tx_info.tx_log.confirmed = false;
+				tx_info.updated = true;
+			}
+
 			continue; // Processing not cancelled transactions. Cancelled will be reactivated as a recovery plan.
 		}
 
@@ -785,8 +790,9 @@ where
 		let tx_confirmation = match tx_type {
 			TxLogEntryType::TxSent => {
 				// Confirmed send expected that Inputs are NOT VALID;  Outputs are VALID
-				if inputs_status.len() == 0
-					|| inputs_status.contains(&OutputStatus::Unspent)
+				if inputs_status.len() == 0 {
+					tx_info.tx_log.confirmed
+				} else if inputs_status.contains(&OutputStatus::Unspent)
 					|| inputs_status.contains(&OutputStatus::Locked)
 					|| inputs_status.contains(&OutputStatus::Unconfirmed)
 				{
@@ -799,7 +805,9 @@ where
 			}
 			TxLogEntryType::TxReceived => {
 				// Confirmed receive expect that Output are VALID or Spent
-				if output_status.len() == 0 || output_status.contains(&OutputStatus::Unconfirmed) {
+				if output_status.len() == 0 {
+					tx_info.tx_log.confirmed
+				} else if output_status.contains(&OutputStatus::Unconfirmed) {
 					false
 				} else {
 					true
@@ -938,7 +946,7 @@ where
 				if out_active == 0 && out_cancelled > 0 {
 					recover_first_cancelled(
 						status_send_channel,
-						&w_out.tx_input_uuid,
+						&w_out.tx_output_uuid,
 						&mut transactions_slates,
 					);
 				}
@@ -994,6 +1002,67 @@ where
 							tx_uuid
 						)));
 					}
+				}
+			}
+		}
+	}
+
+	// Here we are trying to propagate cancelling transactions to Spent outputs. It is possible that the all chain of transactions involved
+	// So it make sense to process all the chain
+	{
+		let mut changed = true;
+		while changed {
+			changed = false;
+
+			for tx_info in transactions_slates.values_mut() {
+				// Collecting known (belong to this wallet) inputs and outputs
+				let mut status: HashSet<OutputStatus> = HashSet::new();
+
+				for out in &tx_info.input_commit {
+					if let Some(out) = outputs.get(out) {
+						status.insert(out.output.status.clone());
+					}
+				}
+				for out in &tx_info.output_commit {
+					if let Some(out) = outputs.get(out) {
+						status.insert(out.output.status.clone());
+					}
+				}
+
+				let has_spent = status.remove(&OutputStatus::Spent);
+				let has_unconfirmed = status.remove(&OutputStatus::Unconfirmed);
+				if status.is_empty() && has_unconfirmed && has_spent {
+					// convert all to Unconfirmed and cancel transaction
+					if !tx_info.tx_log.is_cancelled() {
+						match tx_info.tx_log.tx_type {
+							TxLogEntryType::TxSent => {
+								tx_info.tx_log.tx_type = TxLogEntryType::TxSentCancelled;
+							}
+							TxLogEntryType::TxReceived => {
+								tx_info.tx_log.tx_type = TxLogEntryType::TxReceivedCancelled;
+							}
+							_ => (),
+						}
+						tx_info.updated = true;
+					}
+
+					for out in &tx_info.input_commit {
+						if let Some(out) = outputs.get_mut(out) {
+							if out.output.status != OutputStatus::Unconfirmed {
+								out.output.status = OutputStatus::Unconfirmed;
+								out.updated = true;
+							}
+						}
+					}
+					for out in &tx_info.output_commit {
+						if let Some(out) = outputs.get_mut(out) {
+							if out.output.status != OutputStatus::Unconfirmed {
+								out.output.status = OutputStatus::Unconfirmed;
+								out.updated = true;
+							}
+						}
+					}
+					changed = true;
 				}
 			}
 		}
@@ -1180,7 +1249,7 @@ where
 // Report to user about transactions that point to the same output.
 fn report_transaction_collision(
 	status_send_channel: &Option<Sender<StatusMessage>>,
-	tx_uuid: &Vec<String>,
+	tx_uuid: &HashSet<String>,
 	transactions: &HashMap<String, WalletTxInfo>,
 	inputs: bool,
 ) {
@@ -1211,7 +1280,7 @@ fn report_transaction_collision(
 // We don't want to implement complicated algorithm to handle that. User suppose to be sane and not cancell transactions without reason.
 fn recover_first_cancelled(
 	status_send_channel: &Option<Sender<StatusMessage>>,
-	tx_uuid: &Vec<String>,
+	tx_uuid: &HashSet<String>,
 	transactions: &mut HashMap<String, WalletTxInfo>,
 ) {
 	// let's revert first non cancelled
@@ -1226,6 +1295,7 @@ fn recover_first_cancelled(
 					"Internal error. Expected cancelled transaction, but get different value"
 				),
 			};
+			wtx.tx_log.confirmed = true;
 			wtx.updated = true;
 			if let Some(ref s) = status_send_channel {
 				let _ = s.send(StatusMessage::Info(format!(
