@@ -946,7 +946,7 @@ where
 				if out_active == 0 && out_cancelled > 0 {
 					recover_first_cancelled(
 						status_send_channel,
-						&w_out.tx_input_uuid,
+						&w_out.tx_output_uuid,
 						&mut transactions_slates,
 					);
 				}
@@ -1037,10 +1037,10 @@ where
 						match tx_info.tx_log.tx_type {
 							TxLogEntryType::TxSent => {
 								tx_info.tx_log.tx_type = TxLogEntryType::TxSentCancelled;
-							},
+							}
 							TxLogEntryType::TxReceived => {
 								tx_info.tx_log.tx_type = TxLogEntryType::TxReceivedCancelled;
-							},
+							}
 							_ => (),
 						}
 						tx_info.updated = true;
@@ -1295,6 +1295,7 @@ fn recover_first_cancelled(
 					"Internal error. Expected cancelled transaction, but get different value"
 				),
 			};
+			wtx.tx_log.confirmed = true;
 			wtx.updated = true;
 			if let Some(ref s) = status_send_channel {
 				let _ = s.send(StatusMessage::Info(format!(
