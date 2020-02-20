@@ -16,13 +16,14 @@
 //! specific to the FileWallet
 
 use futures::{stream, Stream};
+use futures::Future;
 
 use crate::api::{self, LocatedTxKernel};
 use crate::core::core::TxKernel;
 use crate::libwallet::{NodeClient, NodeVersionInfo, TxWrapper};
 use semver::Version;
 use std::collections::HashMap;
-use tokio::runtime::Runtime;
+use tokio::runtime::Builder;
 
 use crate::client_utils::Client;
 use crate::libwallet;
@@ -228,8 +229,11 @@ impl NodeClient for HTTPNodeClient {
 
 		let task = stream::futures_unordered(tasks).collect();
 
-		let mut rt = Runtime::new().unwrap();
-		let results = match rt.block_on(task) {
+
+		let mut rt = Builder::new().core_threads(1).build().unwrap();
+		let res = rt.block_on(task);
+		let _ = rt.shutdown_now().wait();
+		let results = match res {
 			Ok(outputs) => outputs,
 			Err(e) => {
 				let report = format!("Getting outputs by id: {}", e);
