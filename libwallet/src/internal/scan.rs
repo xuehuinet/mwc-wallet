@@ -757,6 +757,11 @@ where
 		if tx_type == TxLogEntryType::TxReceivedCancelled
 			|| tx_type == TxLogEntryType::TxSentCancelled
 		{
+			if tx_info.tx_log.confirmed {
+				tx_info.tx_log.confirmed = false;
+				tx_info.updated = true;
+			}
+
 			continue; // Processing not cancelled transactions. Cancelled will be reactivated as a recovery plan.
 		}
 
@@ -784,11 +789,10 @@ where
 		// Validating transaction confirmation flag. True - flag is falid. False - need to be chaged
 		let tx_confirmation = match tx_type {
 			TxLogEntryType::TxSent => {
-                // Confirmed send expected that Inputs are NOT VALID;  Outputs are VALID
-                if inputs_status.len() == 0 {
-                    tx_info.tx_log.confirmed
-                }
-                else if inputs_status.contains(&OutputStatus::Unspent)
+				// Confirmed send expected that Inputs are NOT VALID;  Outputs are VALID
+				if inputs_status.len() == 0 {
+					tx_info.tx_log.confirmed
+				} else if inputs_status.contains(&OutputStatus::Unspent)
 					|| inputs_status.contains(&OutputStatus::Locked)
 					|| inputs_status.contains(&OutputStatus::Unconfirmed)
 				{
@@ -802,9 +806,8 @@ where
 			TxLogEntryType::TxReceived => {
 				// Confirmed receive expect that Output are VALID or Spent
 				if output_status.len() == 0 {
-                    tx_info.tx_log.confirmed
-                }
-                else if output_status.contains(&OutputStatus::Unconfirmed) {
+					tx_info.tx_log.confirmed
+				} else if output_status.contains(&OutputStatus::Unconfirmed) {
 					false
 				} else {
 					true
@@ -999,6 +1002,67 @@ where
 							tx_uuid
 						)));
 					}
+				}
+			}
+		}
+	}
+
+	// Here we are trying to propagate cancelling transactions to Spent outputs. It is possible that the all chain of transactions involved
+	// So it make sense to process all the chain
+	{
+		let mut changed = true;
+		while changed {
+			changed = false;
+
+			for tx_info in transactions_slates.values_mut() {
+				// Collecting known (belong to this wallet) inputs and outputs
+				let mut status: HashSet<OutputStatus> = HashSet::new();
+
+				for out in &tx_info.input_commit {
+					if let Some(out) = outputs.get(out) {
+						status.insert(out.output.status.clone());
+					}
+				}
+				for out in &tx_info.output_commit {
+					if let Some(out) = outputs.get(out) {
+						status.insert(out.output.status.clone());
+					}
+				}
+
+				let has_spent = status.remove(&OutputStatus::Spent);
+				let has_unconfirmed = status.remove(&OutputStatus::Unconfirmed);
+				if status.is_empty() && has_unconfirmed && has_spent {
+					// convert all to Unconfirmed and cancel transaction
+					if !tx_info.tx_log.is_cancelled() {
+						match tx_info.tx_log.tx_type {
+							TxLogEntryType::TxSent => {
+								tx_info.tx_log.tx_type = TxLogEntryType::TxSentCancelled;
+							},
+							TxLogEntryType::TxReceived => {
+								tx_info.tx_log.tx_type = TxLogEntryType::TxReceivedCancelled;
+							},
+							_ => (),
+						}
+						tx_info.updated = true;
+					}
+
+					for out in &tx_info.input_commit {
+						if let Some(out) = outputs.get_mut(out) {
+							if out.output.status != OutputStatus::Unconfirmed {
+								out.output.status = OutputStatus::Unconfirmed;
+								out.updated = true;
+							}
+						}
+					}
+					for out in &tx_info.output_commit {
+						if let Some(out) = outputs.get_mut(out) {
+							if out.output.status != OutputStatus::Unconfirmed {
+								out.output.status = OutputStatus::Unconfirmed;
+								out.updated = true;
+							}
+						}
+					}
+					changed = true;
 				}
 			}
 		}
