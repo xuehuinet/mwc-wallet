@@ -15,8 +15,8 @@
 //! Client functions, implementations of the NodeClient trait
 //! specific to the FileWallet
 
-use futures::{stream, Stream};
 use futures::Future;
+use futures::{stream, Stream};
 
 use crate::api::{self, LocatedTxKernel};
 use crate::core::core::TxKernel;
@@ -228,7 +228,6 @@ impl NodeClient for HTTPNodeClient {
 		}
 
 		let task = stream::futures_unordered(tasks).collect();
-
 
 		let mut rt = Builder::new().core_threads(1).build().unwrap();
 		let res = rt.block_on(task);
