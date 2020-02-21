@@ -786,6 +786,22 @@ where
 			}
 		}
 
+		// Trying to balance input/output states. The problem that for the chaain  Unconfirmed & Spent looks the same. And large reorg can easily make wallet
+		// failed to guess those states.
+		if output_status.contains(&OutputStatus::Unspent)
+			|| output_status.contains(&OutputStatus::Locked)
+				&& inputs_status.contains(&OutputStatus::Unconfirmed)
+		{
+			for out in &tx_info.input_commit {
+				if let Some(out) = outputs.get_mut(out) {
+					if out.output.status == OutputStatus::Unconfirmed {
+						out.output.status == OutputStatus::Spent;
+						out.updated = true;
+					}
+				}
+			}
+		}
+
 		// Validating transaction confirmation flag. True - flag is falid. False - need to be chaged
 		let tx_confirmation = match tx_type {
 			TxLogEntryType::TxSent => {
@@ -1016,21 +1032,26 @@ where
 
 			for tx_info in transactions_slates.values_mut() {
 				// Collecting known (belong to this wallet) inputs and outputs
+				let mut in_status: HashSet<OutputStatus> = HashSet::new();
+				let mut out_status: HashSet<OutputStatus> = HashSet::new();
 				let mut status: HashSet<OutputStatus> = HashSet::new();
 
 				for out in &tx_info.input_commit {
 					if let Some(out) = outputs.get(out) {
+						in_status.insert(out.output.status.clone());
 						status.insert(out.output.status.clone());
 					}
 				}
 				for out in &tx_info.output_commit {
 					if let Some(out) = outputs.get(out) {
+						out_status.insert(out.output.status.clone());
 						status.insert(out.output.status.clone());
 					}
 				}
 
 				let has_spent = status.remove(&OutputStatus::Spent);
 				let has_unconfirmed = status.remove(&OutputStatus::Unconfirmed);
+
 				if status.is_empty() && has_unconfirmed && has_spent {
 					// convert all to Unconfirmed and cancel transaction
 					if !tx_info.tx_log.is_cancelled() {
@@ -1046,23 +1067,40 @@ where
 						tx_info.updated = true;
 					}
 
+					// Converting all to spent because othrwise we have issues with transactions recovery.
+					// For cancelled transaction it doesn't change anything. But for others it is better to be Spent
 					for out in &tx_info.input_commit {
 						if let Some(out) = outputs.get_mut(out) {
-							if out.output.status != OutputStatus::Unconfirmed {
-								out.output.status = OutputStatus::Unconfirmed;
+							if out.output.status != OutputStatus::Spent {
+								out.output.status = OutputStatus::Spent;
 								out.updated = true;
 							}
 						}
 					}
 					for out in &tx_info.output_commit {
 						if let Some(out) = outputs.get_mut(out) {
-							if out.output.status != OutputStatus::Unconfirmed {
-								out.output.status = OutputStatus::Unconfirmed;
+							if out.output.status != OutputStatus::Spent {
+								out.output.status = OutputStatus::Spent;
 								out.updated = true;
 							}
 						}
 					}
 					changed = true;
+				} else {
+					// imputs can't be Unconfirmed for not cancelled
+					if !tx_info.tx_log.is_cancelled()
+						&& in_status.contains(&OutputStatus::Unconfirmed)
+					{
+						for out in &tx_info.input_commit {
+							if let Some(out) = outputs.get_mut(out) {
+								if out.output.status == OutputStatus::Unconfirmed {
+									out.output.status = OutputStatus::Spent;
+									out.updated = true;
+									changed = true;
+								}
+							}
+						}
+					}
 				}
 			}
 		}
