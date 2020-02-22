@@ -863,6 +863,12 @@ pub struct TxLogEntry {
 	/// Additional info needed to stored payment proof
 	#[serde(default)]
 	pub payment_proof: Option<StoredProofInfo>,
+	/// Input commits as Strings, defined by send
+	#[serde(default = "TxLogEntry::default_commits")]
+	pub input_commits: Vec<pedersen::Commitment>,
+	/// Output commits as Strings, defined for send & recieve
+	#[serde(default = "TxLogEntry::default_commits")]
+	pub output_commits: Vec<pedersen::Commitment>,
 }
 
 impl ser::Writeable for TxLogEntry {
@@ -902,6 +908,8 @@ impl TxLogEntry {
 			kernel_excess: None,
 			kernel_lookup_min_height: None,
 			payment_proof: None,
+			input_commits: vec![],
+			output_commits: vec![],
 		}
 	}
 
@@ -923,10 +931,34 @@ impl TxLogEntry {
 		0
 	}
 
+	/// Return empty vector for older TxLog transactions
+	pub fn default_commits() -> Vec<pedersen::Commitment> {
+		vec![]
+	}
+
 	/// Return true if transaction cancelled
 	pub fn is_cancelled(&self) -> bool {
 		return self.tx_type == TxLogEntryType::TxReceivedCancelled
 			|| self.tx_type == TxLogEntryType::TxSentCancelled;
+	}
+
+	/// Cancel transaction
+	pub fn cancel(&mut self) {
+		self.tx_type = match &self.tx_type {
+			TxLogEntryType::TxReceived => TxLogEntryType::TxReceivedCancelled,
+			TxLogEntryType::TxSent => TxLogEntryType::TxSentCancelled,
+			any => any.clone(),
+		};
+	}
+
+	/// Un Cancel transaction
+	pub fn uncancel(&mut self) {
+		self.tx_type = match &self.tx_type {
+			TxLogEntryType::TxReceivedCancelled => TxLogEntryType::TxReceived,
+			TxLogEntryType::TxSentCancelled => TxLogEntryType::TxSent,
+			any => any.clone(),
+		};
+		self.ttl_cutoff_height = None;
 	}
 }
 

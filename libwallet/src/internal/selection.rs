@@ -24,9 +24,11 @@ use crate::grin_core::libtx::{
 };
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::grin_util::secp::key::SecretKey;
+use crate::grin_util::secp::pedersen::Commitment;
 use crate::internal::keys;
 use crate::slate::Slate;
 use crate::types::*;
+use grin_wallet_util::grin_util as util;
 use std::collections::HashMap;
 
 /// Initialize a transaction on the sender side, returns a corresponding
@@ -160,6 +162,7 @@ where
 
 		let mut amount_debited = 0;
 		t.num_inputs = lock_inputs.len();
+		t.input_commits = context.input_commits.clone();
 		for id in lock_inputs {
 			let mut coin = batch.get(&id.0, &id.1).unwrap();
 			coin.tx_log_entry = Some(log_id);
@@ -196,8 +199,9 @@ where
 		};
 
 		// write the output representing our change
+		t.num_outputs = context.output_commits.len();
+		t.output_commits = context.output_commits.clone();
 		for (id, _, _) in &context.get_outputs() {
-			t.num_outputs += 1;
 			let (commit, change_amount) = output_commits.get(&id).unwrap().clone();
 			t.amount_credited += change_amount;
 			batch.save(OutputData {
@@ -331,8 +335,17 @@ where
 	let messages = Some(slate.participant_messages());
 
 	let mut commit_vec = Vec::new();
+	let mut commit_ped = Vec::new();
 	for kva in &key_vec_amounts {
 		let commit = wallet.calc_commit_for_cache(keychain_mask, kva.1, &kva.0)?;
+		if let Some(cm) = commit.clone() {
+			commit_ped.push(Commitment::from_vec(util::from_hex(cm).map_err(|e| {
+				Error::from(ErrorKind::GenericError(format!(
+					"Output commit parse error {:?}",
+					e
+				)))
+			})?));
+		}
 		commit_vec.push(commit);
 	}
 
@@ -343,6 +356,7 @@ where
 	t.amount_credited = amount;
 	t.address = address;
 	t.num_outputs = key_vec_amounts.len();
+	t.output_commits = commit_ped;
 	t.messages = messages;
 	t.ttl_cutoff_height = slate.ttl_cutoff_height;
 	// when invoicing, this will be invalid

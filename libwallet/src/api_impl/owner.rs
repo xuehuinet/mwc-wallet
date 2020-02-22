@@ -816,7 +816,7 @@ where
 			"Updating outputs from node".to_owned(),
 		));
 	}
-	let mut result = update_outputs(
+	let result = update_outputs(
 		wallet_inst.clone(),
 		keychain_mask,
 		update_all,
@@ -840,7 +840,7 @@ where
 	}
 
 	// Step 2: Update outstanding transactions with no change outputs by kernel
-	let mut txs = {
+	let txs = {
 		wallet_lock!(wallet_inst, w);
 		updater::retrieve_txs(
 			&mut **w,
@@ -853,6 +853,7 @@ where
 			None,
 		)?
 	};
+	/*	moved to scan::scan
 	result = update_txs_via_kernel(wallet_inst.clone(), keychain_mask, &mut txs)?;
 	if !result {
 		if let Some(ref s) = status_send_channel {
@@ -861,7 +862,7 @@ where
 			));
 		}
 		return Ok(result);
-	}
+	}*/
 
 	// Step 3: Scan back a bit on the chain
 	let client = {
@@ -1008,6 +1009,7 @@ where
 	}
 }
 
+/*  moved to scan::scan  , search for client.get_kernel there
 /// Update transactions that need to be validated via kernel lookup
 fn update_txs_via_kernel<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
@@ -1057,3 +1059,4 @@ where
 	}
 	Ok(true)
 }
+*/
