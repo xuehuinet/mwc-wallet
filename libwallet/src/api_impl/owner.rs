@@ -801,7 +801,7 @@ where
 		// these changes as the chain is syncing, incorrect or forking
 		if height == 0 || height < last_scanned_height {
 			if let Some(ref s) = status_send_channel {
-				let _ = s.send(StatusMessage::UpdateWarning(
+				let _ = s.send(StatusMessage::Warning(
 					String::from("Wallet Update is skipped, please wait for sync on node to complete or fork to resolve.")
 				));
 			}
@@ -826,7 +826,7 @@ where
 
 	if !result {
 		if let Some(ref s) = status_send_channel {
-			let _ = s.send(StatusMessage::UpdateWarning(
+			let _ = s.send(StatusMessage::Warning(
 				"Updater Thread unable to contact node".to_owned(),
 			));
 		}
@@ -876,7 +876,7 @@ where
 		Ok(t) => t,
 		Err(_) => {
 			if let Some(ref s) = status_send_channel {
-				let _ = s.send(StatusMessage::UpdateWarning(
+				let _ = s.send(StatusMessage::Warning(
 					"Updater Thread unable to contact node".to_owned(),
 				));
 			}

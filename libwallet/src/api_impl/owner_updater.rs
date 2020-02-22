@@ -48,7 +48,7 @@ pub enum StatusMessage {
 	/// UTXO scanning is complete
 	ScanningComplete(String),
 	/// Warning of issues that may have occured during an update
-	UpdateWarning(String),
+	Warning(String),
 	/// Generic info message
 	Info(String),
 }
@@ -80,7 +80,7 @@ pub fn start_updater_log_thread(
 						warn!("Scanning - {}% complete", m);
 					}
 					StatusMessage::ScanningComplete(s) => warn!("{}", s),
-					StatusMessage::UpdateWarning(s) => warn!("{}", s),
+					StatusMessage::Warning(s) => warn!("{}", s),
 					StatusMessage::Info(s) => info!("{}", s),
 				}
 			}
@@ -110,8 +110,8 @@ pub fn start_updater_console_thread(
 							println!("{}, {}% complete", s, m);
 						}
 						StatusMessage::ScanningComplete(s) => println!("{}", s),
-						StatusMessage::UpdateWarning(s) => println!("Warning: {}", s),
-						StatusMessage::Info(s) => println!("{}", s),
+						StatusMessage::Warning(s) => println!("Warning: {}", s),
+						StatusMessage::Info(s) => println!("Info: {}", s),
 					}
 				}
 				if !running {
