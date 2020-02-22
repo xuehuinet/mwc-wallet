@@ -131,7 +131,7 @@ where
 		if switch != SwitchCommitmentType::Regular {
 			let msg = format!("Unexpected switch commitment type {:?}", switch);
 			if let Some(ref s) = status_send_channel {
-				let _ = s.send(StatusMessage::UpdateWarning(msg));
+				let _ = s.send(StatusMessage::Warning(msg));
 			}
 		}
 
@@ -768,8 +768,8 @@ where
 						// Reverting state to Locked
 						if let Some(ref s) = status_send_channel {
 							let _ = match &w_out.output.commit {
-								Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Spent to Locked", commit))),
-								None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Spent to Locked", w_out.output.height))),
+								Some(commit) => s.send(StatusMessage::Warning(format!("Changing status for output {} from Spent to Locked", commit))),
+								None => s.send(StatusMessage::Warning(format!("Changing status for coin base output at height {} from Spent to Locked", w_out.output.height))),
 							};
 						}
 						w_out.updated = true;
@@ -779,8 +779,8 @@ where
 						// Very expected event. Output is at the chain and we get a confirmation.
 						if let Some(ref s) = status_send_channel {
 							let _ = match &w_out.output.commit {
-								Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Unconfirmed to Unspent", commit))),
-								None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Unconfirmed to Unspent", w_out.output.height))),
+								Some(commit) => s.send(StatusMessage::Warning(format!("Changing status for output {} from Unconfirmed to Unspent", commit))),
+								None => s.send(StatusMessage::Warning(format!("Changing status for coin base output at height {} from Unconfirmed to Unspent", w_out.output.height))),
 							};
 						}
 						w_out.updated = true;
@@ -795,8 +795,8 @@ where
 				// In any case it is pretty nice output that we can spend.
 				// Just create a new transaction for this output.
 				if let Some(ref s) = status_send_channel {
-					let _ = s.send(StatusMessage::Info(format!(
-						"Warning: Confirmed output for {} with ID {} ({:?}, index {}) exists in UTXO set but not in wallet. Restoring.",
+					let _ = s.send(StatusMessage::Warning(format!(
+						"Confirmed output for {} with ID {} ({:?}, index {}) exists in UTXO set but not in wallet. Restoring.",
 						ch_out.value, ch_out.key_id, ch_out.commit, ch_out.mmr_index
 					)));
 				}
@@ -821,8 +821,8 @@ where
 				OutputStatus::Unspent => {
 					// Unspent not found - likely it is reorg and that is why the last transaction can't be confirmed now.
 					if let Some(ref s) = status_send_channel {
-						let _ = s.send(StatusMessage::Info(format!(
-							"Warning: Changing status for output {} from Unspent to Unconfirmed",
+						let _ = s.send(StatusMessage::Warning(format!(
+							"Changing status for output {} from Unspent to Unconfirmed",
 							w_out.commit
 						)));
 					}
@@ -833,7 +833,7 @@ where
 					// Locked is not on the chain is expected, It is mean that our send transaction was confirmed.
 					if let Some(ref s) = status_send_channel {
 						let _ = s.send(StatusMessage::Info(format!(
-							"Info: Changing status for output {} from Locked to Spent",
+							"Changing status for output {} from Locked to Spent",
 							w_out.commit
 						)));
 					}
@@ -863,8 +863,8 @@ fn validate_coinbase(
 				if w_tx.tx_log.confirmed != confirmed {
 					if w_tx.tx_log.confirmed {
 						if let Some(ref s) = status_send_channel {
-							let _ = s.send(StatusMessage::Info(format!(
-								"Warning: Marked coin base transaction at height {} is not confirmed.",
+							let _ = s.send(StatusMessage::Warning(format!(
+								"Marked coin base transaction at height {} is not confirmed.",
 								w_out.output.height
 							)));
 						}
@@ -1023,8 +1023,8 @@ fn validate_outputs_ownership(
 					// it is not Locked, it must be active output
 					if let Some(ref s) = status_send_channel {
 						let _ = match &w_out.output.commit {
-							Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Locked to Unspent", commit))),
-							None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Locked to Unspent", w_out.output.height))),
+							Some(commit) => s.send(StatusMessage::Warning(format!("Changing status for output {} from Locked to Unspent", commit))),
+							None => s.send(StatusMessage::Warning(format!("Changing status for coin base output at height {} from Locked to Unspent", w_out.output.height))),
 						};
 					}
 					w_out.output.status = OutputStatus::Unspent;
@@ -1064,8 +1064,8 @@ fn validate_outputs_ownership(
 					// it is not Locked, it must be active output
 					if let Some(ref s) = status_send_channel {
 						let _ = match &w_out.output.commit {
-							Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Unspent to Locked", commit))),
-							None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Unspent to Locked", w_out.output.height))),
+							Some(commit) => s.send(StatusMessage::Warning(format!("Changing status for output {} from Unspent to Locked", commit))),
+							None => s.send(StatusMessage::Warning(format!("Changing status for coin base output at height {} from Unspent to Locked", w_out.output.height))),
 						};
 					}
 					w_out.output.status = OutputStatus::Locked;
@@ -1096,8 +1096,8 @@ fn delete_unconfirmed(
 			OutputStatus::Locked => {
 				if let Some(ref s) = status_send_channel {
 					let _ = match &w_out.output.commit {
-						Some(commit) => s.send(StatusMessage::Info(format!("Warning: Changing status for output {} from Locked to Unspent", commit))),
-						None => s.send(StatusMessage::Info(format!("Warning: Changing status for coin base output at height {} from Locked to Unspent", w_out.output.height))),
+						Some(commit) => s.send(StatusMessage::Warning(format!("Changing status for output {} from Locked to Unspent", commit))),
+						None => s.send(StatusMessage::Warning(format!("Changing status for coin base output at height {} from Locked to Unspent", w_out.output.height))),
 					};
 				}
 				w_out.output.status = OutputStatus::Unspent;
@@ -1130,8 +1130,8 @@ fn delete_unconfirmed(
 				}
 				tx.updated = true;
 				if let Some(ref s) = status_send_channel {
-					let _ = s.send(StatusMessage::Info(format!(
-						"Warning: Cancelling transaction {}",
+					let _ = s.send(StatusMessage::Warning(format!(
+						"Cancelling transaction {}",
 						tx_uuid
 					)));
 				}
@@ -1209,8 +1209,8 @@ fn validate_consistancy(
 				.map(|s| s.clone())
 				.collect::<Vec<String>>()
 				.join(", ");
-			let _ = s.send(StatusMessage::Info(
-				format!( "Warning: Wallet transaction/outputs state is inconsistent, please consider to run full scan for your wallet or restore it from the seed. Collided transaction: {}, outputs: {}",
+			let _ = s.send(StatusMessage::Warning(
+				format!( "Wallet transaction/outputs state is inconsistent, please consider to run full scan for your wallet or restore it from the seed. Collided transaction: {}, outputs: {}",
 						 transactions_str, outputs_str )));
 		}
 	}
@@ -1256,8 +1256,8 @@ where
 		// Unconfirmed without any transactions must be deleted as well
 		if output.is_orphan_output() {
 			if let Some(ref s) = status_send_channel {
-				let _ = s.send(StatusMessage::Info(format!(
-					"Warning: Deleting unconfirmed Output without any transaction. Commit: {}",
+				let _ = s.send(StatusMessage::Warning(format!(
+					"Deleting unconfirmed Output without any transaction. Commit: {}",
 					output.output.commit.clone().unwrap()
 				)));
 			}
@@ -1377,8 +1377,8 @@ fn report_transaction_collision(
 
 		let inputs = if inputs { "inputs" } else { "outputs" };
 
-		let _ = s.send(StatusMessage::UpdateWarning(format!(
-			"Warning: We detected transaction collision on {} for transactions with Id {}",
+		let _ = s.send(StatusMessage::Warning(format!(
+			"We detected transaction collision on {} for transactions with Id {}",
 			inputs, cancelled_tx_idx
 		)));
 	}
