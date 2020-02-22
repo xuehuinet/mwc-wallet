@@ -456,6 +456,7 @@ where
 							t.amount_credited = output.value;
 							t.amount_debited = 0;
 							t.num_outputs = 1;
+							t.output_commits = vec![commit.clone()];
 							// calculate kernel excess for coinbase
 							{
 								let secp = static_secp_instance();
