@@ -13,7 +13,6 @@
 // limitations under the License.
 //! Functions to restore a wallet's outputs from just the master seed
 
-use crate::api_impl::owner;
 use crate::api_impl::owner_updater::StatusMessage;
 use crate::grin_core::consensus::{valid_header_version, WEEK_HEIGHT};
 use crate::grin_core::core::HeaderVersion;
@@ -540,13 +539,15 @@ where
 	for tx in transactions_slate.values_mut() {
 		if tx.tx_log.output_height >= start_height {
 			if let Some(kernel) = &tx.tx_log.kernel_excess {
+				// Note!!!! Test framework doesn't support None for params. So assuming that value must be provided
+				let start_height = cmp::max(start_height,1); // API to tests don't support 0 or smaller
 				let res = client.get_kernel(
 					&kernel,
 					Some(cmp::min(
-						start_height,
+                        start_height, // 1 is min supported value by API
 						tx.tx_log.kernel_lookup_min_height.unwrap_or(start_height),
 					)),
-					None,
+					Some(end_height),
 				)?;
 				tx.kernel_validation = Some(res.is_some());
 			}
@@ -870,6 +871,9 @@ fn validate_coinbase(
 						}
 					}
 					w_tx.tx_log.confirmed = confirmed;
+					if confirmed {
+						w_tx.tx_log.update_confirmation_ts();
+					}
 					w_tx.updated = true;
 				}
 			}
@@ -911,6 +915,7 @@ fn validate_slate_transactions(
 				if tx_info.tx_log.is_cancelled() {
 					tx_info.tx_log.uncancel();
 					tx_info.tx_log.confirmed = true;
+					tx_info.tx_log.update_confirmation_ts();
 					tx_info.updated = true;
 
 					if let Some(ref s) = status_send_channel {
@@ -1279,6 +1284,7 @@ where
 				log_id,
 			);
 			t.confirmed = true;
+			t.update_confirmation_ts();
 			t.output_height = w_out.output.height;
 			t.amount_credited = w_out.output.value;
 			t.amount_debited = 0;
@@ -1301,7 +1307,6 @@ where
 				t.kernel_excess = Some(excess);
 				t.kernel_lookup_min_height = Some(w_out.output.height);
 			}
-			t.update_confirmation_ts();
 			w_out.output.tx_log_entry = Some(log_id);
 
 			batch.save_tx_log_entry(t, parent_key_id)?;
@@ -1405,6 +1410,7 @@ fn recover_first_cancelled(
 				),
 			};
 			wtx.tx_log.confirmed = true;
+			wtx.tx_log.update_confirmation_ts();
 			wtx.updated = true;
 			if let Some(ref s) = status_send_channel {
 				let _ = s.send(StatusMessage::Info(format!(
