@@ -32,7 +32,7 @@ use crate::types::{
 };
 use crate::{
 	address, wallet_lock, InitTxArgs, IssueInvoiceTxArgs, NodeHeightResult, OutputCommitMapping,
-	ScannedBlockInfo, TxLogEntryType, WalletInitStatus, WalletInst, WalletLCProvider,
+	ScannedBlockInfo, TxLogEntryType, WalletInst, WalletLCProvider,
 };
 use crate::{Error, ErrorKind};
 use ed25519_dalek::PublicKey as DalekPublicKey;
@@ -117,7 +117,6 @@ where
 		wallet_inst.clone(),
 		keychain_mask,
 		status_send_channel,
-		false,
 		Some(&parent_key_id),
 	)?;
 
@@ -622,15 +621,14 @@ pub fn scan<'a, L, C, K>(
 	start_height: Option<u64>,
 	delete_unconfirmed: bool,
 	status_send_channel: &Option<Sender<StatusMessage>>,
-	height: Option<u64>,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'a, C, K>,
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	update_outputs(wallet_inst.clone(), keychain_mask, true, height, None)?;
-	let tip = {
+	//update_outputs(wallet_inst.clone(), keychain_mask, true, height, None)?;
+	let (tip_height, tip_hash, _) = {
 		wallet_lock!(wallet_inst, w);
 		w.w2n_client().get_chain_tip()?
 	};
@@ -640,19 +638,34 @@ where
 		None => 1,
 	};
 
-	let mut info = scan::scan(
+	// First we need to get the hashes for heights... Reason, if block chain will be changed during scan, we will detect that naturally with next wallet_update.
+	let mut blocks: Vec<ScannedBlockInfo> =
+		vec![ScannedBlockInfo::new(tip_height, tip_hash.clone())];
+	{
+		wallet_lock!(wallet_inst, w);
+
+		let mut step = 4;
+		while blocks.last().unwrap().height.saturating_sub(step) > start_height {
+			let h = blocks.last().unwrap().height.saturating_sub(step);
+			let hdr = w.w2n_client().get_header_info(h)?;
+			blocks.push(ScannedBlockInfo::new(h, hdr.hash));
+			step *= 2;
+		}
+		// adding last_scanned_block.height not needed
+	}
+
+	scan::scan(
 		wallet_inst.clone(),
 		keychain_mask,
 		delete_unconfirmed,
 		start_height,
-		tip.0,
+		tip_height,
 		status_send_channel,
 	)?;
-	info.hash = tip.1;
 
 	wallet_lock!(wallet_inst, w);
 	let mut batch = w.batch(keychain_mask)?;
-	batch.save_last_scanned_block(info)?;
+	batch.save_last_scanned_blocks(start_height, &blocks)?;
 	batch.commit()?;
 
 	Ok(())
@@ -780,7 +793,6 @@ pub fn update_wallet_state<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
-	update_all: bool,
 	parent_key_id: Option<&Identifier>, // None - Update all Accounts
 ) -> Result<bool, Error>
 where
@@ -790,16 +802,36 @@ where
 {
 	// Wallet update logic doesn't handle trancating of the blockchain. That happen when node in sync or in reorg-sync
 	// In this case better to inform user and do nothing. Sync is useless in any case.
-	let height = {
+	let (tip_height, tip_hash) = {
 		wallet_lock!(wallet_inst, w);
 
-		let height = w.w2n_client().get_chain_tip()?.0;
+		// Checking if keychain mask correct. Issue that sometimes update_wallet_state doesn't need it and it is a security problem
+		let _ = w.batch(keychain_mask)?;
 
-		let last_scanned_height = w.last_scanned_block()?.height;
+		let (tip_height, tip_hash, _) = match w.w2n_client().get_chain_tip() {
+			Ok(t) => t,
+			Err(_) => {
+				if let Some(ref s) = status_send_channel {
+					let _ = s.send(StatusMessage::Warning(
+						"Unable to contact mwc-node".to_owned(),
+					));
+				}
+				return Ok(false);
+			}
+		};
+
+		(tip_height, tip_hash)
+	};
+
+	// Check if this is a restored wallet that needs a full scan
+	let last_scanned_block = {
+		wallet_lock!(wallet_inst, w);
+
+		let blocks = w.last_scanned_blocks()?;
 
 		// If the server height is less than our confirmed height, don't apply
 		// these changes as the chain is syncing, incorrect or forking
-		if height == 0 || height < last_scanned_height {
+		if tip_height == 0 || tip_height < blocks.first().map(|b| b.height).unwrap_or(0) {
 			if let Some(ref s) = status_send_channel {
 				let _ = s.send(StatusMessage::Warning(
 					String::from("Wallet Update is skipped, please wait for sync on node to complete or fork to resolve.")
@@ -807,112 +839,36 @@ where
 			}
 			return Ok(false);
 		}
-		height
-	};
 
-	// Step 1: Update outputs and transactions purely based on UTXO state
-	if let Some(ref s) = status_send_channel {
-		let _ = s.send(StatusMessage::UpdatingOutputs(
-			"Updating outputs from node".to_owned(),
-		));
-	}
-	let mut result = update_outputs(
-		wallet_inst.clone(),
-		keychain_mask,
-		update_all,
-		Some(height),
-		parent_key_id.clone(),
-	)?;
-
-	if !result {
-		if let Some(ref s) = status_send_channel {
-			let _ = s.send(StatusMessage::Warning(
-				"Updater Thread unable to contact node".to_owned(),
-			));
-		}
-		return Ok(result);
-	}
-
-	if let Some(ref s) = status_send_channel {
-		let _ = s.send(StatusMessage::UpdatingTransactions(
-			"Updating transactions".to_owned(),
-		));
-	}
-
-	// Step 2: Update outstanding transactions with no change outputs by kernel
-	let mut txs = {
-		wallet_lock!(wallet_inst, w);
-		updater::retrieve_txs(
-			&mut **w,
-			keychain_mask,
-			None,
-			None,
-			parent_key_id,
-			true,
-			None,
-			None,
-		)?
-	};
-
-	result = update_txs_via_kernel(wallet_inst.clone(), keychain_mask, &mut txs)?;
-	if !result {
-		if let Some(ref s) = status_send_channel {
-			let _ = s.send(StatusMessage::Warning(
-				"Updater Thread unable to contact node".to_owned(),
-			));
-		}
-		return Ok(result);
-	}
-
-	// Step 3: Scan back a bit on the chain
-	let client = {
-		wallet_lock!(wallet_inst, w);
-		w.w2n_client().clone()
-	};
-
-	let res = client.get_chain_tip();
-	// if we can't get the tip, don't continue
-	let tip = match res {
-		Ok(t) => t,
-		Err(_) => {
-			if let Some(ref s) = status_send_channel {
-				let _ = s.send(StatusMessage::Warning(
-					"Updater Thread unable to contact node".to_owned(),
-				));
+		let mut res_bl = ScannedBlockInfo::empty();
+		for bl in blocks {
+			// check if that block is not changed
+			if let Ok(hdr_info) = w.w2n_client().get_header_info(bl.height) {
+				if hdr_info.hash == bl.hash {
+					res_bl = bl;
+					break;
+				}
 			}
-			return Ok(false);
 		}
+
+		res_bl
 	};
 
-	// Check if this is a restored wallet that needs a full scan
-	let last_scanned_block = {
-		wallet_lock!(wallet_inst, w);
-		match w.init_status()? {
-			WalletInitStatus::InitNeedsScanning => ScannedBlockInfo {
-				height: 0,
-				hash: "".to_owned(),
-				start_pmmr_index: 0,
-				last_pmmr_index: 0,
-			},
-			WalletInitStatus::InitNoScanning => ScannedBlockInfo {
-				height: tip.clone().0,
-				hash: tip.clone().1,
-				start_pmmr_index: 0,
-				last_pmmr_index: 0,
-			},
-			WalletInitStatus::InitComplete => w.last_scanned_block()?,
-		}
-	};
+	debug!(
+		"Preparing to update the wallet from height {} to {}",
+		last_scanned_block.height, tip_height
+	);
 
-	let max_reorg_height = {
-		// similar to what wallet_lock! does
-		let inst = wallet_inst.clone();
-		let mut w_lock = inst.lock();
-		let w_provider = w_lock.lc_provider()?;
-		w_provider.get_max_reorg_height()
-	};
+	if last_scanned_block.height == tip_height {
+		debug!("update_wallet_state is skipped because data is already recently updated");
+		return Ok(true);
+	}
 
-	let start_index = last_scanned_block.height.saturating_sub(max_reorg_height);
+	let mut status_send_channel = status_send_channel.clone();
+	if tip_height > 1000 && tip_height.saturating_sub(last_scanned_block.height) < 20 {
+		// let's not bother user with that. Really not a big deal, waiting time is short.
+		status_send_channel = None;
+	}
 
 	if last_scanned_block.height == 0 {
 		let msg = format!("This wallet has not been scanned against the current chain. Beginning full scan... (this first scan may take a while, but subsequent scans will be much quicker)");
@@ -921,43 +877,65 @@ where
 		}
 	}
 
-	let mut info = scan::scan(
+	// First we need to get the hashes for heights... Reason, if block chain will be changed during scan, we will detect that naturally.
+	let mut blocks: Vec<ScannedBlockInfo> =
+		vec![ScannedBlockInfo::new(tip_height, tip_hash.clone())];
+	{
+		wallet_lock!(wallet_inst, w);
+
+		let mut step = 4;
+
+		while blocks.last().unwrap().height.saturating_sub(step) > last_scanned_block.height {
+			let h = blocks.last().unwrap().height.saturating_sub(step);
+			let hdr = w.w2n_client().get_header_info(h)?;
+			blocks.push(ScannedBlockInfo::new(h, hdr.hash));
+			step *= 2;
+		}
+		// adding last_scanned_block.height not needed
+	}
+
+	scan::scan(
 		wallet_inst.clone(),
 		keychain_mask,
 		false,
-		start_index,
-		tip.0,
-		status_send_channel,
+		last_scanned_block.height,
+		tip_height,
+		&status_send_channel,
 	)?;
 
-	info.hash = tip.1;
-
+	// Checking if tip was changed. In this case we need to retry. Retry will be handles naturally optimal
+	let mut tip_was_changed = false;
 	{
 		wallet_lock!(wallet_inst, w);
-		let mut batch = w.batch(keychain_mask)?;
-		batch.save_last_scanned_block(info)?;
-		// init considered complete after first successful update
-		batch.save_init_status(WalletInitStatus::InitComplete)?;
-		batch.commit()?;
-	}
 
-	// Step 5: Cancel any transactions with an expired TTL
-	for tx in txs {
-		if let Some(e) = tx.ttl_cutoff_height {
-			if tip.0 >= e {
-				wallet_lock!(wallet_inst, w);
-				tx::cancel_tx(
-					&mut **w,
-					keychain_mask,
-					&tx.parent_key_id,
-					Some(tx.id),
-					None,
-				)?;
+		if let Ok((after_tip_height, after_tip_hash, _)) = w.w2n_client().get_chain_tip() {
+			// Since we are still online, we can save the scan status
+			{
+				let mut batch = w.batch(keychain_mask)?;
+				batch.save_last_scanned_blocks(last_scanned_block.height, &blocks)?;
+				batch.commit()?;
+			}
+
+			if after_tip_height == tip_height && after_tip_hash == tip_hash {
+				return Ok(true);
+			} else {
+				tip_was_changed = true;
 			}
 		}
 	}
 
-	Ok(result)
+	if tip_was_changed {
+		// Since head was chaged, we need to update it
+		return update_wallet_state(
+			wallet_inst,
+			keychain_mask,
+			&status_send_channel,
+			parent_key_id, // None - Update all Accounts
+		);
+	}
+
+	// wasn't be able to confirm the tip. Scan is failed, scan height not updated.
+	Ok(false)
 }
 
 /// Check TTL
@@ -975,86 +953,4 @@ where
 		}
 	}
 	Ok(())
-}
-
-/// Attempt to update outputs in wallet, return whether it was successful
-fn update_outputs<'a, L, C, K>(
-	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
-	keychain_mask: Option<&SecretKey>,
-	update_all: bool,
-	height: Option<u64>,
-	parent_key_id: Option<&Identifier>, // None - Update all Accounts
-) -> Result<bool, Error>
-where
-	L: WalletLCProvider<'a, C, K>,
-	C: NodeClient + 'a,
-	K: Keychain + 'a,
-{
-	wallet_lock!(wallet_inst, w);
-	match updater::refresh_outputs(
-		&mut **w,
-		keychain_mask,
-		parent_key_id,
-		update_all,
-		height,
-		None,
-	) {
-		Ok(_) => Ok(true),
-		Err(e) => {
-			if let ErrorKind::InvalidKeychainMask = e.kind() {
-				return Err(e);
-			}
-			Ok(false)
-		}
-	}
-}
-
-/// Update transactions that need to be validated via kernel lookup
-fn update_txs_via_kernel<'a, L, C, K>(
-	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
-	keychain_mask: Option<&SecretKey>,
-	txs: &mut Vec<TxLogEntry>,
-) -> Result<bool, Error>
-where
-	L: WalletLCProvider<'a, C, K>,
-	C: NodeClient + 'a,
-	K: Keychain + 'a,
-{
-	let mut client = {
-		wallet_lock!(wallet_inst, w);
-		w.w2n_client().clone()
-	};
-
-	let height = match client.get_chain_tip() {
-		Ok(h) => h.0,
-		Err(_) => return Ok(false),
-	};
-
-	for tx in txs.iter_mut() {
-		if tx.confirmed {
-			continue;
-		}
-		if tx.amount_debited != 0 && tx.amount_credited != 0 {
-			continue;
-		}
-		if let Some(e) = tx.kernel_excess {
-			let res = client.get_kernel(&e, tx.kernel_lookup_min_height, Some(height));
-			let kernel = match res {
-				Ok(k) => k,
-				Err(_) => return Ok(false),
-			};
-			if let Some(k) = kernel {
-				debug!("Kernel Retrieved: {:?}", k);
-				wallet_lock!(wallet_inst, w);
-				let mut batch = w.batch(keychain_mask)?;
-				tx.confirmed = true;
-				tx.update_confirmation_ts();
-				batch.save_tx_log_entry(tx.clone(), &tx.parent_key_id)?;
-				batch.commit()?;
-			}
-		} else {
-			warn!("Attempted to update via kernel excess for transaction {:?}, but kernel excess was not stored", tx.tx_slate_id);
-		}
-	}
-	Ok(true)
 }

@@ -28,7 +28,7 @@ use crate::libwallet;
 use crate::libwallet::api_impl::foreign;
 use crate::libwallet::slate_versions::v3::SlateV3;
 use crate::libwallet::{
-	NodeClient, NodeVersionInfo, Slate, TxWrapper, WalletInst, WalletLCProvider,
+	HeaderInfo, NodeClient, NodeVersionInfo, Slate, TxWrapper, WalletInst, WalletLCProvider,
 };
 use crate::util;
 use crate::util::secp::key::SecretKey;
@@ -36,6 +36,8 @@ use crate::util::secp::pedersen;
 use crate::util::secp::pedersen::Commitment;
 use crate::util::{Mutex, RwLock};
 use failure::ResultExt;
+use grin_core::core::hash::Hashed;
+use grin_core::core::BlockHeader;
 use serde_json;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -147,6 +149,7 @@ where
 			trace!("Wallet Client Proxy Received: {:?}", m);
 			let resp = match m.method.as_ref() {
 				"get_chain_tip" => self.get_chain_tip(m)?,
+				"get_header_info" => self.get_header_info(m)?,
 				"get_outputs_from_node" => self.get_outputs_from_node(m)?,
 				"get_outputs_by_pmmr_index" => self.get_outputs_by_pmmr_index(m)?,
 				"height_range_to_pmmr_indices" => self.height_range_to_pmmr_indices(m)?,
@@ -269,6 +272,30 @@ where
 			dest: m.sender_id,
 			method: m.method,
 			body: format!("{},{}", height, hash),
+		})
+	}
+
+	/// get header hash, version e.t.c
+	fn get_header_info(
+		&mut self,
+		m: WalletProxyMessage,
+	) -> Result<WalletProxyMessage, libwallet::Error> {
+		let height = m.body.parse::<u64>().unwrap();
+
+		let hdr: BlockHeader = self.chain.get_header_by_height(height).unwrap();
+
+		Ok(WalletProxyMessage {
+			sender_id: "node".to_owned(),
+			dest: m.sender_id,
+			method: m.method,
+			body: format!(
+				"{},{},{},{},{}",
+				hdr.height,
+				hdr.hash().to_hex(),
+				hdr.version.0,
+				hdr.pow.nonce,
+				hdr.total_difficulty()
+			),
 		})
 	}
 
@@ -481,6 +508,48 @@ impl NodeClient for LocalWalletClient {
 			))?;
 		let split: Vec<&str> = res.split(",").collect();
 		Ok((split[0].parse::<u64>().unwrap(), split[1].to_owned(), 1))
+	}
+
+	/// Return header info by height
+	fn get_header_info(&self, height: u64) -> Result<HeaderInfo, libwallet::Error> {
+		let m = WalletProxyMessage {
+			sender_id: self.id.clone(),
+			dest: self.node_url().to_owned(),
+			method: "get_header_info".to_owned(),
+			body: format!("{}", height),
+		};
+		{
+			let p = self.proxy_tx.lock();
+			p.send(m).context(libwallet::ErrorKind::ClientCallback(
+				"Get chain header info send".to_owned(),
+			))?;
+		}
+		let r = self.rx.lock();
+		let m = r.recv().unwrap();
+		trace!("Received get_header_info response: {:?}", m.clone());
+		let res = m
+			.body
+			.parse::<String>()
+			.context(libwallet::ErrorKind::ClientCallback(
+				"Parsing get_header_info response".to_owned(),
+			))?;
+		let split: Vec<&str> = res.split(",").collect();
+
+		let r_height = split[0].parse::<u64>().unwrap();
+		let r_hash = String::from(split[1]);
+		let r_version = split[2].parse::<i32>().unwrap();
+		let r_nonce = split[3].parse::<u64>().unwrap();
+		let r_total_difficulty = split[4].parse::<u64>().unwrap();
+
+		assert!(r_height == height);
+
+		Ok(HeaderInfo {
+			height: r_height,
+			hash: r_hash,
+			version: r_version,
+			nonce: r_nonce,
+			total_difficulty: r_total_difficulty,
+		})
 	}
 
 	/// Return Connected peers

@@ -127,6 +127,8 @@ fn accounts_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 
 	// Should have 5 in account1 (5 spendable), 5 in account (2 spendable)
 	wallet::controller::owner_single_use(wallet1.clone(), mask1, |api, m| {
+		let (_, wallet1_info) = api.retrieve_summary_info(m, false, 1)?;
+		assert_eq!(wallet1_info.last_confirmed_height, 0); // mwc false case must be first. scan will update all accounts
 		let (wallet1_refreshed, wallet1_info) = api.retrieve_summary_info(m, true, 1)?;
 		assert!(wallet1_refreshed);
 		assert_eq!(wallet1_info.last_confirmed_height, 12);
@@ -150,7 +152,7 @@ fn accounts_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 	wallet::controller::owner_single_use(wallet1.clone(), mask1, |api, m| {
 		// check last confirmed height on this account is different from above (should be 0)
 		let (_, wallet1_info) = api.retrieve_summary_info(m, false, 1)?;
-		assert_eq!(wallet1_info.last_confirmed_height, 0);
+		assert_eq!(wallet1_info.last_confirmed_height, 12); // for mwc no failure case. we are already updated for all accounts. Refresh comes from prev update
 		let (wallet1_refreshed, wallet1_info) = api.retrieve_summary_info(m, true, 1)?;
 		assert!(wallet1_refreshed);
 		assert_eq!(wallet1_info.last_confirmed_height, 12);
@@ -169,7 +171,7 @@ fn accounts_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 	}
 	wallet::controller::owner_single_use(wallet1.clone(), mask1, |api, m| {
 		let (_, wallet1_info) = api.retrieve_summary_info(m, false, 1)?;
-		assert_eq!(wallet1_info.last_confirmed_height, 0);
+		assert_eq!(wallet1_info.last_confirmed_height, 12); // for mwc no failure case. we are already updated for all accounts. Refresh comes from prev update
 		let (wallet1_refreshed, wallet1_info) = api.retrieve_summary_info(m, true, 1)?;
 		assert!(wallet1_refreshed);
 		assert_eq!(wallet1_info.last_confirmed_height, 12);
@@ -205,6 +207,8 @@ fn accounts_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 	})?;
 
 	wallet::controller::owner_single_use(wallet1.clone(), mask1, |api, m| {
+		let (_, wallet1_info) = api.retrieve_summary_info(m, false, 1)?;
+		assert_eq!(wallet1_info.last_confirmed_height, 12);
 		let (wallet1_refreshed, wallet1_info) = api.retrieve_summary_info(m, true, 1)?;
 		assert!(wallet1_refreshed);
 		assert_eq!(wallet1_info.last_confirmed_height, 13);
@@ -220,7 +224,7 @@ fn accounts_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 	}
 	wallet::controller::owner_single_use(wallet1.clone(), mask1, |api, m| {
 		let (_, wallet1_info) = api.retrieve_summary_info(m, false, 1)?;
-		assert_eq!(wallet1_info.last_confirmed_height, 12);
+		assert_eq!(wallet1_info.last_confirmed_height, 13); // mwc already updated that
 		let (_, wallet1_info) = api.retrieve_summary_info(m, true, 1)?;
 		assert_eq!(wallet1_info.last_confirmed_height, 13);
 		let (_, txs) = api.retrieve_txs(m, true, None, None)?;
@@ -245,7 +249,7 @@ fn accounts_test_impl(test_dir: &'static str) -> Result<(), libwallet::Error> {
 	}
 	wallet::controller::owner_single_use(wallet2.clone(), mask2, |api, m| {
 		let (_, wallet2_info) = api.retrieve_summary_info(m, false, 1)?;
-		assert_eq!(wallet2_info.last_confirmed_height, 0);
+		assert_eq!(wallet2_info.last_confirmed_height, 13); // mwc already update all accounts
 		let (wallet2_refreshed, wallet2_info) = api.retrieve_summary_info(m, true, 1)?;
 		assert!(wallet2_refreshed);
 		assert_eq!(wallet2_info.last_confirmed_height, 13);

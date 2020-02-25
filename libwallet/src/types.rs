@@ -64,9 +64,6 @@ where
 	/// default is assumed to be ~/.grin/main/wallet_data (or floonet equivalent)
 	fn get_top_level_directory(&self) -> Result<String, Error>;
 
-	/// Max expected reorg Len for the wallet
-	fn get_max_reorg_height(&self) -> u64;
-
 	/// Output a grin-wallet.toml file into the current top-level system wallet directory
 	fn create_config(
 		&self,
@@ -252,13 +249,7 @@ where
 	fn last_confirmed_height<'a>(&mut self) -> Result<u64, Error>;
 
 	/// last block scanned during scan or restore
-	fn last_scanned_block<'a>(&mut self) -> Result<ScannedBlockInfo, Error>;
-
-	/// Flag whether the wallet needs a full UTXO scan on next update attempt
-	fn init_status<'a>(&mut self) -> Result<WalletInitStatus, Error>;
-
-	/// Get max nicely acceptable reorg length
-	fn get_max_reorg_height(&self) -> u64;
+	fn last_scanned_blocks<'a>(&mut self) -> Result<Vec<ScannedBlockInfo>, Error>;
 }
 
 /// Batch trait to update the output data backend atomically. Trying to use a
@@ -296,10 +287,11 @@ where
 	) -> Result<(), Error>;
 
 	/// Save the last PMMR index that was scanned via a scan operation
-	fn save_last_scanned_block(&mut self, block: ScannedBlockInfo) -> Result<(), Error>;
-
-	/// Save flag indicating whether wallet needs a full UTXO scan
-	fn save_init_status<'a>(&mut self, value: WalletInitStatus) -> Result<(), Error>;
+	fn save_last_scanned_blocks(
+		&mut self,
+		first_scanned_block_height: u64,
+		block: &Vec<ScannedBlockInfo>,
+	) -> Result<(), Error>;
 
 	/// get next tx log entry for the parent
 	fn next_tx_log_id(&mut self, parent_key_id: &Identifier) -> Result<u32, Error>;
@@ -371,6 +363,9 @@ pub trait NodeClient: Send + Sync + Clone {
 	/// retrieves the current tip (height, hash) from the specified grin node
 	/// (<height>, <hash>, <total difficulty>)
 	fn get_chain_tip(&self) -> Result<(u64, String, u64), Error>;
+
+	/// Return header info by height
+	fn get_header_info(&self, height: u64) -> Result<HeaderInfo, Error>;
 
 	/// Return Connected peers
 	fn get_connected_peer_info(&self) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, Error>;
@@ -1031,10 +1026,17 @@ pub struct ScannedBlockInfo {
 	pub height: u64,
 	/// Hash of tip
 	pub hash: String,
-	/// Starting PMMR Index
-	pub start_pmmr_index: u64,
-	/// Last PMMR Index
-	pub last_pmmr_index: u64,
+}
+
+impl ScannedBlockInfo {
+	/// Create new Block info
+	pub fn new(height: u64, hash: String) -> ScannedBlockInfo {
+		ScannedBlockInfo { height, hash }
+	}
+	/// Create empty instance of the scanned Block info
+	pub fn empty() -> ScannedBlockInfo {
+		ScannedBlockInfo::new(0, String::new())
+	}
 }
 
 impl ser::Writeable for ScannedBlockInfo {
@@ -1064,26 +1066,16 @@ pub struct CbData {
 	pub key_id: Option<Identifier>,
 }
 
-/// Enum to determine what amount of scanning is required for a new wallet
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum WalletInitStatus {
-	/// Wallet is newly created and needs scanning
-	InitNeedsScanning,
-	/// Wallet is new but doesn't need scanning
-	InitNoScanning,
-	/// Wallet scan checks have been completed
-	InitComplete,
-}
-
-impl ser::Writeable for WalletInitStatus {
-	fn write<W: ser::Writer>(&self, writer: &mut W) -> Result<(), ser::Error> {
-		writer.write_bytes(&serde_json::to_vec(self).map_err(|_| ser::Error::CorruptedData)?)
-	}
-}
-
-impl ser::Readable for WalletInitStatus {
-	fn read(reader: &mut dyn ser::Reader) -> Result<WalletInitStatus, ser::Error> {
-		let data = reader.read_bytes_len_prefix()?;
-		serde_json::from_slice(&data[..]).map_err(|_| ser::Error::CorruptedData)
-	}
+/// Header Info data, used by HTTP client
+pub struct HeaderInfo {
+	/// Height of the header
+	pub height: u64,
+	/// Header Hash
+	pub hash: String,
+	/// Header version
+	pub version: i32,
+	/// Header nonce
+	pub nonce: u64,
+	/// total chain difficulty for this header
+	pub total_difficulty: u64,
 }

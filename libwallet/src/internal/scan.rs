@@ -24,6 +24,7 @@ use crate::grin_util::secp::pedersen;
 use crate::grin_util::static_secp_instance;
 use crate::grin_util::Mutex;
 use crate::internal::keys;
+use crate::internal::tx;
 use crate::types::*;
 use crate::{wallet_lock, Error, ErrorKind};
 use grin_core::core::Transaction;
@@ -155,7 +156,7 @@ pub fn collect_chain_outputs<'a, C, K>(
 	start_index: u64,
 	end_index: Option<u64>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
-) -> Result<(Vec<OutputResult>, u64), Error>
+) -> Result<Vec<OutputResult>, Error>
 where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
@@ -164,7 +165,6 @@ where
 	let start_index_stat = start_index;
 	let mut start_index = start_index;
 	let mut result_vec: Vec<OutputResult> = vec![];
-	let last_retrieved_return_index;
 	loop {
 		let (highest_index, last_retrieved_index, outputs) =
 			client.get_outputs_by_pmmr_index(start_index, end_index, batch_size)?;
@@ -191,12 +191,11 @@ where
 		)?);
 
 		if highest_index <= last_retrieved_index {
-			last_retrieved_return_index = last_retrieved_index;
 			break;
 		}
 		start_index = last_retrieved_index + 1;
 	}
-	Ok((result_vec, last_retrieved_return_index))
+	Ok(result_vec)
 }
 
 /// Respore missing outputs. Shared with mwc713
@@ -414,8 +413,6 @@ fn get_wallet_and_chain_data<'a, L, C, K>(
 		Vec<OutputResult>,                 // Chain outputs
 		HashMap<String, WalletTxInfo>,     // Slate based Transaction. Key: tx uuid
 		HashMap<u64, WalletTxInfo>,        // Coin Based Transaction.  Key: height
-		(u64, u64),                        // PMMR index range for chain
-		u64,                               // last Index that was scanned
 	),
 	Error,
 >
@@ -435,7 +432,7 @@ where
 	let pmmr_range = client.height_range_to_pmmr_indices(start_height, Some(end_height))?;
 
 	// Getting outputs that are published on the chain.
-	let (chain_outs, last_index) = collect_chain_outputs(
+	let chain_outs = collect_chain_outputs(
 		&keychain,
 		client,
 		pmmr_range.0,
@@ -537,19 +534,30 @@ where
 	// Validate kernels from transaction. Kernel are a source of truth
 	let mut client = w.w2n_client().clone();
 	for tx in transactions_slate.values_mut() {
-		if tx.tx_log.output_height >= start_height {
+		if !(tx.tx_log.confirmed || tx.tx_log.is_cancelled())
+			|| tx.tx_log.output_height >= start_height
+		{
 			if let Some(kernel) = &tx.tx_log.kernel_excess {
 				// Note!!!! Test framework doesn't support None for params. So assuming that value must be provided
-				let start_height = cmp::max(start_height,1); // API to tests don't support 0 or smaller
+				let start_height = cmp::max(start_height, 1); // API to tests don't support 0 or smaller
 				let res = client.get_kernel(
 					&kernel,
 					Some(cmp::min(
-                        start_height, // 1 is min supported value by API
+						start_height, // 1 is min supported value by API
 						tx.tx_log.kernel_lookup_min_height.unwrap_or(start_height),
 					)),
 					Some(end_height),
 				)?;
-				tx.kernel_validation = Some(res.is_some());
+
+				match res {
+					Some((txkernel, height, _mmr_index)) => {
+						tx.kernel_validation = Some(true);
+						assert!(txkernel.excess == *kernel);
+						tx.tx_log.output_height = height; // Height must come from kernel and will match heights of outputs
+						tx.updated = true;
+					}
+					None => tx.kernel_validation = Some(false),
+				}
 			}
 		}
 	}
@@ -559,8 +567,6 @@ where
 		chain_outs,
 		transactions_slate,
 		transactions_coinbase,
-		pmmr_range,
-		last_index,
 	))
 }
 
@@ -572,9 +578,9 @@ pub fn scan<'a, L, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	del_unconfirmed: bool,
 	start_height: u64,
-	end_height: u64,
+	tip_height: u64, // tip
 	status_send_channel: &Option<Sender<StatusMessage>>,
-) -> Result<ScannedBlockInfo, Error>
+) -> Result<(), Error>
 where
 	L: WalletLCProvider<'a, C, K>,
 	C: NodeClient + 'a,
@@ -586,20 +592,14 @@ where
 	}
 
 	// Collect the data form the chain and from the wallet
-	let (
-		mut outputs,
-		chain_outs,
-		mut transactions_slates,
-		mut transactions_coinbased,
-		pmmr_range,
-		last_index,
-	) = get_wallet_and_chain_data(
-		wallet_inst.clone(),
-		keychain_mask.clone(),
-		start_height,
-		end_height,
-		status_send_channel,
-	)?;
+	let (mut outputs, chain_outs, mut transactions_slates, mut transactions_coinbased) =
+		get_wallet_and_chain_data(
+			wallet_inst.clone(),
+			keychain_mask.clone(),
+			start_height,
+			tip_height,
+			status_send_channel,
+		)?;
 
 	/*	// Printing values for debug...
 	{
@@ -648,7 +648,7 @@ where
 	// Processing slate based transactions. Just need to update 'confirmed flag' and height
 	// We don't want to cancel the transactions. Let's user do that.
 	// We can uncancel transactions if it is confirmed
-	validate_slate_transactions(&mut outputs, &mut transactions_slates, status_send_channel);
+	validate_slate_transactions(&mut transactions_slates, status_send_channel);
 
 	// Checking for output to transaction mapping. We don't want to see active outputs without trsansaction or with cancelled transactions
 	// we might unCancel transaction if output was found but all mapped transactions are cancelled (user just a cheater)
@@ -666,6 +666,32 @@ where
 
 	// Here we are done with all state changes of Outputs and transactions. Now we need to save them at the DB
 	// Note, unknown new outputs are not here because we handle them in the beginning by 'restore'.
+
+	// Cancel any transactions with an expired TTL
+	for tx in transactions_slates.values() {
+		if let Some(h) = tx.tx_log.ttl_cutoff_height {
+			if tip_height >= h {
+				wallet_lock!(wallet_inst, w);
+				match tx::cancel_tx(
+					&mut **w,
+					keychain_mask,
+					&tx.tx_log.parent_key_id,
+					Some(tx.tx_log.id),
+					None,
+				) {
+					Err(e) => {
+						if let Some(ref s) = status_send_channel {
+							let _ = s.send(StatusMessage::Warning(format!(
+								"Unable to cancel TTL expired transaction {} because of error: {}",
+								tx.tx_uuid, e
+							)));
+						}
+					}
+					_ => (),
+				}
+			}
+		}
+	}
 
 	// Apply last data updates and saving the data into DB.
 	{
@@ -688,7 +714,21 @@ where
 		)?;
 	}
 
-	/*	{
+	// Updating confirmed height record. The height at what we finish updating the data
+	// Updating 'done' job for all accounts that was involved. Update was done for all accounts- let's update that
+	{
+		wallet_lock!(wallet_inst, w);
+
+		let accounts: Vec<Identifier> = w.acct_path_iter().map(|m| m.path).collect();
+		let mut batch = w.batch(keychain_mask)?;
+
+		for par_id in &accounts {
+			batch.save_last_confirmed_height(par_id, tip_height)?;
+		}
+		batch.commit()?;
+	}
+
+	/*		{
 		// Dump chain outputs...
 		for ch_out in &chain_outs {
 			println!("End Chain output: {:?}", ch_out );
@@ -711,7 +751,7 @@ where
 		println!("------------------ scan END -----------------------------" );
 		// Dump the same from the DB.
 		if let Some(ref s) = status_send_channel {
-			let _ = owner::dump_wallet_data(wallet_inst.clone(), s, Some(String::from("/tmp/end.txt")) );
+			let _ = crate::api_impl::owner::dump_wallet_data(wallet_inst.clone(), s, Some(String::from("/tmp/end.txt")) );
 		}
 	}*/
 
@@ -721,12 +761,7 @@ where
 		));
 	}
 
-	Ok(ScannedBlockInfo {
-		height: end_height,
-		hash: "".to_owned(),
-		start_pmmr_index: pmmr_range.0,
-		last_pmmr_index: last_index,
-	})
+	Ok(())
 }
 
 // Validated outputs states against the chain
@@ -755,7 +790,7 @@ where
 				// It is mean that w_out does exist at the chain (confirmed) and doing well
 				w_out.at_chain = true;
 
-				// Updating mmr Index for output. It can be changes because of reorg
+				// Updating mmr Index for output. It can be changed because of reorg
 				// It is normal routine event, no need to notify the user.
 				if w_out.output.height != ch_out.height {
 					w_out.output.height = ch_out.height;
@@ -815,7 +850,7 @@ where
 	// Process not found at the chain but expected outputs.
 	// It is a normal case when send transaction was finalized
 	for w_out in outputs.values_mut() {
-		if w_out.output.height > start_height && !w_out.at_chain {
+		if w_out.output.height >= start_height && !w_out.at_chain {
 			match w_out.output.status {
 				OutputStatus::Spent => (), // Spent not expected to be found at the chain
 				OutputStatus::Unconfirmed => (), // Unconfirmed not expected as well
@@ -903,7 +938,6 @@ fn validate_coinbase(
 // We don't want to cancel the transactions. Let's user do that.
 // We can uncancel transactions if it is confirmed
 fn validate_slate_transactions(
-	outputs: &mut HashMap<String, WalletOutputInfo>,
 	transactions_slates: &mut HashMap<String, WalletTxInfo>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) {
@@ -914,54 +948,43 @@ fn validate_slate_transactions(
 				// transaction is valid
 				if tx_info.tx_log.is_cancelled() {
 					tx_info.tx_log.uncancel();
-					tx_info.tx_log.confirmed = true;
-					tx_info.tx_log.update_confirmation_ts();
 					tx_info.updated = true;
 
 					if let Some(ref s) = status_send_channel {
 						let _ = s.send(StatusMessage::Info(format!(
-							"Info: Changing transaction {} Cancel start to active",
+							"Info: Changing transaction {} from Cancel to active",
 							tx_info.tx_uuid
 						)));
 					}
 				}
+
+				if !tx_info.tx_log.confirmed {
+					tx_info.tx_log.confirmed = true;
+					tx_info.tx_log.update_confirmation_ts();
+					tx_info.updated = true;
+				}
 			} else {
 				if !tx_info.tx_log.is_cancelled() {
-					tx_info.tx_log.confirmed = false;
-					tx_info.updated = true;
-
-					if let Some(ref s) = status_send_channel {
-						let _ = s.send(StatusMessage::Info(format!(
-							"Info: Changing transaction {} confirmation state to confirmed",
-							tx_info.tx_uuid
-						)));
+					if tx_info.tx_log.confirmed {
+						tx_info.tx_log.confirmed = false;
+						tx_info.updated = true;
+						if let Some(ref s) = status_send_channel {
+							let _ = s.send(StatusMessage::Info(format!(
+								"Info: Changing transaction {} confirmation state to confirmed",
+								tx_info.tx_uuid
+							)));
+						}
 					}
 				}
 			}
 		}
 
-		// Skipping cancelled transactions, they processed below
+		// Update confirmation flag fr the cancelled.
 		if tx_info.tx_log.is_cancelled() {
 			if tx_info.tx_log.confirmed {
 				tx_info.tx_log.confirmed = false;
 				tx_info.updated = true;
 			}
-
-			continue; // Processing not cancelled transactions. Cancelled will be reactivated as a recovery plan.
-		}
-
-		let mut tx_height = tx_info.tx_log.output_height;
-
-		for out in &tx_info.output_commit {
-			if let Some(out) = outputs.get(out) {
-				if tx_height < out.output.height {
-					tx_height = out.output.height;
-				}
-			}
-		}
-		if tx_height != tx_info.tx_log.output_height {
-			tx_info.tx_log.output_height = tx_height;
-			tx_info.updated = true;
 		}
 	}
 }

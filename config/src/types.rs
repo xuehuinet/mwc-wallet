@@ -58,8 +58,6 @@ pub struct WalletConfig {
 	pub keybase_notify_ttl: Option<u16>,
 	/// Wallet data directory. Default none is 'wallet_data'
 	pub wallet_data_dir: Option<String>,
-	/// Maximum expected size of reorg. Default is 100 blocks
-	pub max_reorg_height: Option<u64>,
 }
 
 impl Default for WalletConfig {
@@ -80,7 +78,6 @@ impl Default for WalletConfig {
 			dark_background_color_scheme: Some(true),
 			keybase_notify_ttl: Some(1440),
 			wallet_data_dir: None,
-			max_reorg_height: None,
 		}
 	}
 }
@@ -105,11 +102,6 @@ impl WalletConfig {
 	/// Owner API listen address
 	pub fn owner_api_listen_addr(&self) -> String {
 		format!("127.0.0.1:{}", self.owner_api_listen_port())
-	}
-
-	/// Return max length of chain reorg. 1 block is about 1 minute
-	pub fn get_max_reorg_height(&self) -> u64 {
-		self.max_reorg_height.clone().unwrap_or(100)
 	}
 }
 /// Error type wrapping config errors.

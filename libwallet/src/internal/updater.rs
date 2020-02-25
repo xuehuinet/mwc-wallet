@@ -128,44 +128,13 @@ where
 /// if `parent_key_id` is set, only return entries from that key
 pub fn retrieve_txs<'a, T: ?Sized, C, K>(
 	wallet: &mut T,
-	keychain_mask: Option<&SecretKey>,
+	_keychain_mask: Option<&SecretKey>,
 	tx_id: Option<u32>,
 	tx_slate_id: Option<Uuid>,
 	parent_key_id: Option<&Identifier>,
 	outstanding_only: bool,
 	pagination_start: Option<u32>,
 	pagination_len: Option<u32>,
-) -> Result<Vec<TxLogEntry>, Error>
-where
-	T: WalletBackend<'a, C, K>,
-	C: NodeClient + 'a,
-	K: Keychain + 'a,
-{
-	retrieve_txs_with_outputs(
-		wallet,
-		keychain_mask,
-		tx_id,
-		tx_slate_id,
-		parent_key_id,
-		outstanding_only,
-		pagination_start,
-		pagination_len,
-		None,
-	)
-}
-
-/// Retrieve all of the transaction entries, or a particular entry
-/// if `parent_key_id` is set, only return entries from that key
-pub fn retrieve_txs_with_outputs<'a, T: ?Sized, C, K>(
-	wallet: &mut T,
-	keychain_mask: Option<&SecretKey>,
-	tx_id: Option<u32>,
-	tx_slate_id: Option<Uuid>,
-	parent_key_id: Option<&Identifier>,
-	outstanding_only: bool,
-	pagination_start: Option<u32>,
-	pagination_len: Option<u32>,
-	output_list: Option<(bool, Vec<(OutputData, pedersen::Commitment)>)>,
 ) -> Result<Vec<TxLogEntry>, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -198,36 +167,6 @@ where
 			f_pk && f_tx_id && f_txs && f_outstanding
 		})
 		.collect();
-
-	if output_list.is_some() {
-		let mut batch = wallet.batch(keychain_mask)?;
-		let output_list = output_list.unwrap().1;
-		for i in 0..txs.len() {
-			let mut tx = &mut txs[i];
-			if !tx.confirmed && tx.tx_type == TxLogEntryType::TxSent {
-				// if it's not confirmed, see if we have any outputs
-				// Point that if we found output - it is mean that transaction didn't go through.
-				//  otherwise we can mark is confirmed, but unfortunatelly without block height
-				let mut confirmed = true;
-				for j in 0..output_list.len() {
-					if output_list[j].0.tx_log_entry.is_some() {
-						let id = output_list[j].0.tx_log_entry.unwrap();
-						if id == tx.id {
-							confirmed = false;
-							break;
-						}
-					}
-				}
-				tx.confirmed = confirmed;
-				if tx.confirmed {
-					tx.output_height = 0;
-					tx.update_confirmation_ts();
-					batch.save_tx_log_entry(tx.clone(), &tx.parent_key_id)?;
-				}
-			}
-		}
-		batch.commit()?;
-	}
 
 	txs.sort_by_key(|tx| tx.creation_ts);
 
@@ -567,16 +506,11 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let max_reorg_height = wallet.get_max_reorg_height();
-
-	if height < max_reorg_height {
-		return Ok(());
-	}
 	let mut ids_to_del = vec![];
 	for out in wallet.iter() {
 		if out.status == OutputStatus::Unconfirmed
 			&& out.height > 0
-			&& out.height < height - max_reorg_height
+			&& out.height + 100 < height  // Cleaning up of coinbase is safe. If later we discover it - that will be another transactions
 			&& out.is_coinbase
 		{
 			ids_to_del.push(out.key_id.clone())

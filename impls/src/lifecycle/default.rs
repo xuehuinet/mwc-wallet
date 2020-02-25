@@ -19,9 +19,7 @@ use crate::config::{
 };
 use crate::core::global;
 use crate::keychain::Keychain;
-use crate::libwallet::{
-	Error, ErrorKind, NodeClient, WalletBackend, WalletInitStatus, WalletLCProvider,
-};
+use crate::libwallet::{Error, ErrorKind, NodeClient, WalletBackend, WalletLCProvider};
 use crate::lifecycle::seed::WalletSeed;
 use crate::util::secp::key::SecretKey;
 use crate::util::ZeroingString;
@@ -37,7 +35,6 @@ where
 	K: Keychain + 'a,
 {
 	data_dir: String,
-	max_reorg_height: u64,
 	node_client: C,
 	backend: Option<Box<dyn WalletBackend<'a, C, K> + 'a>>,
 }
@@ -48,11 +45,10 @@ where
 	K: Keychain + 'a,
 {
 	/// Create new provider
-	pub fn new(max_reorg_height: u64, node_client: C) -> Self {
+	pub fn new(node_client: C) -> Self {
 		DefaultLCProvider {
 			node_client,
 			data_dir: "default".to_owned(),
-			max_reorg_height,
 			backend: None,
 		}
 	}
@@ -70,11 +66,6 @@ where
 
 	fn get_top_level_directory(&self) -> Result<String, Error> {
 		Ok(self.data_dir.to_owned())
-	}
-
-	/// Max expected reorg Len for the wallet
-	fn get_max_reorg_height(&self) -> u64 {
-		self.max_reorg_height
 	}
 
 	fn create_config(
@@ -199,24 +190,17 @@ where
 		}
 		let _ = WalletSeed::init_file(&data_dir_name, mnemonic_length, mnemonic.clone(), password);
 		info!("Wallet seed file created");
-		let mut wallet: LMDBBackend<'a, C, K> = match LMDBBackend::new(
-			&data_dir_name,
-			self.node_client.clone(),
-			self.get_max_reorg_height(),
-		) {
-			Err(e) => {
-				let msg = format!("Error creating wallet: {}, Data Dir: {}", e, &data_dir_name);
-				error!("{}", msg);
-				return Err(ErrorKind::Lifecycle(msg).into());
-			}
-			Ok(d) => d,
-		};
+		let mut wallet: LMDBBackend<'a, C, K> =
+			match LMDBBackend::new(&data_dir_name, self.node_client.clone()) {
+				Err(e) => {
+					let msg = format!("Error creating wallet: {}, Data Dir: {}", e, &data_dir_name);
+					error!("{}", msg);
+					return Err(ErrorKind::Lifecycle(msg).into());
+				}
+				Ok(d) => d,
+			};
 		// Save init status of this wallet, to determine whether it needs a full UTXO scan
-		let mut batch = wallet.batch_no_mask()?;
-		match mnemonic {
-			Some(_) => batch.save_init_status(WalletInitStatus::InitNeedsScanning)?,
-			None => batch.save_init_status(WalletInitStatus::InitNoScanning)?,
-		};
+		let batch = wallet.batch_no_mask()?;
 		batch.commit()?;
 		info!("Wallet database backend created at {}", data_dir_name);
 		Ok(())
@@ -233,17 +217,14 @@ where
 		let mut data_dir_name = PathBuf::from(self.data_dir.clone());
 		data_dir_name.push(wallet_data_dir.unwrap_or(GRIN_WALLET_DIR));
 		let data_dir_name = data_dir_name.to_str().unwrap();
-		let mut wallet: LMDBBackend<'a, C, K> = match LMDBBackend::new(
-			&data_dir_name,
-			self.node_client.clone(),
-			self.get_max_reorg_height(),
-		) {
-			Err(e) => {
-				let msg = format!("Error opening wallet: {}, Data Dir: {}", e, &data_dir_name);
-				return Err(ErrorKind::Lifecycle(msg).into());
-			}
-			Ok(d) => d,
-		};
+		let mut wallet: LMDBBackend<'a, C, K> =
+			match LMDBBackend::new(&data_dir_name, self.node_client.clone()) {
+				Err(e) => {
+					let msg = format!("Error opening wallet: {}, Data Dir: {}", e, &data_dir_name);
+					return Err(ErrorKind::Lifecycle(msg).into());
+				}
+				Ok(d) => d,
+			};
 		let wallet_seed = WalletSeed::from_file(&data_dir_name, password).context(
 			ErrorKind::Lifecycle("Error opening wallet (is password correct?)".into()),
 		)?;

@@ -169,7 +169,6 @@ where
 				self.wallet_inst.clone(),
 				(&keychain_mask).as_ref(),
 				status_send_channel,
-				false,
 				None, // In background make sense to update all accounts
 			)?;
 
