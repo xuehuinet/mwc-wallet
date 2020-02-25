@@ -20,6 +20,7 @@ use futures::{stream, Stream};
 
 use crate::api::{self, LocatedTxKernel};
 use crate::core::core::TxKernel;
+use crate::libwallet::HeaderInfo;
 use crate::libwallet::{NodeClient, NodeVersionInfo, TxWrapper};
 use semver::Version;
 use std::collections::HashMap;
@@ -131,6 +132,31 @@ impl NodeClient for HTTPNodeClient {
 				Err(libwallet::ErrorKind::ClientCallback(report).into())
 			}
 			Ok(r) => Ok((r.height, r.last_block_pushed, r.total_difficulty)),
+		}
+	}
+
+	/// Return header info from given height
+	fn get_header_info(&self, height: u64) -> Result<HeaderInfo, libwallet::Error> {
+		let addr = self.node_url();
+		let url = format!("{}/v1/headers/{}", addr, height);
+		let client = Client::new();
+		let res = client.get::<api::BlockHeaderPrintable>(url.as_str(), self.node_api_secret());
+		match res {
+			Err(e) => {
+				let report = format!("Getting header {} info from node: {}", height, e);
+				error!("Get chain header {} error: {}", height, e);
+				Err(libwallet::ErrorKind::ClientCallback(report).into())
+			}
+			Ok(r) => {
+				assert!(r.height == height);
+				Ok(HeaderInfo {
+					height: r.height,
+					hash: r.hash,
+					version: r.version as i32,
+					nonce: r.nonce,
+					total_difficulty: r.total_difficulty,
+				})
+			}
 		}
 	}
 

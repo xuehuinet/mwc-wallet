@@ -26,13 +26,13 @@ use uuid::Uuid;
 use crate::blake2::blake2b::{Blake2b, Blake2bResult};
 
 use crate::keychain::{ChildNumber, ExtKeychain, Identifier, Keychain, SwitchCommitmentType};
-use crate::store::{self, option_to_not_found, to_key, to_key_u64};
+use crate::store::{self, option_to_not_found, to_key, to_key_u64, u64_to_key};
 
 use crate::core::core::Transaction;
 use crate::core::ser;
 use crate::libwallet::{
 	AcctPathMapping, Context, Error, ErrorKind, NodeClient, OutputData, ScannedBlockInfo,
-	TxLogEntry, WalletBackend, WalletInitStatus, WalletOutputBatch,
+	TxLogEntry, WalletBackend, WalletOutputBatch,
 };
 use crate::util::secp::constants::SECRET_KEY_SIZE;
 use crate::util::secp::key::SecretKey;
@@ -51,10 +51,7 @@ const PRIVATE_TX_CONTEXT_PREFIX: u8 = 'p' as u8;
 const TX_LOG_ENTRY_PREFIX: u8 = 't' as u8;
 const TX_LOG_ID_PREFIX: u8 = 'i' as u8;
 const ACCOUNT_PATH_MAPPING_PREFIX: u8 = 'a' as u8;
-const LAST_SCANNED_BLOCK: u8 = 'l' as u8;
-const LAST_SCANNED_KEY: &str = "LAST_SCANNED_KEY";
-const WALLET_INIT_STATUS: u8 = 'w' as u8;
-const WALLET_INIT_STATUS_KEY: &str = "WALLET_INIT_STATUS";
+const LAST_SCANNED_BLOCK: u8 = 'm' as u8; // pre v3.0 was l
 
 /// test to see if database files exist in the current directory. If so,
 /// use a DB backend for all operations
@@ -103,7 +100,6 @@ where
 {
 	db: store::Store,
 	data_file_dir: String,
-	max_reorg_height: u64,
 	/// Keychain
 	pub keychain: Option<K>,
 	/// Check value for XORed keychain seed
@@ -121,7 +117,7 @@ where
 	C: NodeClient + 'ck,
 	K: Keychain + 'ck,
 {
-	pub fn new(data_file_dir: &str, n_client: C, max_reorg_height: u64) -> Result<Self, Error> {
+	pub fn new(data_file_dir: &str, n_client: C) -> Result<Self, Error> {
 		let db_path = path::Path::new(data_file_dir).join(DB_DIR);
 		fs::create_dir_all(&db_path).expect("Couldn't create wallet backend directory!");
 
@@ -152,7 +148,6 @@ where
 		let res = LMDBBackend {
 			db: store,
 			data_file_dir: data_file_dir.to_owned(),
-			max_reorg_height,
 			keychain: None,
 			master_checksum: Box::new(None),
 			parent_key_id: LMDBBackend::<C, K>::default_path(),
@@ -491,39 +486,19 @@ where
 		Ok(last_confirmed_height)
 	}
 
-	fn last_scanned_block<'a>(&mut self) -> Result<ScannedBlockInfo, Error> {
+	fn last_scanned_blocks<'a>(&mut self) -> Result<Vec<ScannedBlockInfo>, Error> {
 		let batch = self.db.batch()?;
-		let scanned_block_key = to_key(
-			LAST_SCANNED_BLOCK,
-			&mut LAST_SCANNED_KEY.as_bytes().to_vec(),
-		);
-		let last_scanned_block = match batch.get_ser(&scanned_block_key)? {
-			Some(b) => b,
-			None => ScannedBlockInfo {
-				height: 0,
-				hash: "".to_owned(),
-				start_pmmr_index: 0,
-				last_pmmr_index: 0,
-			},
-		};
-		Ok(last_scanned_block)
-	}
+		let mut blocks: Vec<ScannedBlockInfo> = batch
+			.iter(&[LAST_SCANNED_BLOCK])
+			.unwrap()
+			.map(|o| o.1)
+			.collect();
 
-	fn init_status<'a>(&mut self) -> Result<WalletInitStatus, Error> {
-		let batch = self.db.batch()?;
-		let init_status_key = to_key(
-			WALLET_INIT_STATUS,
-			&mut WALLET_INIT_STATUS_KEY.as_bytes().to_vec(),
-		);
-		let status = match batch.get_ser(&init_status_key)? {
-			Some(s) => s,
-			None => WalletInitStatus::InitComplete,
-		};
-		Ok(status)
-	}
+		blocks.sort_by(|a, b| b.height.cmp(&a.height));
 
-	fn get_max_reorg_height(&self) -> u64 {
-		self.max_reorg_height
+		debug!("last_scanned_blocks: {:?}", blocks);
+
+		Ok(blocks)
 	}
 }
 
@@ -642,29 +617,53 @@ where
 		Ok(())
 	}
 
-	fn save_last_scanned_block(&mut self, block_info: ScannedBlockInfo) -> Result<(), Error> {
-		let pmmr_index_key = to_key(
-			LAST_SCANNED_BLOCK,
-			&mut LAST_SCANNED_KEY.as_bytes().to_vec(),
-		);
-		self.db
-			.borrow()
-			.as_ref()
-			.unwrap()
-			.put_ser(&pmmr_index_key, &block_info)?;
-		Ok(())
-	}
+	fn save_last_scanned_blocks(
+		&mut self,
+		first_scanned_block_height: u64,
+		block_info: &Vec<ScannedBlockInfo>,
+	) -> Result<(), Error> {
+		assert!(block_info.first().unwrap().height >= block_info.last().unwrap().height);
 
-	fn save_init_status(&mut self, value: WalletInitStatus) -> Result<(), Error> {
-		let init_status_key = to_key(
-			WALLET_INIT_STATUS,
-			&mut WALLET_INIT_STATUS_KEY.as_bytes().to_vec(),
-		);
-		self.db
-			.borrow()
-			.as_ref()
+		let br = self.db.borrow();
+		let db = br.as_ref().unwrap();
+
+		// Cleaning up the head blocks...
+		let mut heights: Vec<u64> = db
+			.iter(&[LAST_SCANNED_BLOCK])
 			.unwrap()
-			.put_ser(&init_status_key, &value)?;
+			.map(|o: (Vec<u8>, ScannedBlockInfo)| o.1.height)
+			.collect();
+
+		for h in &heights {
+			if *h >= first_scanned_block_height {
+				db.delete(&u64_to_key(LAST_SCANNED_BLOCK, *h))?;
+			}
+		}
+
+		heights.retain(|h| *h < first_scanned_block_height);
+
+		// Inserting the new data
+		for bl_info in block_info {
+			let scan_block_key = u64_to_key(LAST_SCANNED_BLOCK, bl_info.height);
+			db.put_ser(&scan_block_key, bl_info)?;
+		}
+
+		heights.extend(block_info.iter().map(|b| b.height));
+		heights.sort();
+
+		let mut step = 4;
+		let mut start = heights.pop().unwrap();
+
+		while let Some(h) = heights.pop() {
+			assert!(h < start);
+			if start - h < step {
+				db.delete(&u64_to_key(LAST_SCANNED_BLOCK, h))?;
+			} else {
+				start = h;
+				step *= 2;
+			}
+		}
+
 		Ok(())
 	}
 
