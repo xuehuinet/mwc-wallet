@@ -590,21 +590,24 @@ where
 
 		for chunk in &slices {
 			if let Some(ref s) = status_send_channel {
-				let _ = s.send(StatusMessage::Scanning("Validating outputs".to_string(), (chunk_num * 100 / slices.len()) as u8));
+				let _ = s.send(StatusMessage::Scanning(
+					"Validating outputs".to_string(),
+					(chunk_num * 100 / slices.len()) as u8,
+				));
 			}
 			chunk_num += 1;
 
-			commits.extend( client.get_outputs_from_node(chunk.to_vec())? );
+			commits.extend(client.get_outputs_from_node(chunk.to_vec())?);
 		}
 
 		if let Some(ref s) = status_send_channel {
-			let _ = s.send(StatusMessage::ScanningComplete("Finish outputs validation".to_string()));
+			let _ = s.send(StatusMessage::ScanningComplete(
+				"Finish outputs validation".to_string(),
+			));
 		}
-	}
-	else {
+	} else {
 		commits = client.get_outputs_from_node(wallet_outputs_to_check)?;
 	}
-
 
 	// Updating commits data with that
 	// Key: commt, Value Heihgt
