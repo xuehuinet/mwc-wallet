@@ -300,6 +300,7 @@ where
 	}
 
 	/// get api outputs
+	/// Result value: Commit, Height, MMR
 	fn get_outputs_from_node(
 		&mut self,
 		m: WalletProxyMessage,
@@ -561,6 +562,7 @@ impl NodeClient for LocalWalletClient {
 	}
 
 	/// Retrieve outputs from node
+	/// Result value: Commit, Height, MMR
 	fn get_outputs_from_node(
 		&self,
 		wallet_outputs: Vec<pedersen::Commitment>,

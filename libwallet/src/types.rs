@@ -381,6 +381,7 @@ pub trait NodeClient: Send + Sync + Clone {
 
 	/// retrieve a list of outputs from the specified grin node
 	/// need "by_height" and "by_id" variants
+	/// Result value: Commit, Height, MMR
 	fn get_outputs_from_node(
 		&self,
 		wallet_outputs: Vec<pedersen::Commitment>,

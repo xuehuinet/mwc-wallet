@@ -562,6 +562,49 @@ where
 		}
 	}
 
+	// Validate all 'active output' - Unspend and Locked if they still on the chain
+	// Spent and Unconfirmed news should come from the updates
+	let wallet_outputs_to_check: Vec<pedersen::Commitment> = outputs
+		.values()
+		.filter(|out| out.output.is_spendable() && !out.commit.is_empty())
+		.map(
+			|out|  // Parsing Commtment string into the binary, how API needed
+			pedersen::Commitment::from_vec(
+				util::from_hex(out.output.commit.clone().unwrap()).unwrap()),
+		)
+		.collect();
+
+	let commits = client.get_outputs_from_node(wallet_outputs_to_check)?;
+
+	// Updating commits data with that
+	// Key: commt, Value Heihgt
+	let node_commits: HashMap<String, u64> = commits
+		.values()
+		.map(|(commit, height, _mmr)| (commit.clone(), height.clone()))
+		.collect();
+
+	for out in outputs
+		.values_mut()
+		.filter(|out| out.output.is_spendable() && out.output.commit.is_some())
+	{
+		if let Some(height) = node_commits.get(&out.commit) {
+			if out.output.height != *height {
+				out.output.height = *height;
+				out.updated = true;
+			}
+		} else {
+			// Commit is gone. Probably it is spent
+			// Initial state 'Unspent' is possible if user playing with cancellations. So just ignore it
+			// Next workflow will take case about the transaction state as well as Spent/Unconfirmed uncertainty
+			out.output.status = match &out.output.status {
+				OutputStatus::Locked => OutputStatus::Spent,
+				OutputStatus::Unspent => OutputStatus::Unconfirmed,
+				a => {debug_assert!(false); a.clone()},
+			};
+			out.updated = true;
+		}
+	}
+
 	Ok((
 		outputs,
 		chain_outs,
@@ -601,9 +644,9 @@ where
 			status_send_channel,
 		)?;
 
-	/*	// Printing values for debug...
+	/*		// Printing values for debug...
 	{
-		println!("Chain range: Heights: {} to {}  PMMRs: {} to {}", start_height, end_height, pmmr_range.0, pmmr_range.1 );
+		println!("Chain range: Heights: {} to {}", start_height, tip_height );
 		// Dump chain outputs...
 		for ch_out in &chain_outs {
 			println!("Chain output: {:?}", ch_out );
@@ -639,6 +682,7 @@ where
 
 	// -------------------------------------------------------
 	// Sync up coinbase outputs and transactions
+	// Note. Conibase also legacy transactions without uuid
 	validate_coinbase(
 		&mut outputs,
 		&mut transactions_coinbased,
@@ -648,7 +692,7 @@ where
 	// Processing slate based transactions. Just need to update 'confirmed flag' and height
 	// We don't want to cancel the transactions. Let's user do that.
 	// We can uncancel transactions if it is confirmed
-	validate_slate_transactions(&mut transactions_slates, status_send_channel);
+	validate_slate_transactions(&mut transactions_slates, &outputs, status_send_channel);
 
 	// Checking for output to transaction mapping. We don't want to see active outputs without trsansaction or with cancelled transactions
 	// we might unCancel transaction if output was found but all mapped transactions are cancelled (user just a cheater)
@@ -728,7 +772,7 @@ where
 		batch.commit()?;
 	}
 
-	/*		{
+	/*	{
 		// Dump chain outputs...
 		for ch_out in &chain_outs {
 			println!("End Chain output: {:?}", ch_out );
@@ -924,11 +968,23 @@ fn validate_coinbase(
 			.map(|o| o.output.height),
 	);
 
-	for w_tx in transactions_coinbased.values_mut() {
-		if !coinbased_heights.contains(&w_tx.tx_log.output_height) {
-			if w_tx.tx_log.confirmed {
-				w_tx.tx_log.confirmed = false;
-				w_tx.updated = true;
+	for tx_info in transactions_coinbased.values_mut() {
+		if tx_info.tx_log.tx_type == TxLogEntryType::ConfirmedCoinbase {
+			if !coinbased_heights.contains(&tx_info.tx_log.output_height) {
+				if tx_info.tx_log.confirmed {
+					tx_info.tx_log.confirmed = false;
+					tx_info.updated = true;
+				}
+			}
+		} else {
+			update_non_kernel_transaction(tx_info, outputs);
+		}
+
+		// Update confirmation flag fr the cancelled.
+		if tx_info.tx_log.is_cancelled() {
+			if tx_info.tx_log.confirmed {
+				tx_info.tx_log.confirmed = false;
+				tx_info.updated = true;
 			}
 		}
 	}
@@ -939,6 +995,7 @@ fn validate_coinbase(
 // We can uncancel transactions if it is confirmed
 fn validate_slate_transactions(
 	transactions_slates: &mut HashMap<String, WalletTxInfo>,
+	outputs: &HashMap<String, WalletOutputInfo>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) {
 	for tx_info in transactions_slates.values_mut() {
@@ -978,6 +1035,8 @@ fn validate_slate_transactions(
 				}
 			}
 		}
+
+		update_non_kernel_transaction(tx_info, outputs);
 
 		// Update confirmation flag fr the cancelled.
 		if tx_info.tx_log.is_cancelled() {
@@ -1340,6 +1399,46 @@ where
 	batch.commit()?;
 
 	Ok(())
+}
+
+fn update_non_kernel_transaction(
+	tx_info: &mut WalletTxInfo,
+	outputs: &HashMap<String, WalletOutputInfo>,
+) {
+	// Handle legacy broken data case. Transaction might not have any kernel. Let's out outputs to upadte the state
+	if tx_info.tx_log.kernel_excess.is_none() {
+		// Rule is very simple. If outputs are exist, we will map them and update transaction status by that
+		let mut outputs_state: HashSet<OutputStatus> = HashSet::new();
+		for commit in &tx_info.output_commit {
+			if let Some(out) = outputs.get(commit) {
+				outputs_state.insert(out.output.status.clone());
+			}
+		}
+
+		let mut input_state: HashSet<OutputStatus> = HashSet::new();
+		for commit in &tx_info.input_commit {
+			if let Some(out) = outputs.get(commit) {
+				input_state.insert(out.output.status.clone());
+			}
+		}
+
+		if !outputs_state.is_empty() && !outputs_state.contains(&OutputStatus::Unconfirmed) {
+			if tx_info.tx_log.is_cancelled() {
+				tx_info.tx_log.uncancel();
+				tx_info.updated = true;
+			}
+			if !tx_info.tx_log.confirmed {
+				tx_info.tx_log.confirmed = true;
+				tx_info.tx_log.update_confirmation_ts();
+				tx_info.updated = true;
+			}
+		} else if outputs_state.contains(&OutputStatus::Unconfirmed) {
+			if tx_info.tx_log.confirmed {
+				tx_info.tx_log.confirmed = false;
+				tx_info.updated = true;
+			}
+		}
+	}
 }
 
 // restore labels, account paths and child derivation indices

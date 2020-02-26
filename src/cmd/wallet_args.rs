@@ -1083,7 +1083,9 @@ where
 			let a = arg_parse!(parse_check_args(&args));
 			command::scan(wallet, km, a)
 		}
-		("dump-wallet-data", Some(_)) => command::dump_wallet_data(wallet, km),
+		("dump-wallet-data", Some(args)) => {
+			command::dump_wallet_data(wallet, km, args.value_of("file").map(|s| String::from(s)))
+		}
 		_ => {
 			let msg = format!("Unknown wallet command, use 'mwc help wallet' for details");
 			return Err(ErrorKind::ArgumentError(msg).into());
