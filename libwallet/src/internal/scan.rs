@@ -574,7 +574,37 @@ where
 		)
 		.collect();
 
-	let commits = client.get_outputs_from_node(wallet_outputs_to_check)?;
+	// get_outputs_from_nodefor large number will take a time. Chunk size is 200 ids.
+
+	let mut commits: HashMap<pedersen::Commitment, (String, u64, u64)> = HashMap::new();
+
+	if wallet_outputs_to_check.len() > 100 {
+		if let Some(ref s) = status_send_channel {
+			let _ = s.send(StatusMessage::Warning(format!("You have {} active outputs, it is a large number, validation will take time. Please wait...", wallet_outputs_to_check.len()) ));
+		}
+
+		// processing them by groups becuase we want to shouw the progress
+		let slices: Vec<&[pedersen::Commitment]> = wallet_outputs_to_check.chunks(100).collect();
+
+		let mut chunk_num = 0;
+
+		for chunk in &slices {
+			if let Some(ref s) = status_send_channel {
+				let _ = s.send(StatusMessage::Scanning("Validating outputs".to_string(), (chunk_num * 100 / slices.len()) as u8));
+			}
+			chunk_num += 1;
+
+			commits.extend( client.get_outputs_from_node(chunk.to_vec())? );
+		}
+
+		if let Some(ref s) = status_send_channel {
+			let _ = s.send(StatusMessage::ScanningComplete("Finish outputs validation".to_string()));
+		}
+	}
+	else {
+		commits = client.get_outputs_from_node(wallet_outputs_to_check)?;
+	}
+
 
 	// Updating commits data with that
 	// Key: commt, Value Heihgt
@@ -599,7 +629,10 @@ where
 			out.output.status = match &out.output.status {
 				OutputStatus::Locked => OutputStatus::Spent,
 				OutputStatus::Unspent => OutputStatus::Unconfirmed,
-				a => {debug_assert!(false); a.clone()},
+				a => {
+					debug_assert!(false);
+					a.clone()
+				}
 			};
 			out.updated = true;
 		}
