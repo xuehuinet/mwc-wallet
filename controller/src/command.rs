@@ -948,6 +948,7 @@ where
 pub fn dump_wallet_data<L, C, K>(
 	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
+	file_name: Option<String>,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'static, C, K> + 'static,
@@ -955,7 +956,7 @@ where
 	K: keychain::Keychain + 'static,
 {
 	controller::owner_single_use(wallet.clone(), keychain_mask, |api, _m| {
-		let result = api.dump_wallet_data();
+		let result = api.dump_wallet_data(file_name);
 		match result {
 			Ok(_) => {
 				warn!("Data dump is finished, please check the logs for results",);

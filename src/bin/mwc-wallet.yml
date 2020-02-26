@@ -400,3 +400,9 @@ subcommands:
             takes_value: true
   - dump-wallet-data:
       about: Print wallet internal data (transactions, outputs)
+      args:
+        - file:
+            help: write dump to the file instead of console
+            short: f
+            long: file
+            takes_value: true
