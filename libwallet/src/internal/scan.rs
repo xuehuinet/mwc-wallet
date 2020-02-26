@@ -31,9 +31,9 @@ use grin_core::core::Transaction;
 use grin_wallet_util::grin_util as util;
 use std::cmp;
 use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use uuid::Uuid;
 
 /// Utility struct for return values from below
 #[derive(Debug, Clone)]
@@ -338,13 +338,10 @@ struct WalletTxInfo {
 }
 
 impl WalletTxInfo {
-	pub fn new(tx_log: TxLogEntry) -> WalletTxInfo {
+	pub fn new(tx_uuid: String, tx_log: TxLogEntry) -> WalletTxInfo {
 		WalletTxInfo {
 			updated: false,
-			tx_uuid: match tx_log.tx_slate_id {
-				Some(uuid) => uuid.to_string(),
-				None => String::new(),
-			},
+			tx_uuid,
 			input_commit: tx_log
 				.input_commits
 				.iter()
@@ -412,7 +409,6 @@ fn get_wallet_and_chain_data<'a, L, C, K>(
 		HashMap<String, WalletOutputInfo>, // Outputs. Key: Commit
 		Vec<OutputResult>,                 // Chain outputs
 		HashMap<String, WalletTxInfo>,     // Slate based Transaction. Key: tx uuid
-		HashMap<u64, WalletTxInfo>,        // Coin Based Transaction.  Key: height
 	),
 	Error,
 >
@@ -475,49 +471,68 @@ where
 
 	// Wallet's transactions with extended info
 	// Key: transaction uuid
-	let mut transactions_slate: HashMap<String, WalletTxInfo> = HashMap::new();
+	let mut transactions: HashMap<String, WalletTxInfo> = HashMap::new();
 	let mut transactions_id2uuid: HashMap<u32, String> = HashMap::new();
 
-	let mut transactions_coinbase: HashMap<u64, WalletTxInfo> = HashMap::new();
+	let mut non_uuid_tx_counter: u32 = 0;
+	let temp_uuid_data = [0, 0, 0, 0, 0, 0, 0, 0]; // uuid expected 8 bytes
 
 	// Collecting Transactions from the wallet. UUID need to be known, otherwise
 	// transaction is non complete and can be ignored.
 	for tx in w.tx_log_iter() {
-		match tx.tx_slate_id {
-			Some(tx_slate_id) => {
-				// Slate base transaction
-				let uuid_str = tx_slate_id.to_string();
-
-				let mut wtx = WalletTxInfo::new(tx.clone());
-
-				if let Ok(transaction) = w.get_stored_tx_by_uuid(&uuid_str) {
-					wtx.add_transaction(transaction);
-				};
-				transactions_slate.insert(uuid_str.clone(), wtx);
-				transactions_id2uuid.insert(tx.id, uuid_str);
-			}
+		// For transactions without uuid generating temp uuid just for mapping
+		let uuid_str = match tx.tx_slate_id {
+			Some(tx_slate_id) => tx_slate_id.to_string(),
 			None => {
-				// Coin based transactions
-				transactions_coinbase.insert(tx.output_height, WalletTxInfo::new(tx.clone()));
+				non_uuid_tx_counter += 1;
+				Uuid::from_fields(non_uuid_tx_counter, 0, 0, &temp_uuid_data)
+					.unwrap()
+					.to_string()
 			}
-		}
+		};
+
+		let mut wtx = WalletTxInfo::new(uuid_str, tx.clone());
+
+		if let Ok(transaction) = w.get_stored_tx_by_uuid(&wtx.tx_uuid) {
+			wtx.add_transaction(transaction);
+		};
+		transactions_id2uuid.insert(tx.id, wtx.tx_uuid.clone());
+		transactions.insert(wtx.tx_uuid.clone(), wtx);
 	}
+
+	// Legacy restored transactions/Coinbases might not have any mapping. We can map them by height.
+	// Better than nothing
+	let height_to_orphan_txuuid: HashMap<u64, String> = transactions
+		.values()
+		.filter(|t| {
+			t.output_commit.is_empty() && t.input_commit.is_empty() && t.tx_log.output_height > 0
+		})
+		.map(|t| (t.tx_log.output_height, t.tx_uuid.clone()))
+		.collect();
 
 	// Apply Output to transaction mapping from Outputs
 	// Normally Outputs suppose to have transaction Id.
 	for w_out in outputs.values_mut() {
 		if let Some(tx_id) = w_out.output.tx_log_entry {
 			if let Some(tx_uuid) = transactions_id2uuid.get_mut(&tx_id) {
-				transactions_slate
+				transactions
 					.get_mut(tx_uuid)
 					.unwrap()
 					.add_output(&w_out.commit);
 			}
 		}
+
+		// Covering legacy coinbase and legacy recovery
+		if let Some(tx_uuid) = height_to_orphan_txuuid.get(&w_out.output.height) {
+			transactions
+				.get_mut(tx_uuid)
+				.unwrap()
+				.add_output(&w_out.commit);
+		}
 	}
 
 	// Propagate tx to output mapping to outputs
-	for tx in transactions_slate.values() {
+	for tx in transactions.values() {
 		// updated output vs Transactions mapping
 		for com in &tx.input_commit {
 			if let Some(out) = outputs.get_mut(com) {
@@ -533,7 +548,7 @@ where
 
 	// Validate kernels from transaction. Kernel are a source of truth
 	let mut client = w.w2n_client().clone();
-	for tx in transactions_slate.values_mut() {
+	for tx in transactions.values_mut() {
 		if !(tx.tx_log.confirmed || tx.tx_log.is_cancelled())
 			|| tx.tx_log.output_height >= start_height
 		{
@@ -641,12 +656,7 @@ where
 		}
 	}
 
-	Ok((
-		outputs,
-		chain_outs,
-		transactions_slate,
-		transactions_coinbase,
-	))
+	Ok((outputs, chain_outs, transactions))
 }
 
 /// Check / repair wallet contents by scanning against chain
@@ -671,16 +681,15 @@ where
 	}
 
 	// Collect the data form the chain and from the wallet
-	let (mut outputs, chain_outs, mut transactions_slates, mut transactions_coinbased) =
-		get_wallet_and_chain_data(
-			wallet_inst.clone(),
-			keychain_mask.clone(),
-			start_height,
-			tip_height,
-			status_send_channel,
-		)?;
+	let (mut outputs, chain_outs, mut transactions) = get_wallet_and_chain_data(
+		wallet_inst.clone(),
+		keychain_mask.clone(),
+		start_height,
+		tip_height,
+		status_send_channel,
+	)?;
 
-	/*		// Printing values for debug...
+	/*	// Printing values for debug...
 	{
 		println!("Chain range: Heights: {} to {}", start_height, tip_height );
 		// Dump chain outputs...
@@ -693,13 +702,8 @@ where
 			println!("{}  =>  {:?}", o.0, o.1 );
 		}
 
-		println!("transactions_slates len is {}", transactions_slates.len());
-		for t in &transactions_slates {
-			println!("{}  =>  {:?}", t.0, t.1 );
-		}
-
-		println!("transactions_coinbased len is {}", transactions_coinbased.len());
-		for t in &transactions_coinbased {
+		println!("transactions len is {}", transactions.len());
+		for t in &transactions {
 			println!("{}  =>  {:?}", t.0, t.1 );
 		}
 	}*/
@@ -716,39 +720,30 @@ where
 		&mut found_parents,
 	)?;
 
-	// -------------------------------------------------------
-	// Sync up coinbase outputs and transactions
-	// Note. Conibase also legacy transactions without uuid
-	validate_coinbase(
-		&mut outputs,
-		&mut transactions_coinbased,
-		status_send_channel,
-	);
-
 	// Processing slate based transactions. Just need to update 'confirmed flag' and height
 	// We don't want to cancel the transactions. Let's user do that.
 	// We can uncancel transactions if it is confirmed
-	validate_slate_transactions(&mut transactions_slates, &outputs, status_send_channel);
+	validate_transactions(&mut transactions, &outputs, status_send_channel);
 
 	// Checking for output to transaction mapping. We don't want to see active outputs without trsansaction or with cancelled transactions
 	// we might unCancel transaction if output was found but all mapped transactions are cancelled (user just a cheater)
-	validate_outputs_ownership(&mut outputs, &mut transactions_slates, status_send_channel);
+	validate_outputs_ownership(&mut outputs, &mut transactions, status_send_channel);
 
 	// Delete any unconfirmed outputs (requested by user), unlock any locked outputs and delete (cancel) associated transactions
 	if del_unconfirmed {
-		delete_unconfirmed(&mut outputs, &mut transactions_slates, status_send_channel);
+		delete_unconfirmed(&mut outputs, &mut transactions, status_send_channel);
 	}
 
 	// Let's check the consistency. Report is we found any discrepency, so users can do the check or restore.
 	{
-		validate_consistancy(&mut outputs, &mut transactions_slates, status_send_channel);
+		validate_consistancy(&mut outputs, &mut transactions, status_send_channel);
 	}
 
 	// Here we are done with all state changes of Outputs and transactions. Now we need to save them at the DB
 	// Note, unknown new outputs are not here because we handle them in the beginning by 'restore'.
 
 	// Cancel any transactions with an expired TTL
-	for tx in transactions_slates.values() {
+	for tx in transactions.values() {
 		if let Some(h) = tx.tx_log.ttl_cutoff_height {
 			if tip_height >= h {
 				wallet_lock!(wallet_inst, w);
@@ -779,8 +774,7 @@ where
 			wallet_inst.clone(),
 			keychain_mask.clone(),
 			&mut outputs,
-			&transactions_slates,
-			&transactions_coinbased,
+			&transactions,
 			status_send_channel,
 		)?;
 	}
@@ -819,15 +813,11 @@ where
 			println!("{}  =>  {:?}", o.0, o.1 );
 		}
 
-		println!("End transactions_slates len is {}", transactions_slates.len());
-		for t in &transactions_slates {
+		println!("End transactions len is {}", transactions.len());
+		for t in &transactions {
 			println!("{}  =>  {:?}", t.0, t.1 );
 		}
 
-		println!("End transactions_coinbased len is {}", transactions_coinbased.len());
-		for t in &transactions_coinbased {
-			println!("{}  =>  {:?}", t.0, t.1 );
-		}
 		println!("------------------ scan END -----------------------------" );
 		// Dump the same from the DB.
 		if let Some(ref s) = status_send_channel {
@@ -963,78 +953,15 @@ where
 	Ok(())
 }
 
-// validate coninbase outputs/transactions
-fn validate_coinbase(
-	outputs: &mut HashMap<String, WalletOutputInfo>,
-	transactions_coinbased: &mut HashMap<u64, WalletTxInfo>,
-	status_send_channel: &Option<Sender<StatusMessage>>,
-) {
-	// Process Coin based not found at the chain but expected outputs.
-	for w_out in outputs.values_mut() {
-		// Checking if output in this sync renge period if
-		if w_out.output.is_coinbase {
-			// Updating coinbase transaction
-			if let Some(w_tx) = transactions_coinbased.get_mut(&w_out.output.height) {
-				let confirmed = w_out.output.status != OutputStatus::Unconfirmed;
-				if w_tx.tx_log.confirmed != confirmed {
-					if w_tx.tx_log.confirmed {
-						if let Some(ref s) = status_send_channel {
-							let _ = s.send(StatusMessage::Warning(format!(
-								"Marked coin base transaction at height {} is not confirmed.",
-								w_out.output.height
-							)));
-						}
-					}
-					w_tx.tx_log.confirmed = confirmed;
-					if confirmed {
-						w_tx.tx_log.update_confirmation_ts();
-					}
-					w_tx.updated = true;
-				}
-			}
-		}
-	}
-
-	// Let's clean output based transactions that are orphans
-	// Just mark them as non confirmed,
-	let coinbased_heights: HashSet<u64> = HashSet::from_iter(
-		outputs
-			.values()
-			.filter(|o| o.output.is_coinbase)
-			.map(|o| o.output.height),
-	);
-
-	for tx_info in transactions_coinbased.values_mut() {
-		if tx_info.tx_log.tx_type == TxLogEntryType::ConfirmedCoinbase {
-			if !coinbased_heights.contains(&tx_info.tx_log.output_height) {
-				if tx_info.tx_log.confirmed {
-					tx_info.tx_log.confirmed = false;
-					tx_info.updated = true;
-				}
-			}
-		} else {
-			update_non_kernel_transaction(tx_info, outputs);
-		}
-
-		// Update confirmation flag fr the cancelled.
-		if tx_info.tx_log.is_cancelled() {
-			if tx_info.tx_log.confirmed {
-				tx_info.tx_log.confirmed = false;
-				tx_info.updated = true;
-			}
-		}
-	}
-}
-
 // Processing slate based transactions. Just need to update 'confirmed flag' and height
 // We don't want to cancel the transactions. Let's user do that.
 // We can uncancel transactions if it is confirmed
-fn validate_slate_transactions(
-	transactions_slates: &mut HashMap<String, WalletTxInfo>,
+fn validate_transactions(
+	transactions: &mut HashMap<String, WalletTxInfo>,
 	outputs: &HashMap<String, WalletOutputInfo>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) {
-	for tx_info in transactions_slates.values_mut() {
+	for tx_info in transactions.values_mut() {
 		// Checking the kernel - the source of truth for transactions
 		if tx_info.kernel_validation.is_some() {
 			if tx_info.kernel_validation.clone().unwrap() {
@@ -1088,7 +1015,7 @@ fn validate_slate_transactions(
 // we might unCancel transaction if output was found but all mapped transactions are cancelled (user just a cheater)
 fn validate_outputs_ownership(
 	outputs: &mut HashMap<String, WalletOutputInfo>,
-	transactions_slates: &mut HashMap<String, WalletTxInfo>,
+	transactions: &mut HashMap<String, WalletTxInfo>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) {
 	for w_out in outputs.values_mut() {
@@ -1096,26 +1023,14 @@ fn validate_outputs_ownership(
 		let in_cancelled = w_out
 			.tx_input_uuid
 			.iter()
-			.filter(|tx_uuid| {
-				transactions_slates
-					.get(*tx_uuid)
-					.unwrap()
-					.tx_log
-					.is_cancelled()
-			})
+			.filter(|tx_uuid| transactions.get(*tx_uuid).unwrap().tx_log.is_cancelled())
 			.count();
 		let in_active = w_out.tx_input_uuid.len() - in_cancelled;
 
 		let out_cancelled = w_out
 			.tx_output_uuid
 			.iter()
-			.filter(|tx_uuid| {
-				transactions_slates
-					.get(*tx_uuid)
-					.unwrap()
-					.tx_log
-					.is_cancelled()
-			})
+			.filter(|tx_uuid| transactions.get(*tx_uuid).unwrap().tx_log.is_cancelled())
 			.count();
 		let out_active = w_out.tx_output_uuid.len() - out_cancelled;
 
@@ -1126,7 +1041,7 @@ fn validate_outputs_ownership(
 			report_transaction_collision(
 				status_send_channel,
 				&w_out.tx_output_uuid,
-				&transactions_slates,
+				&transactions,
 				false,
 			);
 		}
@@ -1135,7 +1050,7 @@ fn validate_outputs_ownership(
 			report_transaction_collision(
 				status_send_channel,
 				&w_out.tx_input_uuid,
-				&transactions_slates,
+				&transactions,
 				true,
 			);
 		}
@@ -1157,7 +1072,7 @@ fn validate_outputs_ownership(
 					recover_first_cancelled(
 						status_send_channel,
 						&w_out.tx_input_uuid,
-						transactions_slates,
+						transactions,
 					);
 				}
 			}
@@ -1167,14 +1082,14 @@ fn validate_outputs_ownership(
 					recover_first_cancelled(
 						status_send_channel,
 						&w_out.tx_output_uuid,
-						transactions_slates,
+						transactions,
 					);
 				}
 				if in_active == 0 && in_cancelled > 0 {
 					recover_first_cancelled(
 						status_send_channel,
 						&w_out.tx_input_uuid,
-						transactions_slates,
+						transactions,
 					);
 				}
 			}
@@ -1198,7 +1113,7 @@ fn validate_outputs_ownership(
 					recover_first_cancelled(
 						status_send_channel,
 						&w_out.tx_output_uuid,
-						transactions_slates,
+						transactions,
 					);
 				}
 			}
@@ -1209,7 +1124,7 @@ fn validate_outputs_ownership(
 // Delete any unconfirmed outputs (requested by user), unlock any locked outputs and delete (cancel) associated transactions
 fn delete_unconfirmed(
 	outputs: &mut HashMap<String, WalletOutputInfo>,
-	transactions_slates: &mut HashMap<String, WalletTxInfo>,
+	transactions: &mut HashMap<String, WalletTxInfo>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) {
 	let mut transaction2cancel: HashSet<String> = HashSet::new();
@@ -1239,7 +1154,7 @@ fn delete_unconfirmed(
 	}
 
 	for tx_uuid in &transaction2cancel {
-		if let Some(tx) = transactions_slates.get_mut(tx_uuid) {
+		if let Some(tx) = transactions.get_mut(tx_uuid) {
 			if !tx.tx_log.is_cancelled() {
 				// let's cancell transaction
 				match tx.tx_log.tx_type {
@@ -1247,6 +1162,9 @@ fn delete_unconfirmed(
 						tx.tx_log.tx_type = TxLogEntryType::TxSentCancelled;
 					}
 					TxLogEntryType::TxReceived => {
+						tx.tx_log.tx_type = TxLogEntryType::TxReceivedCancelled;
+					}
+					TxLogEntryType::ConfirmedCoinbase => {
 						tx.tx_log.tx_type = TxLogEntryType::TxReceivedCancelled;
 					}
 					_ => assert!(false), // Not expected, must be logical issue
@@ -1267,13 +1185,13 @@ fn delete_unconfirmed(
 // Here not much what we can do because full node scan or restore from the seed is required.
 fn validate_consistancy(
 	outputs: &mut HashMap<String, WalletOutputInfo>,
-	transactions_slates: &mut HashMap<String, WalletTxInfo>,
+	transactions: &mut HashMap<String, WalletTxInfo>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) {
 	let mut collision_transactions: HashSet<String> = HashSet::new();
 	let mut collision_commits: HashSet<String> = HashSet::new();
 
-	for tx_info in transactions_slates.values_mut() {
+	for tx_info in transactions.values_mut() {
 		if tx_info.tx_log.is_cancelled() {
 			continue;
 		}
@@ -1344,8 +1262,7 @@ fn store_transactions_outputs<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
 	outputs: &mut HashMap<String, WalletOutputInfo>,
-	transactions_slates: &HashMap<String, WalletTxInfo>,
-	transactions_coinbased: &HashMap<u64, WalletTxInfo>,
+	transactions: &HashMap<String, WalletTxInfo>,
 	status_send_channel: &Option<Sender<StatusMessage>>,
 ) -> Result<(), Error>
 where
@@ -1357,14 +1274,7 @@ where
 	let mut batch = w.batch(keychain_mask)?;
 
 	// Slate based Transacitons
-	for tx in transactions_slates.values() {
-		if tx.updated {
-			batch.save_tx_log_entry(tx.tx_log.clone(), &tx.tx_log.parent_key_id)?;
-		}
-	}
-
-	// Coin Based transaction.
-	for tx in transactions_coinbased.values() {
+	for tx in transactions.values() {
 		if tx.updated {
 			batch.save_tx_log_entry(tx.tx_log.clone(), &tx.tx_log.parent_key_id)?;
 		}
@@ -1392,7 +1302,7 @@ where
 	// It is a coinbase transactions. Let's create coinbase transactions if they don't exist yet
 	// See what updater::apply_api_outputs does
 	for w_out in outputs.values_mut() {
-		if w_out.output.is_coinbase && !transactions_coinbased.contains_key(&w_out.output.height) {
+		if w_out.output.is_coinbase && w_out.tx_output_uuid.is_empty() {
 			let parent_key_id = &w_out.output.root_key_id; // it is Account Key ID.
 
 			let log_id = batch.next_tx_log_id(parent_key_id)?;
