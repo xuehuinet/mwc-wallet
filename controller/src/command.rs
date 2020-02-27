@@ -142,7 +142,7 @@ where
 		),
 		"keybase" => KeybaseAllChannels::new()?.listen(
 			config.clone(),
-			g_args.password.clone().unwrap(),
+			g_args.password.clone().unwrap_or(ZeroingString::from("")),
 			&g_args.account,
 			g_args.node_api_secret.clone(),
 		),
