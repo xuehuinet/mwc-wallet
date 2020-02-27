@@ -481,7 +481,7 @@ where
 	// transaction is non complete and can be ignored.
 	for tx in w.tx_log_iter() {
 		// For transactions without uuid generating temp uuid just for mapping
-		let uuid_str = match tx.tx_slate_id {
+		let mut uuid_str = match tx.tx_slate_id {
 			Some(tx_slate_id) => tx_slate_id.to_string(),
 			None => {
 				non_uuid_tx_counter += 1;
@@ -490,6 +490,9 @@ where
 					.to_string()
 			}
 		};
+
+		uuid_str += "/";
+		uuid_str += &tx.parent_key_id.to_hex();
 
 		let mut wtx = WalletTxInfo::new(uuid_str, tx.clone());
 
@@ -758,7 +761,8 @@ where
 						if let Some(ref s) = status_send_channel {
 							let _ = s.send(StatusMessage::Warning(format!(
 								"Unable to cancel TTL expired transaction {} because of error: {}",
-								tx.tx_uuid, e
+								tx.tx_uuid.split('/').next().unwrap(),
+								e
 							)));
 						}
 					}
@@ -973,7 +977,7 @@ fn validate_transactions(
 					if let Some(ref s) = status_send_channel {
 						let _ = s.send(StatusMessage::Info(format!(
 							"Info: Changing transaction {} from Cancel to active",
-							tx_info.tx_uuid
+							tx_info.tx_uuid.split('/').next().unwrap()
 						)));
 					}
 				}
@@ -991,7 +995,7 @@ fn validate_transactions(
 						if let Some(ref s) = status_send_channel {
 							let _ = s.send(StatusMessage::Info(format!(
 								"Info: Changing transaction {} confirmation state to confirmed",
-								tx_info.tx_uuid
+								tx_info.tx_uuid.split('/').next().unwrap()
 							)));
 						}
 					}
@@ -1173,7 +1177,7 @@ fn delete_unconfirmed(
 				if let Some(ref s) = status_send_channel {
 					let _ = s.send(StatusMessage::Warning(format!(
 						"Cancelling transaction {}",
-						tx_uuid
+						tx_uuid.split('/').next().unwrap()
 					)));
 				}
 			}
@@ -1483,7 +1487,9 @@ fn recover_first_cancelled(
 			if let Some(ref s) = status_send_channel {
 				let _ = s.send(StatusMessage::Info(format!(
 					"Changing transaction {} state from {:?} to {:?}",
-					wtx.tx_uuid, prev_tx_state, wtx.tx_log.tx_type
+					wtx.tx_uuid.split('/').next().unwrap(),
+					prev_tx_state,
+					wtx.tx_log.tx_type
 				)));
 			}
 
