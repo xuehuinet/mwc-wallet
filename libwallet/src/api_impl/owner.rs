@@ -661,6 +661,7 @@ where
 		start_height,
 		tip_height,
 		status_send_channel,
+		true,
 	)?;
 
 	wallet_lock!(wallet_inst, w);
@@ -717,7 +718,7 @@ fn write_info(
 			let _ = write!(file, "{}\n", message);
 		}
 		None => {
-			let _ = status_send_channel.send(StatusMessage::Info(message));
+			let _ = status_send_channel.send(StatusMessage::Info(true, message));
 		}
 	};
 }
@@ -779,10 +780,10 @@ where
 	}
 
 	if let Some(f) = fn_copy {
-		let _ = status_send_channel.send(StatusMessage::Info(format!(
-			"Wallet dump is stored at  {}",
-			f
-		)));
+		let _ = status_send_channel.send(StatusMessage::Info(
+			true,
+			format!("Wallet dump is stored at  {}", f),
+		));
 	}
 
 	Ok(())
@@ -864,11 +865,8 @@ where
 		return Ok(true);
 	}
 
-	let mut status_send_channel = status_send_channel.clone();
-	if tip_height > 1000 && tip_height.saturating_sub(last_scanned_block.height) < 20 {
-		// let's not bother user with that. Really not a big deal, waiting time is short.
-		status_send_channel = None;
-	}
+	let show_progress =
+		tip_height < 1000 || tip_height.saturating_sub(last_scanned_block.height) > 20;
 
 	if last_scanned_block.height == 0 {
 		let msg = format!("This wallet has not been scanned against the current chain. Beginning full scan... (this first scan may take a while, but subsequent scans will be much quicker)");
@@ -900,7 +898,8 @@ where
 		false,
 		last_scanned_block.height,
 		tip_height,
-		&status_send_channel,
+		status_send_channel,
+		show_progress,
 	)?;
 
 	// Checking if tip was changed. In this case we need to retry. Retry will be handles naturally optimal
