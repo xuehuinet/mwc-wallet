@@ -481,7 +481,7 @@ where
 	// transaction is non complete and can be ignored.
 	for tx in w.tx_log_iter() {
 		// For transactions without uuid generating temp uuid just for mapping
-		let mut uuid_str = match tx.tx_slate_id {
+		let uuid_str = match tx.tx_slate_id {
 			Some(tx_slate_id) => tx_slate_id.to_string(),
 			None => {
 				non_uuid_tx_counter += 1;
@@ -491,8 +491,9 @@ where
 			}
 		};
 
-		uuid_str += "/";
-		uuid_str += &tx.parent_key_id.to_hex();
+		// uuid must include tx uuid, id for transaction to handle self send with same account,
+		//    parent_key_id  to handle senf send to different accounts
+		let uuid_str = format!("{}/{}/{}", uuid_str, tx.id, tx.parent_key_id.to_hex());
 
 		let mut wtx = WalletTxInfo::new(uuid_str, tx.clone());
 
