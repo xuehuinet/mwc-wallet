@@ -39,15 +39,13 @@ steps:
     displayName: Github release
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/'), eq(variables['CI_JOB'], 'release' ))
     inputs:
-      gitHubConnection: 'github-release'
+      gitHubConnection: 'github.com_bayk'
       repositoryName: 'mwcproject/mwc-wallet'
       action: 'edit'
-      target: '$(build.sourceVersion)'
-      tagSource: 'manual'
+      tagSource: "Git tag"
       tag: '$(build.my_tag)'
       assets: |
         $(Build.ArtifactStagingDirectory)\mwc-wallet-$(build.my_tag)-$(build.platform).zip
         $(Build.ArtifactStagingDirectory)\mwc-wallet-$(build.my_tag)-$(build.platform)-sha256sum.txt
-      title: '$(build.my_tag)'
       assetUploadMode: 'replace'
       addChangeLog: true
