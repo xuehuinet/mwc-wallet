@@ -36,21 +36,18 @@ const MESSAGE_QUEUE_MAX_LEN: usize = 10_000;
 pub enum StatusMessage {
 	/// Wallet is performing a regular update, matching the UTXO set against
 	/// current wallet outputs
-	UpdatingOutputs(String),
-	/// Wallet is updating transactions, potentially retrieving transactions
-	/// by kernel if needed
-	UpdatingTransactions(String),
+	UpdatingOutputs(bool, String),
 	/// Warning that the wallet is about to perform a full UTXO scan
 	FullScanWarn(String),
 	/// Status and percentage complete messages returned during the
 	/// scanning process
-	Scanning(String, u8),
+	Scanning(bool, String, u8),
 	/// UTXO scanning is complete
-	ScanningComplete(String),
+	ScanningComplete(bool, String),
 	/// Warning of issues that may have occured during an update
 	Warning(String),
 	/// Generic info message
-	Info(String),
+	Info(bool, String),
 }
 
 /// Helper function that starts a simple log thread for updater messages
@@ -72,16 +69,15 @@ pub fn start_updater_log_thread(
 					}
 				}
 				match m {
-					StatusMessage::UpdatingOutputs(s) => debug!("{}", s),
-					StatusMessage::UpdatingTransactions(s) => debug!("{}", s),
+					StatusMessage::UpdatingOutputs(_show_progress, s) => debug!("{}", s),
 					StatusMessage::FullScanWarn(s) => warn!("{}", s),
-					StatusMessage::Scanning(s, m) => {
+					StatusMessage::Scanning(_show_progress, s, m) => {
 						debug!("{}", s);
 						warn!("Scanning - {}% complete", m);
 					}
-					StatusMessage::ScanningComplete(s) => warn!("{}", s),
+					StatusMessage::ScanningComplete(_show_progress, s) => warn!("{}", s),
 					StatusMessage::Warning(s) => warn!("{}", s),
-					StatusMessage::Info(s) => info!("{}", s),
+					StatusMessage::Info(_show_progress, s) => info!("{}", s),
 				}
 			}
 			thread::sleep(Duration::from_millis(500));
@@ -103,15 +99,28 @@ pub fn start_updater_console_thread(
 				let running = running_state.load(Ordering::Relaxed);
 				while let Ok(m) = rx.try_recv() {
 					match m {
-						StatusMessage::UpdatingOutputs(s) => println!("{}", s),
-						StatusMessage::UpdatingTransactions(s) => println!("{}", s),
-						StatusMessage::FullScanWarn(s) => println!("{}", s),
-						StatusMessage::Scanning(s, m) => {
-							println!("{}, {}% complete", s, m);
+						StatusMessage::UpdatingOutputs(show_progress, s) => {
+							if show_progress {
+								println!("{}", s)
+							}
 						}
-						StatusMessage::ScanningComplete(s) => println!("{}", s),
+						StatusMessage::FullScanWarn(s) => println!("{}", s),
+						StatusMessage::Scanning(show_progress, s, m) => {
+							if show_progress {
+								println!("{}, {}% complete", s, m);
+							}
+						}
+						StatusMessage::ScanningComplete(show_progress, s) => {
+							if show_progress {
+								println!("{}", s)
+							}
+						}
 						StatusMessage::Warning(s) => println!("Warning: {}", s),
-						StatusMessage::Info(s) => println!("Info: {}", s),
+						StatusMessage::Info(show_progress, s) => {
+							if show_progress {
+								println!("Info: {}", s)
+							}
+						}
 					}
 				}
 				if !running {
