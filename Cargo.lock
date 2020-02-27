@@ -818,8 +818,8 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "grin_api"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "easy-jsonrpc-mw",
  "failure",
@@ -852,8 +852,8 @@ dependencies = [
 
 [[package]]
 name = "grin_chain"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "bit-vec",
  "bitflags 1.2.1",
@@ -876,8 +876,8 @@ dependencies = [
 
 [[package]]
 name = "grin_core"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -903,8 +903,8 @@ dependencies = [
 
 [[package]]
 name = "grin_keychain"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -926,8 +926,8 @@ dependencies = [
 
 [[package]]
 name = "grin_p2p"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "bitflags 1.2.1",
  "bytes",
@@ -949,8 +949,8 @@ dependencies = [
 
 [[package]]
 name = "grin_pool"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "blake2-rfc",
  "chrono",
@@ -984,8 +984,8 @@ dependencies = [
 
 [[package]]
 name = "grin_store"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "bit-vec",
  "byteorder",
@@ -1006,8 +1006,8 @@ dependencies = [
 
 [[package]]
 name = "grin_util"
-version = "3.0.0"
-source = "git+https://github.com/mwcproject/mwc-node#e1b8f7cd0bf9500995e6fa9a19bf363ff6bdc2f4"
+version = "3.1.0"
+source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "backtrace",
  "base64 0.9.3",
