@@ -35,16 +35,19 @@ impl RunHandlerInThread {
 		let thr_task = task.clone();
 		let thr_running = running.clone();
 
-		let worker_thread = thread::spawn(move || {
-			let result = handler();
-			thr_running.store(false, Ordering::Relaxed);
+		let worker_thread = thread::Builder::new()
+			.name("RunHandlerInThread".to_string())
+			.spawn(move || {
+				let result = handler();
+				thr_running.store(false, Ordering::Relaxed);
 
-			let rt = thr_task.lock().unwrap();
-			if let Some(ref task) = rt.task {
-				task.notify();
-			}
-			Ok(result)
-		});
+				let rt = thr_task.lock().unwrap();
+				if let Some(ref task) = rt.task {
+					task.notify();
+				}
+				Ok(result)
+			})
+			.unwrap();
 
 		Self {
 			running,
