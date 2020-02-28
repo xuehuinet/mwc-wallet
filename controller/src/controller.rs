@@ -311,15 +311,18 @@ where
 		api: Owner<L, C, K>,
 	) -> Box<dyn Future<Item = serde_json::Value, Error = Error> + Send> {
 		Box::new(parse_body(req).and_then(move |val: serde_json::Value| {
-			let owner_api = &api as &dyn OwnerRpc;
-			match owner_api.handle_request(val) {
-				MaybeReply::Reply(r) => ok(r),
-				MaybeReply::DontReply => {
-					// Since it's http, we need to return something. We return [] because jsonrpc
-					// clients will parse it as an empty batch response.
-					ok(serde_json::json!([]))
+			let handler = move || -> serde_json::Value {
+				let owner_api = &api as &dyn OwnerRpc;
+				match owner_api.handle_request(val) {
+					MaybeReply::Reply(r) => r,
+					MaybeReply::DontReply => {
+						// Since it's http, we need to return something. We return [] because jsonrpc
+						// clients will parse it as an empty batch response.
+						serde_json::json!([])
+					}
 				}
-			}
+			};
+			crate::executor::RunHandlerInThread::new(handler)
 		}))
 	}
 
