@@ -819,7 +819,6 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 [[package]]
 name = "grin_api"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "easy-jsonrpc-mw",
  "failure",
@@ -853,7 +852,6 @@ dependencies = [
 [[package]]
 name = "grin_chain"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "bit-vec",
  "bitflags 1.2.1",
@@ -877,7 +875,6 @@ dependencies = [
 [[package]]
 name = "grin_core"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -891,20 +888,19 @@ dependencies = [
  "lazy_static",
  "log",
  "lru-cache",
- "num 0.2.1",
- "num-bigint 0.2.6",
+ "num",
+ "num-bigint",
  "rand 0.6.5",
  "serde",
  "serde_derive",
  "siphasher",
- "uuid 0.6.5",
+ "uuid 0.7.4",
  "zeroize 0.9.3",
 ]
 
 [[package]]
 name = "grin_keychain"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -927,7 +923,6 @@ dependencies = [
 [[package]]
 name = "grin_p2p"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "bitflags 1.2.1",
  "bytes",
@@ -940,7 +935,7 @@ dependencies = [
  "log",
  "lru-cache",
  "net2",
- "num 0.1.42",
+ "num",
  "rand 0.6.5",
  "serde",
  "serde_derive",
@@ -950,7 +945,6 @@ dependencies = [
 [[package]]
 name = "grin_pool"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "blake2-rfc",
  "chrono",
@@ -985,7 +979,6 @@ dependencies = [
 [[package]]
 name = "grin_store"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "bit-vec",
  "byteorder",
@@ -1007,7 +1000,6 @@ dependencies = [
 [[package]]
 name = "grin_util"
 version = "3.1.0"
-source = "git+https://github.com/mwcproject/mwc-node?tag=3.1.0#8c51cc2cf689b755e33902f3ccfdaa04f6c2dbf4"
 dependencies = [
  "backtrace",
  "base64 0.9.3",
@@ -1040,7 +1032,7 @@ dependencies = [
  "grin_wallet_libwallet",
  "grin_wallet_util",
  "log",
- "rand 0.5.6",
+ "rand 0.6.5",
  "ring",
  "serde",
  "serde_derive",
@@ -1115,7 +1107,7 @@ dependencies = [
  "hyper-rustls",
  "hyper-timeout",
  "log",
- "rand 0.5.6",
+ "rand 0.6.5",
  "regex",
  "ring",
  "semver 0.9.0",
@@ -1150,7 +1142,7 @@ dependencies = [
  "grin_wallet_util",
  "lazy_static",
  "log",
- "rand 0.5.6",
+ "rand 0.6.5",
  "serde",
  "serde_derive",
  "serde_json",
@@ -1172,7 +1164,7 @@ dependencies = [
  "grin_store",
  "grin_util",
  "pretty_assertions",
- "rand 0.5.6",
+ "rand 0.6.5",
  "serde",
  "serde_derive",
  "toml 0.4.10",
@@ -1764,42 +1756,16 @@ dependencies = [
 
 [[package]]
 name = "num"
-version = "0.1.42"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4703ad64153382334aa8db57c637364c322d3372e097840c72000dabdcf6156e"
-dependencies = [
- "num-bigint 0.1.44",
- "num-complex 0.1.43",
- "num-integer",
- "num-iter",
- "num-rational 0.1.42",
- "num-traits 0.2.11",
-]
-
-[[package]]
-name = "num"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8536030f9fea7127f841b45bb6243b27255787fb4eb83958aa1ef9d2fdc0c36"
 dependencies = [
- "num-bigint 0.2.6",
- "num-complex 0.2.4",
+ "num-bigint",
+ "num-complex",
  "num-integer",
  "num-iter",
- "num-rational 0.2.3",
+ "num-rational",
  "num-traits 0.2.11",
-]
-
-[[package]]
-name = "num-bigint"
-version = "0.1.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e63899ad0da84ce718c14936262a41cee2c79c981fc0a0e7c7beb47d5a07e8c1"
-dependencies = [
- "num-integer",
- "num-traits 0.2.11",
- "rand 0.4.6",
- "rustc-serialize",
 ]
 
 [[package]]
@@ -1811,16 +1777,6 @@ dependencies = [
  "autocfg 1.0.0",
  "num-integer",
  "num-traits 0.2.11",
-]
-
-[[package]]
-name = "num-complex"
-version = "0.1.43"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b288631d7878aaf59442cffd36910ea604ecd7745c36054328595114001c9656"
-dependencies = [
- "num-traits 0.2.11",
- "rustc-serialize",
 ]
 
 [[package]]
@@ -1856,24 +1812,12 @@ dependencies = [
 
 [[package]]
 name = "num-rational"
-version = "0.1.42"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee314c74bd753fc86b4780aa9475da469155f3848473a261d2d18e35245a784e"
-dependencies = [
- "num-bigint 0.1.44",
- "num-integer",
- "num-traits 0.2.11",
- "rustc-serialize",
-]
-
-[[package]]
-name = "num-rational"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da4dc79f9e6c81bef96148c8f6b8e72ad4541caa4a24373e900a36da07de03a3"
 dependencies = [
  "autocfg 1.0.0",
- "num-bigint 0.2.6",
+ "num-bigint",
  "num-integer",
  "num-traits 0.2.11",
 ]

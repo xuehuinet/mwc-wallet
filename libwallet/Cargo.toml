@@ -14,7 +14,7 @@ edition = "2018"
 blake2-rfc = "0.2"
 failure = "0.1"
 failure_derive = "0.1"
-rand = "0.5"
+rand = "0.6"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
@@ -33,9 +33,9 @@ grin_wallet_util = { path = "../util", version = "3.1.1" }
 grin_wallet_config = { path = "../config", version = "3.1.1" }
 
 # Release
-grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "3.1.0" }
-grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "3.1.0" }
-grin_core= { git = "https://github.com/mwcproject/mwc-node", tag = "3.1.0" }
+#grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "3.1.0" }
+#grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "3.1.0" }
+#grin_core= { git = "https://github.com/mwcproject/mwc-node", tag = "3.1.0" }
 
 # For bleeding edge
 #grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
@@ -43,6 +43,6 @@ grin_core= { git = "https://github.com/mwcproject/mwc-node", tag = "3.1.0" }
 #grin_core= { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
 
 # For local testing
-#grin_api = { path = "../../mwc-node/api", version= "3.1.1"}
-#grin_p2p = { path = "../../mwc-node/p2p", version= "3.1.1"}
-#grin_core= { path = "../../mwc-node/core", version= "3.1.1"}
+grin_api = { path = "../../mwc-node/api", version= "3.1.0"}
+grin_p2p = { path = "../../mwc-node/p2p", version= "3.1.0"}
+grin_core= { path = "../../mwc-node/core", version= "3.1.0"}
