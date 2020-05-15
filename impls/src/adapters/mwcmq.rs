@@ -56,10 +56,15 @@ impl MWCMQSAddress {
 	}
 }
 
-//this is not really useful for MWCMQSAddress, mwc-wallet uses the Display trait
 impl Display for MWCMQSAddress {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "mwcmqs://{}", self.address.public_key)?;
+		if self.domain != DEFAULT_MWCMQS_DOMAIN || self.port != DEFAULT_MWCMQS_PORT {
+			write!(f, "@{}", self.domain)?;
+			if self.port != DEFAULT_MWCMQS_PORT {
+				write!(f, ":{}", self.port)?;
+			}
+		}
 		Ok(())
 	}
 }
@@ -103,14 +108,7 @@ impl Address for MWCMQSAddress {
 	}
 
 	fn get_stripped(&self) -> String {
-		let mut res = self.address.public_key.clone();
-		if self.domain != DEFAULT_MWCMQS_DOMAIN || self.port != DEFAULT_MWCMQS_PORT {
-			res.push_str(&format!("@{}", self.domain));
-			if self.port != DEFAULT_MWCMQS_PORT {
-				res.push_str(&format!(":{}", self.port));
-			}
-		}
-		res
+		format!("{}", self)[9..].to_string()
 	}
 	fn address_type(&self) -> AddressType {
 		AddressType::MWCMQS
