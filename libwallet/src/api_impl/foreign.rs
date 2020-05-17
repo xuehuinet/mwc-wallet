@@ -24,9 +24,25 @@ use crate::{
 	address, BlockFees, CbData, Error, ErrorKind, NodeClient, Slate, TxLogEntryType, VersionInfo,
 	WalletBackend,
 };
+use std::sync::RwLock;
 
 const FOREIGN_API_VERSION: u16 = 2;
 const USER_MESSAGE_MAX_LEN: usize = 256;
+
+lazy_static! {
+	/// Recieve account can be specified separately and must be allpy to ALL receive operations
+	static ref RECV_ACCOUNT:   RwLock<Option<String>>  = RwLock::new(None);
+}
+
+/// get current receive account name
+pub fn get_receive_account() -> Option<String> {
+	RECV_ACCOUNT.read().unwrap().clone()
+}
+
+///
+pub fn set_receive_account(account: String) {
+	RECV_ACCOUNT.write().unwrap().replace(account.to_string());
+}
 
 /// Return the version info
 pub fn check_version() -> VersionInfo {
@@ -76,6 +92,12 @@ where
 {
 	let mut ret_slate = slate.clone();
 	check_ttl(w, &ret_slate)?;
+
+	let mut dest_acct_name = dest_acct_name.map(|s| s.to_string());
+	if dest_acct_name.is_none() {
+		dest_acct_name = get_receive_account();
+	}
+
 	let parent_key_id = match dest_acct_name {
 		Some(d) => {
 			let pm = w.get_acct_path(d.to_owned())?;
@@ -86,6 +108,7 @@ where
 		}
 		None => w.parent_key_id(),
 	};
+
 	// Don't do this multiple times
 	let tx = updater::retrieve_txs(
 		&mut *w,

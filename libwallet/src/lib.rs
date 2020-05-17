@@ -80,6 +80,8 @@ pub use types::{
 	WalletBackend, WalletInfo, WalletInst, WalletLCProvider, WalletOutputBatch,
 };
 
+pub use api_impl::foreign::{get_receive_account, set_receive_account};
+
 /// Helper for taking a lock on the wallet instance
 #[macro_export]
 macro_rules! wallet_lock {

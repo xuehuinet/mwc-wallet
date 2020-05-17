@@ -54,13 +54,21 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::Arc;
+use std::sync::{RwLock,Arc};
 use std::thread;
 use std::time::Duration;
+use std::collections::HashSet;
 
 lazy_static! {
 	pub static ref MWC_OWNER_BASIC_REALM: HeaderValue =
 		HeaderValue::from_str("Basic realm=MWC-OwnerAPI").unwrap();
+
+	// Slates that are scheduled to flaff instead of dandelion
+    static ref FLUFFED_SLATES: RwLock<HashSet<String>> = RwLock::new(HashSet::new());
+}
+
+pub fn set_fluff_for_slate(slate_id: String) {
+	FLUFFED_SLATES.write().unwrap().insert(slate_id);
 }
 
 // This function has to use libwallet errots because of callback and runs on libwallet side
@@ -426,8 +434,9 @@ where
 					}
 				}
 				if should_post {
+					let fluff = FLUFFED_SLATES.write().unwrap().remove(&slate.id.to_string());
 					owner_api
-						.post_tx((&mask).as_ref(), &slate.tx, false)
+						.post_tx((&mask).as_ref(), &slate.tx, fluff)
 						.map_err(|e| {
 							ErrorKind::LibWallet(format!(
 								"Unable to broadcast slate to blockchain network, {}",
