@@ -62,7 +62,7 @@ pub enum ParseError {
 	ArgumentError(String),
 	#[fail(display = "Parsing IO error: {}", _0)]
 	IOError(String),
-	#[fail(display = "Wallet configuration already exists: {}", _0)]
+	#[fail(display = "Wallet configuration with config file already exists: {}", _0)]
 	WalletExists(String),
 	#[fail(display = "User Cancelled")]
 	CancelledError,
