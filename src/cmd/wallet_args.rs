@@ -23,7 +23,7 @@ use crate::util::{Mutex, ZeroingString};
 use clap::ArgMatches;
 use failure::Fail;
 use grin_wallet_api::Owner;
-use grin_wallet_config::{config_file_exists, MQSConfig, TorConfig, WalletConfig};
+use grin_wallet_config::{MQSConfig, TorConfig, WalletConfig};
 use grin_wallet_controller::command;
 use grin_wallet_controller::{Error, ErrorKind};
 use grin_wallet_impls::tor::config::is_tor_address;
@@ -62,7 +62,7 @@ pub enum ParseError {
 	ArgumentError(String),
 	#[fail(display = "Parsing IO error: {}", _0)]
 	IOError(String),
-	#[fail(display = "Wallet configuration with config file already exists: {}", _0)]
+	#[fail(display = "Wallet configuration already exists: {}", _0)]
 	WalletExists(String),
 	#[fail(display = "User Cancelled")]
 	CancelledError,
@@ -312,8 +312,11 @@ where
 	C: NodeClient + 'static,
 	K: keychain::Keychain + 'static,
 {
-	if config_file_exists(&config.data_file_dir) && !test_mode {
-		return Err(ParseError::WalletExists(config.data_file_dir.clone()));
+	// Checking is wallet data
+	let mut wallet_data_path = PathBuf::from(&config.data_file_dir);
+	wallet_data_path.push(config.wallet_data_dir.clone().unwrap_or(GRIN_WALLET_DIR.to_string()) );
+	if wallet_data_path.exists() && !test_mode {
+		return Err(ParseError::WalletExists(wallet_data_path.to_str().unwrap_or("unknown").to_string()));
 	}
 
 	let list_length = match args.is_present("short_wordlist") {
