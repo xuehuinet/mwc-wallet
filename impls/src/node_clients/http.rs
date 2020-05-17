@@ -250,9 +250,8 @@ impl NodeClient for HTTPNodeClient {
 
 		// going to leave this here even though we're moving
 		// to the json RPC api to keep the functionality of
-		// parallelizing larger requests. Will raise default
-		// from 200 to 500, however
-		let chunk_default = 500;
+		// parallelizing larger requests.
+		let chunk_default = 200;
 		let chunk_size = match env::var("GRIN_OUTPUT_QUERY_SIZE") {
 			Ok(s) => match s.parse::<usize>() {
 				Ok(c) => c,
@@ -350,6 +349,7 @@ impl NodeClient for HTTPNodeClient {
 		Ok(api_outputs)
 	}
 
+	// Expected respond from non full node, that can return reliable only non spent outputs.
 	fn get_outputs_by_pmmr_index(
 		&self,
 		start_index: u64,
@@ -369,6 +369,10 @@ impl NodeClient for HTTPNodeClient {
 		let params = json!([start_index, end_index, max_outputs, Some(true)]);
 		let res = self.send_json_request::<OutputListing>("get_unspent_outputs", &params)?;
 		for out in res.outputs {
+			if out.spent {
+				continue;
+			}
+
 			let is_coinbase = match out.output_type {
 				api::OutputType::Coinbase => true,
 				api::OutputType::Transaction => false,
