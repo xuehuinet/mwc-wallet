@@ -122,6 +122,14 @@ fn comments() -> HashMap<String, String> {
 "
 		.to_string(),
 	);
+	retval.insert(
+		"grinbox_address_index".to_string(),
+		"
+# Address derive index. Every new index will give you a new address that will be used for
+# communication with message queue server.
+"
+		.to_string(),
+	);
 
 	retval.insert(
 		"[logging]".to_string(),
@@ -194,7 +202,7 @@ fn comments() -> HashMap<String, String> {
 		"[tor]".to_string(),
 		"
 #########################################
-### TOR CONFIGURATION (Experimental)  ###
+### TOR CONFIGURATION (Experimental) ###
 #########################################
 "
 		.to_string(),
@@ -204,14 +212,6 @@ fn comments() -> HashMap<String, String> {
 		"use_tor_listener".to_string(),
 		"
 #Whether to start tor listener on listener startup (default true)
-"
-		.to_string(),
-	);
-
-	retval.insert(
-		"socks_proxy_addr".to_string(),
-		"
-#Address of the running TOR (SOCKS) server
 "
 		.to_string(),
 	);
@@ -233,10 +233,27 @@ fn comments() -> HashMap<String, String> {
 	);
 
 	retval.insert(
-		"grinbox_address_index".to_string(),
+		"[mqs]".to_string(),
 		"
-# MWC MQS address defive index. Every new index will give you a new address that will be used for
-# communication with message queue
+#########################################
+### MWCMQS CONFIGURATION              ###
+#########################################
+"
+		.to_string(),
+	);
+
+	retval.insert(
+		"mwcmqs_domain".to_string(),
+		"
+#mqs server domain
+"
+		.to_string(),
+	);
+
+	retval.insert(
+		"mwcmqs_port".to_string(),
+		"
+#mqs server port
 "
 		.to_string(),
 	);

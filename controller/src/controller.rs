@@ -621,7 +621,10 @@ where
 {
 	// make sure wallet is not locked, if it is try to unlock with no passphrase
 
-	info!("starting mwcmqs listener... ");
+	info!(
+		"starting mwcmqs listener for {}:{}...",
+		mqs_config.mwcmqs_domain, mqs_config.mwcmqs_port
+	);
 	info!("the addres index is {}... ", address_index);
 
 	let mwcmqs_domain = mqs_config.mwcmqs_domain;
