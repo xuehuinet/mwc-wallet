@@ -45,9 +45,7 @@ pub struct WalletConfig {
 	pub owner_api_include_foreign: Option<bool>,
 	/// Whether to include the mwcmqs listener
 	pub owner_api_include_mqs_listener: Option<bool>,
-	///To enable this amount for an invoice amount, for example if the value is 50000000000 that is 50 mwc or less,
-	pub max_auto_accept_invoice: Option<u64>,
-	///Index used to derive address
+	/// MQS address  derivative index
 	pub grinbox_address_index: Option<u32>,
 	/// The directory in which wallet files are stored
 	pub data_file_dir: String,

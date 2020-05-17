@@ -16,7 +16,9 @@ use super::types::{Address, AddressType, Publisher, Subscriber, SubscriptionHand
 use crate::error::ErrorKind;
 use crate::libwallet::proof::crypto;
 use crate::libwallet::proof::crypto::Hex;
+use crate::util::Mutex;
 use failure::Error;
+use grin_util::RwLock;
 use grin_wallet_libwallet::proof::message::EncryptedMessage;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
@@ -27,6 +29,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Display};
 use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
 use std::{thread, time};
@@ -36,6 +39,24 @@ extern crate nanoid;
 const TIMEOUT_ERROR_REGEX: &str = r"timed out";
 const DEFAULT_MWCMQS_DOMAIN: &str = "mqs.mwc.mw";
 pub const DEFAULT_MWCMQS_PORT: u16 = 443;
+
+// MQS enforced to have a single instance. And different compoments migth manage
+// instances separatlly.
+// Also all dependent components want to use MQS and they need interface.
+// Since instance is single, interface will be global
+lazy_static! {
+	static ref MWCMQS_BROKER: RwLock<Option<(MWCMQPublisher, MWCMQSubscriber)>> = RwLock::new(None);
+}
+
+/// Init mwc mqs objects for the access.
+pub fn init_mwcmqs_access_data(publisher: MWCMQPublisher, subscriber: MWCMQSubscriber) {
+	MWCMQS_BROKER.write().replace((publisher, subscriber));
+}
+
+/// Init mwc mqs objects for the access.
+pub fn get_mwcmqs_brocker() -> Option<(MWCMQPublisher, MWCMQSubscriber)> {
+	MWCMQS_BROKER.read().clone()
+}
 
 #[derive(Clone, Debug)]
 pub struct MWCMQSAddress {
@@ -56,15 +77,10 @@ impl MWCMQSAddress {
 	}
 }
 
+//this is not really useful for MWCMQSAddress, mwc-wallet uses the Display trait
 impl Display for MWCMQSAddress {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "mwcmqs://{}", self.address.public_key)?;
-		if self.domain != DEFAULT_MWCMQS_DOMAIN || self.port != DEFAULT_MWCMQS_PORT {
-			write!(f, "@{}", self.domain)?;
-			if self.port != DEFAULT_MWCMQS_PORT {
-				write!(f, ":{}", self.port)?;
-			}
-		}
 		Ok(())
 	}
 }
@@ -108,7 +124,14 @@ impl Address for MWCMQSAddress {
 	}
 
 	fn get_stripped(&self) -> String {
-		format!("{}", self)[9..].to_string()
+		let mut res = self.address.public_key.clone();
+		if self.domain != DEFAULT_MWCMQS_DOMAIN || self.port != DEFAULT_MWCMQS_PORT {
+			res.push_str(&format!("@{}", self.domain));
+			if self.port != DEFAULT_MWCMQS_PORT {
+				res.push_str(&format!(":{}", self.port));
+			}
+		}
+		res
 	}
 	fn address_type(&self) -> AddressType {
 		AddressType::MWCMQS
@@ -123,18 +146,20 @@ pub struct MWCMQPublisher {
 }
 
 impl MWCMQPublisher {
+	// Note, Publisher must initialize controller with self
 	pub fn new(
 		address: MWCMQSAddress,
 		secret_key: &SecretKey,
 		mwcmqs_domain: String,
 		mwcmqs_port: u16,
 		print_to_log: bool,
-	) -> Result<Self, Error> {
-		Ok(Self {
+		handler: Box<dyn SubscriptionHandler + Send>,
+	) -> Self {
+		Self {
 			address,
-			broker: MWCMQSBroker::new(mwcmqs_domain, mwcmqs_port, print_to_log),
+			broker: MWCMQSBroker::new(mwcmqs_domain, mwcmqs_port, print_to_log, handler),
 			secret_key: secret_key.clone(),
-		})
+		}
 	}
 }
 impl Publisher for MWCMQPublisher {
@@ -155,18 +180,18 @@ pub struct MWCMQSubscriber {
 }
 
 impl MWCMQSubscriber {
-	pub fn new(publisher: &MWCMQPublisher) -> Result<Self, Error> {
-		Ok(Self {
+	pub fn new(publisher: &MWCMQPublisher) -> Self {
+		Self {
 			address: publisher.address.clone(),
 			broker: publisher.broker.clone(),
 			secret_key: publisher.secret_key.clone(),
-		})
+		}
 	}
 }
 impl Subscriber for MWCMQSubscriber {
-	fn start(&mut self, handler: Box<dyn SubscriptionHandler + Send>) -> Result<(), Error> {
+	fn start(&mut self) -> Result<(), Error> {
 		self.broker
-			.subscribe(&self.address.address, &self.secret_key, handler);
+			.subscribe(&self.address.address, &self.secret_key);
 		Ok(())
 	}
 
@@ -199,6 +224,21 @@ impl Subscriber for MWCMQSubscriber {
 	fn is_running(&self) -> bool {
 		self.broker.is_running()
 	}
+
+	fn set_notification_channels(
+		&self,
+		slate_send_channel: Sender<Slate>,
+		message_receive_channel: Receiver<bool>,
+	) {
+		self.broker
+			.handler
+			.lock()
+			.set_notification_channels(slate_send_channel, message_receive_channel);
+	}
+
+	fn reset_notification_channels(&self) {
+		self.broker.handler.lock().reset_notification_channels();
+	}
 }
 
 #[derive(Clone)]
@@ -207,15 +247,22 @@ struct MWCMQSBroker {
 	pub mwcmqs_domain: String,
 	pub mwcmqs_port: u16,
 	pub print_to_log: bool,
+	pub handler: Arc<Mutex<Box<dyn SubscriptionHandler + Send>>>,
 }
 
 impl MWCMQSBroker {
-	fn new(mwcmqs_domain: String, mwcmqs_port: u16, print_to_log: bool) -> Self {
+	fn new(
+		mwcmqs_domain: String,
+		mwcmqs_port: u16,
+		print_to_log: bool,
+		handler: Box<dyn SubscriptionHandler + Send>,
+	) -> Self {
 		Self {
 			running: Arc::new(AtomicBool::new(false)),
 			mwcmqs_domain,
 			mwcmqs_port,
 			print_to_log,
+			handler: Arc::new(Mutex::new(handler)),
 		}
 	}
 
@@ -339,12 +386,7 @@ impl MWCMQSBroker {
 		}
 	}
 
-	fn subscribe(
-		&mut self,
-		source_address: &ProvableAddress,
-		secret_key: &SecretKey,
-		handler: Box<dyn SubscriptionHandler + Send>,
-	) -> () {
+	fn subscribe(&mut self, source_address: &ProvableAddress, secret_key: &SecretKey) -> () {
 		let address = MWCMQSAddress::new(
 			source_address.clone(),
 			Some(self.mwcmqs_domain.clone()),
@@ -780,7 +822,11 @@ impl MWCMQSBroker {
 									}
 								};
 
-								handler.on_slate(&from, &mut slate, Some(&mut tx_proof));
+								self.handler.lock().on_slate(
+									&from,
+									&mut slate,
+									Some(&mut tx_proof),
+								);
 								break;
 							}
 						}

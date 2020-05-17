@@ -76,7 +76,7 @@ impl BIP32Hasher for BIP32GrinboxHasher {
 ///this derive_address_key will used in both mwc-wallet and wallet713 to derive the key.
 pub fn derive_address_key<K: Keychain>(keychain: &K, index: u32) -> Result<SecretKey, Error> {
 	let root = keychain
-		.derive_key(713, &K::root_key_id(), &SwitchCommitmentType::Regular)
+		.derive_key(713, &K::root_key_id(), SwitchCommitmentType::Regular)
 		.map_err(|e| ErrorKind::DeriveKeyError(format!("Derive key error, {}", e)))?;
 	let mut hasher = BIP32GrinboxHasher::new(is_floonet());
 	let secp = keychain.secp();

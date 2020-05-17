@@ -22,6 +22,10 @@ use blake2_rfc as blake2;
 extern crate serde_derive;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate serde_json;
+#[macro_use]
+extern crate lazy_static;
 use grin_wallet_libwallet as libwallet;
 use grin_wallet_util::grin_api as api;
 use grin_wallet_util::grin_chain as chain;
@@ -42,10 +46,10 @@ pub mod test_framework;
 pub mod tor;
 
 pub use crate::adapters::{
-	create_sender, CloseReason, HttpSlateSender, KeybaseAllChannels, KeybaseChannel,
-	MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber, MwcMqsChannel, PathToSlate, SlateGetter,
-	SlatePutter, SlateReceiver, SlateSender, SubscriptionHandler,
-	Publisher, Subscriber, Address, AddressType, KeybaseAddress, HttpsAddress,
+	create_sender, get_mwcmqs_brocker, init_mwcmqs_access_data, Address, AddressType, CloseReason,
+	HttpSlateSender, HttpsAddress, KeybaseAddress, KeybaseAllChannels, KeybaseChannel,
+	MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber, MwcMqsChannel, PathToSlate, Publisher,
+	SlateGetter, SlatePutter, SlateReceiver, SlateSender, Subscriber, SubscriptionHandler,
 };
 pub use crate::backends::{wallet_db_exists, LMDBBackend};
 pub use crate::error::{Error, ErrorKind};
