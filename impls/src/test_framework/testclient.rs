@@ -577,7 +577,7 @@ impl NodeClient for LocalWalletClient {
 	/// Result value: Commit, Height, MMR
 	fn get_outputs_from_node(
 		&self,
-		wallet_outputs: Vec<pedersen::Commitment>,
+		wallet_outputs: &Vec<pedersen::Commitment>,
 	) -> Result<HashMap<pedersen::Commitment, (String, u64, u64)>, libwallet::Error> {
 		let query_params: Vec<String> = wallet_outputs
 			.iter()

@@ -110,13 +110,13 @@ pub enum Error {
 
 impl From<serde_json::Error> for Error {
 	fn from(e: serde_json::Error) -> Error {
-		Error::Json(format!("{}",e))
+		Error::Json(format!("{}", e))
 	}
 }
 
 impl From<hyper::error::Error> for Error {
 	fn from(e: hyper::error::Error) -> Error {
-		Error::Hyper(format!("{}",e))
+		Error::Hyper(format!("{}", e))
 	}
 }
 

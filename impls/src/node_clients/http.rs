@@ -22,7 +22,7 @@ use crossbeam_utils::thread::scope;
 use futures::stream::FuturesUnordered;
 use futures::TryStreamExt;
 use std::collections::HashMap;
-use std::env;
+use std::{env, thread};
 use tokio::runtime::Builder;
 
 use crate::client_utils::Client;
@@ -37,6 +37,11 @@ use std::sync::{Arc, RwLock};
 
 const ENDPOINT: &str = "/v2/foreign";
 const CACHE_VALID_TIME_MS: u128 = 5000; // 2 seconds for cache should be enough for our purpose
+
+const NODE_CALL_RETRY: i32 = 3;
+lazy_static! {
+	static ref NODE_CALL_DELAY: Vec<u64> = vec![5000, 3000, 1000];
+}
 
 // cashed values are stored by the key K
 #[derive(Clone)]
@@ -111,10 +116,11 @@ impl HTTPNodeClient {
 		self.get_chain_tip()
 	}
 
-	fn send_json_request<D: serde::de::DeserializeOwned>(
+	fn send_json_request_impl<D: serde::de::DeserializeOwned>(
 		&self,
 		method: &str,
 		params: &serde_json::Value,
+		counter: i32
 	) -> Result<D, libwallet::Error> {
 		let url = format!("{}{}", self.node_url(), ENDPOINT);
 		let req = build_request(method, params);
@@ -122,6 +128,11 @@ impl HTTPNodeClient {
 
 		match res {
 			Err(e) => {
+				if counter>0 {
+					debug!("Retrying to call Node API method {}: {}", method, e);
+					thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
+					return self.send_json_request_impl(method, params, counter-1);
+				}
 				let report = format!("Error calling {}: {}", method, e);
 				error!("{}", report);
 				Err(libwallet::ErrorKind::ClientCallback(report).into())
@@ -129,6 +140,11 @@ impl HTTPNodeClient {
 			Ok(inner) => match inner.clone().into_result() {
 				Ok(r) => Ok(r),
 				Err(e) => {
+					if counter>0 {
+						debug!("Retrying to call Node API method {}: {}", method, e);
+						thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
+						return self.send_json_request_impl(method, params, counter-1);
+					}
 					error!("{:?}", inner);
 					let report = format!("Unable to parse response for {}: {}", method, e);
 					error!("{}", report);
@@ -136,6 +152,214 @@ impl HTTPNodeClient {
 				}
 			},
 		}
+	}
+
+	fn send_json_request<D: serde::de::DeserializeOwned>(
+		&self,
+		method: &str,
+		params: &serde_json::Value,
+	) -> Result<D, libwallet::Error> {
+		self.send_json_request_impl(method, params, NODE_CALL_RETRY)
+	}
+
+	/// Return Connected peers
+	fn get_connected_peer_info_impls(&self, counter: i32) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error> {
+		// There is no v2 API with connected peers. Keep using v1 for that
+
+		let addr = self.node_url();
+		let url = format!("{}/v1/peers/connected", addr);
+
+		let res = self.client
+			.get::<Vec<grin_p2p::types::PeerInfoDisplay>>(url.as_str(), self.node_api_secret());
+		match res {
+			Err(e) => {
+				// Do retry
+				if counter>0 {
+					debug!("Retry to call connected peers API {}, {}", url, e);
+					thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
+					return self.get_connected_peer_info_impls(counter-1);
+				}
+				let report = format!("Get connected peers error {}, {}", url, e);
+				error!("{}", report);
+				Err(libwallet::ErrorKind::ClientCallback(report).into())
+			}
+			Ok(peer) => Ok(peer),
+		}
+	}
+
+	/// Get kernel implementation
+	fn get_kernel_impl(
+		&mut self,
+		excess: &pedersen::Commitment,
+		min_height: Option<u64>,
+		max_height: Option<u64>,
+		counter: i32,
+	) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
+		let method = "get_kernel";
+		let params = json!([to_hex(excess.0.to_vec()), min_height, max_height]);
+		// have to handle this manually since the error needs to be parsed
+		let url = format!("{}{}", self.node_url(), ENDPOINT);
+		let req = build_request(method, &params);
+		let res = self.client.post::<Request, Response>(url.as_str(), self.node_api_secret(), &req);
+
+		match res {
+			Err(e) => {
+				if counter>0 {
+					debug!("Retry to call API get_kernel, {}", e);
+					thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
+					return self.get_kernel_impl(excess, min_height, max_height, counter-1);
+				}
+				let report = format!("Error calling {}: {}", method, e);
+				error!("{}", report);
+				Err(libwallet::ErrorKind::ClientCallback(report).into())
+			}
+			Ok(inner) => match inner.clone().into_result::<LocatedTxKernel>() {
+				Ok(r) => Ok(Some((r.tx_kernel, r.height, r.mmr_index))),
+				Err(e) => {
+					let contents = format!("{:?}", inner);
+					if contents.contains("NotFound") {
+						Ok(None)
+					} else {
+						let report = format!("Unable to parse response for {}: {}", method, e);
+						error!("{}", report);
+						Err(libwallet::ErrorKind::ClientCallback(report).into())
+					}
+				}
+			},
+		}
+	}
+
+	/// Retrieve outputs from node
+	/// Result value: Commit, Height, MMR
+	fn get_outputs_from_node_impl(
+		&self,
+		wallet_outputs: &Vec<pedersen::Commitment>,
+		counter: i32,
+	) -> Result<HashMap<pedersen::Commitment, (String, u64, u64)>, libwallet::Error> {
+		// build a map of api outputs by commit so we can look them up efficiently
+		let mut api_outputs: HashMap<pedersen::Commitment, (String, u64, u64)> = HashMap::new();
+
+		if wallet_outputs.is_empty() {
+			return Ok(api_outputs);
+		}
+
+		// build vec of commits for inclusion in query
+		let query_params: Vec<String> = wallet_outputs
+			.iter()
+			.map(|commit| format!("{}", util::to_hex(commit.as_ref().to_vec())))
+			.collect();
+
+		// going to leave this here even though we're moving
+		// to the json RPC api to keep the functionality of
+		// parallelizing larger requests.
+		let chunk_default = 200;
+		let chunk_size = match env::var("GRIN_OUTPUT_QUERY_SIZE") {
+			Ok(s) => match s.parse::<usize>() {
+				Ok(c) => c,
+				Err(e) => {
+					error!(
+						"Unable to parse GRIN_OUTPUT_QUERY_SIZE, defaulting to {}",
+						chunk_default
+					);
+					error!("Reason: {}", e);
+					chunk_default
+				}
+			},
+			Err(_) => chunk_default,
+		};
+
+		trace!("Output query chunk size is: {}", chunk_size);
+
+		let url = format!("{}{}", self.node_url(), ENDPOINT);
+
+		let task = async move {
+			let params: Vec<_> = query_params
+				.chunks(chunk_size)
+				.map(|c| json!([c, null, null, false, false]))
+				.collect();
+
+			let mut reqs = Vec::with_capacity(params.len());
+			for p in &params {
+				reqs.push(build_request("get_outputs", p));
+			}
+
+			let mut tasks = Vec::with_capacity(params.len());
+			for req in &reqs {
+				tasks.push(self.client.post_async::<Request, Response>(
+					url.as_str(),
+					req,
+					self.node_api_secret(),
+				));
+			}
+
+			let task: FuturesUnordered<_> = tasks.into_iter().collect();
+			task.try_collect().await
+		};
+
+		let res = scope(|s| {
+			let handle = s.spawn(|_| {
+				let mut rt = Builder::new()
+					.threaded_scheduler()
+					.enable_all()
+					.build()
+					.unwrap();
+				let res: Result<Vec<Response>, _> = rt.block_on(task);
+				res
+			});
+			handle.join().unwrap()
+		})
+		.unwrap();
+
+		let results: Vec<OutputPrintable> = match res {
+			Ok(resps) => {
+				let mut results = vec![];
+				for r in resps {
+					match r.into_result::<Vec<OutputPrintable>>() {
+						Ok(mut r) => results.append(&mut r),
+						Err(e) => {
+							if counter>0 {
+								debug!("Retry to call API get_outputs, {}", e);
+								thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
+								return self.get_outputs_from_node_impl(wallet_outputs,counter-1);
+							}
+
+							let report = format!("Unable to parse response for get_outputs: {}", e);
+							error!("{}", report);
+							return Err(libwallet::ErrorKind::ClientCallback(report).into());
+						}
+					};
+				}
+				results
+			}
+			Err(e) => {
+				if counter>0 {
+					debug!("Retry to call API get_outputs, {}", e);
+					thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
+					return self.get_outputs_from_node_impl(wallet_outputs,counter-1);
+				}
+				let report = format!("Outputs by id failed: {}", e);
+				error!("{}", report);
+				return Err(libwallet::ErrorKind::ClientCallback(report).into());
+			}
+		};
+
+		for out in results.iter() {
+			if out.spent {
+				continue; // we don't expect any spent, let's skip it
+			}
+			let height = match out.block_height {
+				Some(h) => h,
+				None => {
+					let msg = format!("Missing block height for output {:?}", out.commit);
+					return Err(libwallet::ErrorKind::ClientCallback(msg).into());
+				}
+			};
+			api_outputs.insert(
+				out.commit,
+				(util::to_hex(out.commit.0.to_vec()), height, out.mmr_index),
+			);
+		}
+		Ok(api_outputs)
 	}
 }
 
@@ -244,21 +468,7 @@ impl NodeClient for HTTPNodeClient {
 	fn get_connected_peer_info(
 		&self,
 	) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error> {
-		// There is no v2 API with connected peers. Keep using v1 for that
-
-		let addr = self.node_url();
-		let url = format!("{}/v1/peers/connected", addr);
-
-		let res = self.client
-			.get::<Vec<grin_p2p::types::PeerInfoDisplay>>(url.as_str(), self.node_api_secret());
-		match res {
-			Err(e) => {
-				let report = format!("Get connected peers error {}, {}", url, e);
-				error!("{}", report);
-				Err(libwallet::ErrorKind::ClientCallback(report).into())
-			}
-			Ok(peer) => Ok(peer),
-		}
+		self.get_connected_peer_info_impls(NODE_CALL_RETRY)
 	}
 
 	/// Get kernel implementation
@@ -268,151 +478,17 @@ impl NodeClient for HTTPNodeClient {
 		min_height: Option<u64>,
 		max_height: Option<u64>,
 	) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
-		let method = "get_kernel";
-		let params = json!([to_hex(excess.0.to_vec()), min_height, max_height]);
-		// have to handle this manually since the error needs to be parsed
-		let url = format!("{}{}", self.node_url(), ENDPOINT);
-		let req = build_request(method, &params);
-		let res = self.client.post::<Request, Response>(url.as_str(), self.node_api_secret(), &req);
 
-		match res {
-			Err(e) => {
-				let report = format!("Error calling {}: {}", method, e);
-				error!("{}", report);
-				Err(libwallet::ErrorKind::ClientCallback(report).into())
-			}
-			Ok(inner) => match inner.clone().into_result::<LocatedTxKernel>() {
-				Ok(r) => Ok(Some((r.tx_kernel, r.height, r.mmr_index))),
-				Err(e) => {
-					let contents = format!("{:?}", inner);
-					if contents.contains("NotFound") {
-						Ok(None)
-					} else {
-						let report = format!("Unable to parse response for {}: {}", method, e);
-						error!("{}", report);
-						Err(libwallet::ErrorKind::ClientCallback(report).into())
-					}
-				}
-			},
-		}
+		self.get_kernel_impl(excess, min_height, max_height, NODE_CALL_RETRY)
 	}
 
 	/// Retrieve outputs from node
 	/// Result value: Commit, Height, MMR
 	fn get_outputs_from_node(
 		&self,
-		wallet_outputs: Vec<pedersen::Commitment>,
+		wallet_outputs: &Vec<pedersen::Commitment>,
 	) -> Result<HashMap<pedersen::Commitment, (String, u64, u64)>, libwallet::Error> {
-		// build a map of api outputs by commit so we can look them up efficiently
-		let mut api_outputs: HashMap<pedersen::Commitment, (String, u64, u64)> = HashMap::new();
-
-		if wallet_outputs.is_empty() {
-			return Ok(api_outputs);
-		}
-
-		// build vec of commits for inclusion in query
-		let query_params: Vec<String> = wallet_outputs
-			.iter()
-			.map(|commit| format!("{}", util::to_hex(commit.as_ref().to_vec())))
-			.collect();
-
-		// going to leave this here even though we're moving
-		// to the json RPC api to keep the functionality of
-		// parallelizing larger requests.
-		let chunk_default = 200;
-		let chunk_size = match env::var("GRIN_OUTPUT_QUERY_SIZE") {
-			Ok(s) => match s.parse::<usize>() {
-				Ok(c) => c,
-				Err(e) => {
-					error!(
-						"Unable to parse GRIN_OUTPUT_QUERY_SIZE, defaulting to {}",
-						chunk_default
-					);
-					error!("Reason: {}", e);
-					chunk_default
-				}
-			},
-			Err(_) => chunk_default,
-		};
-
-		trace!("Output query chunk size is: {}", chunk_size);
-
-		let url = format!("{}{}", self.node_url(), ENDPOINT);
-
-		let task = async move {
-			let params: Vec<_> = query_params
-				.chunks(chunk_size)
-				.map(|c| json!([c, null, null, false, false]))
-				.collect();
-
-			let mut reqs = Vec::with_capacity(params.len());
-			for p in &params {
-				reqs.push(build_request("get_outputs", p));
-			}
-
-			let mut tasks = Vec::with_capacity(params.len());
-			for req in &reqs {
-				tasks.push(self.client.post_async::<Request, Response>(
-					url.as_str(),
-					req,
-					self.node_api_secret(),
-				));
-			}
-
-			let task: FuturesUnordered<_> = tasks.into_iter().collect();
-			task.try_collect().await
-		};
-
-		let res = scope(|s| {
-			let handle = s.spawn(|_| {
-				let mut rt = Builder::new()
-					.threaded_scheduler()
-					.enable_all()
-					.build()
-					.unwrap();
-				let res: Result<Vec<Response>, _> = rt.block_on(task);
-				res
-			});
-			handle.join().unwrap()
-		})
-		.unwrap();
-
-		let results: Vec<OutputPrintable> = match res {
-			Ok(resps) => {
-				let mut results = vec![];
-				for r in resps {
-					match r.into_result::<Vec<OutputPrintable>>() {
-						Ok(mut r) => results.append(&mut r),
-						Err(e) => {
-							let report = format!("Unable to parse response for get_outputs: {}", e);
-							error!("{}", report);
-							return Err(libwallet::ErrorKind::ClientCallback(report).into());
-						}
-					};
-				}
-				results
-			}
-			Err(e) => {
-				let report = format!("Outputs by id failed: {}", e);
-				error!("{}", report);
-				return Err(libwallet::ErrorKind::ClientCallback(report).into());
-			}
-		};
-
-		for out in results.iter() {
-			let height = match out.block_height {
-				Some(h) => h,
-				None => {
-					let msg = format!("Missing block height for output {:?}", out.commit);
-					return Err(libwallet::ErrorKind::ClientCallback(msg).into());
-				}
-			};
-			api_outputs.insert(
-				out.commit,
-				(util::to_hex(out.commit.0.to_vec()), height, out.mmr_index),
-			);
-		}
-		Ok(api_outputs)
+		self.get_outputs_from_node_impl(wallet_outputs, NODE_CALL_RETRY)
 	}
 
 	// Expected respond from non full node, that can return reliable only non spent outputs.

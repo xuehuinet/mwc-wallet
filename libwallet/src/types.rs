@@ -387,7 +387,7 @@ pub trait NodeClient: Send + Sync + Clone {
 	/// Result value: Commit, Height, MMR
 	fn get_outputs_from_node(
 		&self,
-		wallet_outputs: Vec<pedersen::Commitment>,
+		wallet_outputs: &Vec<pedersen::Commitment>,
 	) -> Result<HashMap<pedersen::Commitment, (String, u64, u64)>, Error>;
 
 	/// Get a list of outputs from the node by traversing the UTXO

@@ -857,7 +857,7 @@ where
 				}
 				chunk_num += 1;
 
-				commits.extend(client.get_outputs_from_node(chunk.to_vec())?);
+				commits.extend(client.get_outputs_from_node(&chunk.to_vec())?);
 			}
 
 			if let Some(ref s) = status_send_channel {
@@ -867,7 +867,7 @@ where
 				));
 			}
 		} else {
-			commits = client.get_outputs_from_node(wallet_outputs_to_check)?;
+			commits = client.get_outputs_from_node(&wallet_outputs_to_check)?;
 		}
 
 		// Updating commits data with that
@@ -930,7 +930,7 @@ where
 
 		// Node will return back only Commits that are exist now.
 		let active_commits: HashMap<pedersen::Commitment, (String, u64, u64)> =
-			client.get_outputs_from_node(wallet_outputs_to_check)?;
+			client.get_outputs_from_node(&wallet_outputs_to_check)?;
 
 		for (active_commit, _, _) in active_commits.values() {
 			let output = outputs
