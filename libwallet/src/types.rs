@@ -353,6 +353,9 @@ pub trait NodeClient: Send + Sync + Clone {
 	/// Change the API secret
 	fn set_node_api_secret(&mut self, node_api_secret: Option<String>);
 
+	/// Reset cache data
+	fn reset_cache(&self);
+
 	/// Posts a transaction to a grin node
 	fn post_tx(&self, tx: &Transaction, fluff: bool) -> Result<(), Error>;
 
@@ -1186,6 +1189,7 @@ pub struct CbData {
 }
 
 /// Header Info data, used by HTTP client
+#[derive(Clone)]
 pub struct HeaderInfo {
 	/// Height of the header
 	pub height: u64,

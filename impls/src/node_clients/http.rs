@@ -32,25 +32,78 @@ use crate::util::{self, to_hex};
 
 use super::resp_types::*;
 use crate::client_utils::json_rpc::*;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use std::sync::{Arc, RwLock};
 
 const ENDPOINT: &str = "/v2/foreign";
+const CACHE_VALID_TIME_MS: u128 = 5000; // 2 seconds for cache should be enough for our purpose
+
+// cashed values are stored by the key K
+#[derive(Clone)]
+struct CachedValue<K, T> {
+	data: Arc<RwLock<HashMap<K, (T,Instant)>>>,
+}
+
+impl<K,T> CachedValue<K,T>
+	where K: std::cmp::Eq + std::hash::Hash,
+		  T: Clone
+{
+	fn new() -> Self {
+		CachedValue {
+			data: Arc::new(RwLock::new(HashMap::new())),
+		}
+	}
+
+	// Return none is cached value not set of epired
+	fn get_value(&self, key: &K) -> Option<T> {
+		match self.data.write().unwrap().get(key) {
+			Some( (data, time) ) => {
+				if time.elapsed().as_millis() > CACHE_VALID_TIME_MS {
+					return None;
+				}
+				Some( (*data).clone())
+			},
+			None => None
+		}
+	}
+
+	fn set_value(&self, key: K, value: T) {
+		self.data.write().unwrap().insert(key, (value, Instant::now()) );
+	}
+
+	fn clean(&self) {
+		self.data.write().unwrap().clear();
+	}
+}
 
 #[derive(Clone)]
 pub struct HTTPNodeClient {
 	node_url: String,
 	node_api_secret: Option<String>,
 	node_version_info: Option<NodeVersionInfo>,
+	client: Client,
+
+	// cache for the data
+	chain_tip:   CachedValue<u8,(u64, String, u64)>,
+	header_info: CachedValue<u64, HeaderInfo>,
+	block_info:  CachedValue<u64, api::BlockPrintable>,
 }
 
 impl HTTPNodeClient {
 	/// Create a new client that will communicate with the given grin node
-	pub fn new(node_url: &str, node_api_secret: Option<String>) -> HTTPNodeClient {
-		HTTPNodeClient {
+	pub fn new(node_url: &str, node_api_secret: Option<String>) -> Result<HTTPNodeClient, Error> {
+		let client = Client::new(false, None)
+			.map_err(|e| Error::GenericError(format!("Unable to create a client, {}", e)))?;
+
+		Ok(HTTPNodeClient {
 			node_url: node_url.to_owned(),
 			node_api_secret: node_api_secret,
 			node_version_info: None,
-		}
+			client,
+			chain_tip: 	 CachedValue::new(),
+			header_info: CachedValue::new(),
+			block_info:  CachedValue::new(),
+		})
 	}
 
 	/// Allow returning the chain height without needing a wallet instantiated
@@ -64,9 +117,8 @@ impl HTTPNodeClient {
 		params: &serde_json::Value,
 	) -> Result<D, libwallet::Error> {
 		let url = format!("{}{}", self.node_url(), ENDPOINT);
-		let client = Client::new();
 		let req = build_request(method, params);
-		let res = client.post::<Request, Response>(url.as_str(), self.node_api_secret(), &req);
+		let res = self.client.post::<Request, Response>(url.as_str(), self.node_api_secret(), &req);
 
 		match res {
 			Err(e) => {
@@ -101,6 +153,12 @@ impl NodeClient for HTTPNodeClient {
 
 	fn set_node_api_secret(&mut self, node_api_secret: Option<String>) {
 		self.node_api_secret = node_api_secret;
+	}
+
+	fn reset_cache(&self) {
+		self.chain_tip.clean();
+		self.header_info.clean();
+		self.block_info.clean();
 	}
 
 	fn get_version_info(&mut self) -> Option<NodeVersionInfo> {
@@ -147,27 +205,39 @@ impl NodeClient for HTTPNodeClient {
 
 	/// Return the chain tip from a given node
 	fn get_chain_tip(&self) -> Result<(u64, String, u64), libwallet::Error> {
+		if let Some(tip) = self.chain_tip.get_value(&0) {
+			return Ok(tip);
+		}
+
 		let result = self.send_json_request::<GetTipResp>("get_tip", &serde_json::Value::Null)?;
-		Ok((
+		let res = (
 			result.height,
 			result.last_block_pushed,
 			result.total_difficulty,
-		))
+		);
+		self.chain_tip.set_value(0, res.clone());
+		Ok(res)
 	}
 
 	/// Return header info from given height
 	fn get_header_info(&self, height: u64) -> Result<HeaderInfo, libwallet::Error> {
+		if let Some(h) = self.header_info.get_value(&height) {
+			return Ok(h);
+		}
+
 		let params = json!([Some(height), None::<Option<String>>, None::<Option<String>>]);
 		let r = self.send_json_request::<api::BlockHeaderPrintable>("get_header", &params)?;
 
 		assert!(r.height == height);
-		Ok(HeaderInfo {
+		let hdr = HeaderInfo {
 			height: r.height,
 			hash: r.hash,
 			version: r.version as i32,
 			nonce: r.nonce,
 			total_difficulty: r.total_difficulty,
-		})
+		};
+		self.header_info.set_value(height, hdr.clone());
+		Ok(hdr)
 	}
 
 	/// Return Connected peers
@@ -178,9 +248,8 @@ impl NodeClient for HTTPNodeClient {
 
 		let addr = self.node_url();
 		let url = format!("{}/v1/peers/connected", addr);
-		let client = Client::new();
 
-		let res = client
+		let res = self.client
 			.get::<Vec<grin_p2p::types::PeerInfoDisplay>>(url.as_str(), self.node_api_secret());
 		match res {
 			Err(e) => {
@@ -203,9 +272,8 @@ impl NodeClient for HTTPNodeClient {
 		let params = json!([to_hex(excess.0.to_vec()), min_height, max_height]);
 		// have to handle this manually since the error needs to be parsed
 		let url = format!("{}{}", self.node_url(), ENDPOINT);
-		let client = Client::new();
 		let req = build_request(method, &params);
-		let res = client.post::<Request, Response>(url.as_str(), self.node_api_secret(), &req);
+		let res = self.client.post::<Request, Response>(url.as_str(), self.node_api_secret(), &req);
 
 		match res {
 			Err(e) => {
@@ -272,8 +340,6 @@ impl NodeClient for HTTPNodeClient {
 		let url = format!("{}{}", self.node_url(), ENDPOINT);
 
 		let task = async move {
-			let client = Client::new();
-
 			let params: Vec<_> = query_params
 				.chunks(chunk_size)
 				.map(|c| json!([c, null, null, false, false]))
@@ -286,7 +352,7 @@ impl NodeClient for HTTPNodeClient {
 
 			let mut tasks = Vec::with_capacity(params.len());
 			for req in &reqs {
-				tasks.push(client.post_async::<Request, Response>(
+				tasks.push(self.client.post_async::<Request, Response>(
 					url.as_str(),
 					req,
 					self.node_api_secret(),
@@ -424,6 +490,7 @@ impl NodeClient for HTTPNodeClient {
 	/// Get blocks for height range. end_height is included.
 	/// Note, single block required singe request. Don't abuse it much because mwc713 wallets using the same node
 	/// threads_number - how many requests to do in parallel
+	/// Result of blocks not ordered
 	fn get_blocks_by_height(
 		&self,
 		start_height: u64,
@@ -448,27 +515,39 @@ impl NodeClient for HTTPNodeClient {
 		while height <= end_height {
 			let mut tasks = Vec::new();
 			while tasks.len() < threads_number && height <= end_height {
-				let params = json!([Some(height), None::<Option<String>>, None::<Option<String>>]);
-				tasks.push(async move {
-					self.send_json_request::<api::BlockPrintable>("get_block", &params)
-				});
+				if let Some(b) = self.block_info.get_value(&height) {
+					result_blocks.push(b); // using cache
+				}
+				else {
+					let params = json!([Some(height), None::<Option<String>>, None::<Option<String>>]);
+					tasks.push(async move {
+						self.send_json_request::<api::BlockPrintable>("get_block", &params)
+					});
+				}
 				height += 1;
 			}
 
-			let task = async {
-				let task: FuturesUnordered<_> = tasks.into_iter().collect();
-				task.try_collect().await
-			};
-			let res: Result<Vec<api::BlockPrintable>, _> = rt.block_on(task);
-			match res {
-				Ok(blocks) => result_blocks.extend(blocks),
-				Err(e) => {
-					let report = format!(
-						"get_blocks_by_height: error calling api 'get_block' at {}. Error: {}",
-						self.node_url, e
-					);
-					error!("{}", report);
-					return Err(libwallet::ErrorKind::ClientCallback(report).into());
+			if !tasks.is_empty() {
+				let task = async {
+					let task: FuturesUnordered<_> = tasks.into_iter().collect();
+					task.try_collect().await
+				};
+				let res: Result<Vec<api::BlockPrintable>, _> = rt.block_on(task);
+				match res {
+					Ok(blocks) => {
+						for b in &blocks {
+							self.block_info.set_value(b.header.height, b.clone());
+						}
+						result_blocks.extend(blocks)
+					},
+					Err(e) => {
+						let report = format!(
+							"get_blocks_by_height: error calling api 'get_block' at {}. Error: {}",
+							self.node_url, e
+						);
+						error!("{}", report);
+						return Err(libwallet::ErrorKind::ClientCallback(report).into());
+					}
 				}
 			}
 		}

@@ -118,8 +118,8 @@ pub enum ErrorKind {
 	NodeNotReady,
 
 	/// Error originating from hyper.
-	#[fail(display = "Hyper error")]
-	Hyper,
+	#[fail(display = "Hyper error, {}", _0)]
+	Hyper(String),
 
 	/// Error originating from hyper uri parsing.
 	#[fail(display = "Uri parsing error")]

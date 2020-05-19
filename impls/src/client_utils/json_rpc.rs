@@ -62,8 +62,8 @@ impl Response {
 		}
 
 		let result = match self.result.clone() {
-			Some(r) => serde_json::from_value(r["Ok"].clone()).map_err(Error::Json),
-			None => serde_json::from_value(serde_json::Value::Null).map_err(Error::Json),
+			Some(r) => serde_json::from_value(r["Ok"].clone()).map_err(|e| Error::Json(format!("{}",e)) ),
+			None => serde_json::from_value(serde_json::Value::Null).map_err(|e| Error::Json(format!("{}",e)) ),
 		}?;
 		Ok(result)
 	}
@@ -92,28 +92,31 @@ impl Response {
 }
 
 /// A library error
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, Clone)]
 pub enum Error {
 	/// Json error
 	#[fail(display = "Unable to parse json, {}", _0)]
-	Json(serde_json::Error),
+	Json(String),
 	/// Client error
 	#[fail(display = "Connection error, {}", _0)]
-	Hyper(hyper::error::Error),
+	Hyper(String),
 	/// Error response
 	#[fail(display = "RPC error: {:?}", _0)]
 	Rpc(RpcError),
+	/// Internal generic Error
+	#[fail(display = "Client error: {}", _0)]
+	GenericError(String),
 }
 
 impl From<serde_json::Error> for Error {
 	fn from(e: serde_json::Error) -> Error {
-		Error::Json(e)
+		Error::Json(format!("{}",e))
 	}
 }
 
 impl From<hyper::error::Error> for Error {
 	fn from(e: hyper::error::Error) -> Error {
-		Error::Hyper(e)
+		Error::Hyper(format!("{}",e))
 	}
 }
 

@@ -360,7 +360,8 @@ impl SlateReceiver for KeybaseAllChannels {
 		account: &str,
 		node_api_secret: Option<String>,
 	) -> Result<(), Error> {
-		let node_client = HTTPNodeClient::new(&config.check_node_api_http_addr, node_api_secret);
+		let node_client = HTTPNodeClient::new(&config.check_node_api_http_addr, node_api_secret)
+			.map_err(|e| ErrorKind::WalletComms(format!("Unable create node client, {}",e)))?;
 		let mut wallet =
 			Box::new(DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client).unwrap())
 				as Box<

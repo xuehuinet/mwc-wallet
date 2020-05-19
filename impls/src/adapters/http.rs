@@ -152,12 +152,8 @@ impl HttpSlateSender {
 	where
 		IN: Serialize,
 	{
-		let mut client = Client::new();
-		if self.use_socks {
-			client.use_socks = true;
-			client.socks_proxy_addr = self.socks_proxy_addr;
-		}
-
+		// For state sender we want send and disconnect
+		let client = Client::new(self.use_socks, self.socks_proxy_addr)?;
 		let req = client.create_post_request(url, Some("mwc".to_string()), api_secret, &input)?;
 		let res = client.send_request(req)?;
 		Ok(res)

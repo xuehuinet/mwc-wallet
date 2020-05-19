@@ -27,8 +27,10 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fmt::{self, Display};
 use std::net::SocketAddr;
-use std::time::Duration;
 use tokio::runtime::Builder;
+use std::time::Duration;
+use hyper::client::HttpConnector;
+use std::sync::Arc;
 
 /// Errors that can be returned by an ApiEndpoint implementation.
 #[derive(Debug)]
@@ -84,19 +86,65 @@ impl From<Context<ErrorKind>> for Error {
 	}
 }
 
+#[derive(Clone)]
 pub struct Client {
-	/// Whether to use socks proxy
-	pub use_socks: bool,
-	/// Proxy url/port
-	pub socks_proxy_addr: Option<SocketAddr>,
+	// At the same time only one client can exist. Probably it is a better way to write that, but we don't want
+	// to change signature.
+
+	/// Normal http(s) client.
+	https_client: Arc<Option<hyper::Client<TimeoutConnector<hyper_rustls::HttpsConnector<HttpConnector>>>>>,
+	/// Socks proxy client
+	socks_client: Arc<Option<hyper::Client<TimeoutConnector<hyper_socks2::SocksConnector<hyper_rustls::HttpsConnector<HttpConnector>>>>>>,
 }
 
 impl Client {
 	/// New client
-	pub fn new() -> Self {
-		Client {
-			use_socks: false,
-			socks_proxy_addr: None,
+	pub fn new(use_socks: bool, socks_proxy_addr: Option<SocketAddr>) -> Result<Self,Error> {
+		let (https_client, socks_client) = Self::construct_client(use_socks, socks_proxy_addr)?;
+		Ok(Client {
+			https_client: Arc::new(https_client),
+			socks_client: Arc::new(socks_client),
+		})
+	}
+
+	fn construct_client(use_socks: bool, socks_proxy_addr: Option<SocketAddr>) ->
+									Result< (Option<hyper::Client<TimeoutConnector<hyper_rustls::HttpsConnector<HttpConnector>>>>,
+										Option<hyper::Client<TimeoutConnector<hyper_socks2::SocksConnector<hyper_rustls::HttpsConnector<HttpConnector>>>>>), Error> {
+		if !use_socks {
+			let https = hyper_rustls::HttpsConnector::new();
+			let mut connector = TimeoutConnector::new(https);
+			connector.set_connect_timeout(Some(Duration::from_secs(20)));
+			connector.set_read_timeout(Some(Duration::from_secs(20)));
+			connector.set_write_timeout(Some(Duration::from_secs(20)));
+			let client = HyperClient::builder()
+				.pool_idle_timeout(Duration::from_secs(120))
+				.build::<_, Body>(connector);
+			Ok( (Some(client), None) )
+		} else {
+			let addr = socks_proxy_addr.ok_or_else(|| ErrorKind::RequestError("Missing Socks proxy address".to_string()))?;
+			let auth = format!("{}:{}", addr.ip(), addr.port());
+
+			let https = hyper_rustls::HttpsConnector::new();
+			let socks = hyper_socks2::SocksConnector {
+				proxy_addr: hyper::Uri::builder()
+					.scheme("socks5")
+					.authority(auth.as_str())
+					.path_and_query("/")
+					.build()
+					.map_err(|_| {
+						ErrorKind::RequestError("Can't parse Socks proxy address".to_string())
+					})?,
+				auth: None,
+				connector: https,
+			};
+			let mut connector = TimeoutConnector::new(socks);
+			connector.set_connect_timeout(Some(Duration::from_secs(20)));
+			connector.set_read_timeout(Some(Duration::from_secs(20)));
+			connector.set_write_timeout(Some(Duration::from_secs(20)));
+			let client = HyperClient::builder()
+				.pool_idle_timeout(Duration::from_secs(120))
+				.build::<_, Body>(connector);
+			Ok((None, Some(client) ))
 		}
 	}
 
@@ -318,42 +366,15 @@ impl Client {
 	}
 
 	async fn send_request_async(&self, req: Request<Body>) -> Result<String, Error> {
-		let resp = if !self.use_socks {
-			let https = hyper_rustls::HttpsConnector::new();
-			let mut connector = TimeoutConnector::new(https);
-			connector.set_connect_timeout(Some(Duration::from_secs(20)));
-			connector.set_read_timeout(Some(Duration::from_secs(20)));
-			connector.set_write_timeout(Some(Duration::from_secs(20)));
-			let client = HyperClient::builder().build::<_, Body>(connector);
-
+		let resp = if self.https_client.is_some() {
+			let client = self.https_client.iter().next().unwrap();
 			client.request(req).await
-		} else {
-			let addr = self.socks_proxy_addr.ok_or_else(|| {
-				ErrorKind::RequestError("Missing Socks proxy address".to_string())
-			})?;
-			let auth = format!("{}:{}", addr.ip(), addr.port());
-
-			let https = hyper_rustls::HttpsConnector::new();
-			let socks = hyper_socks2::SocksConnector {
-				proxy_addr: hyper::Uri::builder()
-					.scheme("socks5")
-					.authority(auth.as_str())
-					.path_and_query("/")
-					.build()
-					.map_err(|_| {
-						ErrorKind::RequestError("Can't parse Socks proxy address".to_string())
-					})?,
-				auth: None,
-				connector: https,
-			};
-			let mut connector = TimeoutConnector::new(socks);
-			connector.set_connect_timeout(Some(Duration::from_secs(20)));
-			connector.set_read_timeout(Some(Duration::from_secs(20)));
-			connector.set_write_timeout(Some(Duration::from_secs(20)));
-			let client = HyperClient::builder().build::<_, Body>(connector);
-
-			client.request(req).await
+		}
+		else {
+			debug_assert!(self.socks_client.is_some());
+			self.socks_client.iter().next().unwrap().request(req).await
 		};
+
 		let resp =
 			resp.map_err(|e| ErrorKind::RequestError(format!("Cannot make request: {}", e)))?;
 

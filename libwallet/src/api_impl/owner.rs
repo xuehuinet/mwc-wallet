@@ -732,6 +732,11 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
+	{
+		wallet_lock!(wallet_inst, w);
+		w.w2n_client().reset_cache();
+	}
+
 	// Checking from what point we should start scanning
 	let (tip_height, tip_hash, last_scanned_block, has_reorg) = get_last_detect_last_scanned_block(
 		wallet_inst.clone(),
@@ -998,6 +1003,9 @@ where
 	}
 
 	if has_reorg {
+		wallet_lock!(wallet_inst, w);
+		w.w2n_client().reset_cache(); // let's reset cach to be safe
+
 		info!(
 			"Wallet update will do full outputs checking because since last update reorg happend"
 		);
