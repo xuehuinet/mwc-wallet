@@ -173,6 +173,44 @@ impl Publisher for MWCMQPublisher {
 			.post_slate(slate, &to_address, &self.address, &self.secret_key)?;
 		Ok(())
 	}
+
+	fn encrypt_slate(&self, slate: &Slate, to: &dyn Address) -> Result<String, Error> {
+		let to_address_raw = format!("mwcmqs://{}", to.get_stripped());
+		let to_address = MWCMQSAddress::from_str(&to_address_raw)?;
+		self.broker
+			.encrypt_slate(slate, &to_address, &self.address, &self.secret_key)
+	}
+
+	fn decrypt_slate(
+		&self,
+		from: String,
+		mapmessage: String,
+		signature: String,
+		source_address: &ProvableAddress,
+	) -> Result<String, Error> {
+		let r1 = str::replace(&mapmessage, "%22", "\"");
+		let r2 = str::replace(&r1, "%7B", "{");
+		let r3 = str::replace(&r2, "%7D", "}");
+		let r4 = str::replace(&r3, "%3A", ":");
+		let r5 = str::replace(&r4, "%2C", ",");
+		let r5 = r5.trim().to_string();
+
+		let from = MWCMQSAddress::from_str(&from)?;
+
+		let (slate, _tx_proof) = TxProof::from_response(
+			&from.address,
+			r5.clone(),
+			"".to_string(),
+			signature.clone(),
+			&self.secret_key,
+			&source_address,
+		)?;
+
+		let slate = serde_json::to_string(&slate).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
+		})?;
+		Ok(slate)
+	}
 }
 
 #[derive(Clone)]
@@ -267,6 +305,44 @@ impl MWCMQSBroker {
 			print_to_log,
 			handler: Arc::new(Mutex::new(handler)),
 		}
+	}
+
+	fn encrypt_slate(
+		&self,
+		slate: &Slate,
+		to: &MWCMQSAddress,
+		from: &MWCMQSAddress,
+		secret_key: &SecretKey,
+	) -> Result<String, Error> {
+		let pkey = to.address.public_key()?;
+		let skey = secret_key.clone();
+
+		let message = EncryptedMessage::new(
+			serde_json::to_string(&slate).map_err(|e| {
+				ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
+			})?,
+			&to.address,
+			&pkey,
+			&skey,
+		)
+		.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
+
+		let message_ser = &serde_json::to_string(&message).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable convert Message to Json, {}", e))
+		})?;
+
+		let mut challenge = String::new();
+		challenge.push_str(&message_ser);
+		let signature = crypto::sign_challenge(&challenge, secret_key)?;
+		let signature = signature.to_hex();
+
+		let mser: &str = &message_ser;
+		let fromstripped = from.get_stripped();
+
+		Ok(format!(
+			"mapmessage={}&from={}&signature={}",
+			mser, &fromstripped, &signature
+		))
 	}
 
 	fn post_slate(

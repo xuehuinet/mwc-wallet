@@ -3,6 +3,7 @@ use super::mwcmq::MWCMQSAddress;
 use crate::error::ErrorKind;
 use crate::libwallet::proof::tx_proof::TxProof;
 use failure::Error;
+use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::Slate;
 use std::sync::mpsc::{Receiver, Sender};
 use url::Url; //only for the Address::parse
@@ -19,6 +20,14 @@ pub enum CloseReason {
 
 pub trait Publisher {
 	fn post_slate(&self, slate: &Slate, to: &dyn Address) -> Result<(), Error>;
+	fn encrypt_slate(&self, slate: &Slate, to: &dyn Address) -> Result<String, Error>;
+	fn decrypt_slate(
+		&self,
+		from: String,
+		mapmessage: String,
+		signature: String,
+		source_address: &ProvableAddress,
+	) -> Result<String, Error>;
 }
 
 pub trait Subscriber {
