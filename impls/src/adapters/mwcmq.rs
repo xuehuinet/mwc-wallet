@@ -316,15 +316,15 @@ impl MWCMQSBroker {
 	) -> Result<String, Error> {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
-		let serde_json = serde_json::to_string(&slate).map_err(|e| {
+		let serde_json5 = serde_json::to_string(&slate).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
 		})?;
 
-		let serde_json = str::replace(&serde_json, "{", "%7B");
-		let serde_json = str::replace(&serde_json, "}", "%7D");
-		let serde_json = str::replace(&serde_json, ":", "%3A");
-		let serde_json = str::replace(&serde_json, ",", "%2C");
-		let serde_json = serde_json.trim().to_string();
+		let serde_json4 = str::replace(&serde_json5, "{", "%7B");
+		let serde_json3 = str::replace(&serde_json4, "}", "%7D");
+		let serde_json2 = str::replace(&serde_json3, ":", "%3A");
+		let serde_json1 = str::replace(&serde_json2, ",", "%2C");
+		let serde_json = serde_json1.trim().to_string();
 
 		let message = EncryptedMessage::new(serde_json, &to.address, &pkey, &skey)
 			.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
