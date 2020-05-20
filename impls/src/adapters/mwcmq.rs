@@ -337,6 +337,7 @@ impl MWCMQSBroker {
 		let mser: &str = &str::replace(mser, "}", "%7D");
 		let mser: &str = &str::replace(mser, ":", "%3A");
 		let mser: &str = &str::replace(mser, ",", "%2C");
+		let mser: &str = &str::replace(mser, "\"", "%22");
 		let mser: &str = &mser.trim().to_string();
 
 		let fromstripped = from.get_stripped();
