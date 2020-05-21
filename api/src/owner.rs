@@ -22,7 +22,6 @@ use crate::config::{MQSConfig, TorConfig, WalletConfig};
 use crate::core::core::Transaction;
 use crate::core::global;
 use crate::impls::create_sender;
-use crate::impls::MwcMqsChannel;
 use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::api_impl::owner_updater::{start_updater_log_thread, StatusMessage};
 use crate::libwallet::api_impl::{owner, owner_updater};
@@ -738,7 +737,7 @@ where
 							&sa.dest,
 							&sa.apisecret,
 							tor_config_lock.clone(),
-							Some(MwcMqsChannel::new(sa.dest.clone(), sa.finalize.clone())),
+							sa.finalize,
 						)
 						.map_err(|e| {
 							ErrorKind::GenericError(format!("Unable to crete a sender, {}", e))

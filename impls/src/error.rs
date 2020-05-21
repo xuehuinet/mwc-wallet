@@ -119,6 +119,12 @@ pub enum ErrorKind {
 	#[fail(display = "Keybase error: {}", _0)]
 	KeybaseGenericError(String),
 
+	#[fail(display = "keybase not found! consider installing keybase locally first.")]
+	KeybaseNotFound,
+
+	#[fail(display = "Unable to send keybase message, {}", _0)]
+	KeybaseMessageSendError(String),
+
 	/// Get MQS invalid response
 	#[fail(display = "{} Sender returned invalid response.", _0)]
 	MqsInvalidRespose(String),

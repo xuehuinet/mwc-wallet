@@ -45,6 +45,8 @@ pub struct WalletConfig {
 	pub owner_api_include_foreign: Option<bool>,
 	/// Whether to include the mwcmqs listener
 	pub owner_api_include_mqs_listener: Option<bool>,
+	/// Whether to include the keybase listener
+	pub owner_api_include_keybase_listener: Option<bool>,
 	///Index used to derive address
 	pub grinbox_address_index: Option<u32>,
 	/// The directory in which wallet files are stored
@@ -77,6 +79,7 @@ impl Default for WalletConfig {
 			check_node_api_http_addr: "http://127.0.0.1:3413".to_string(),
 			owner_api_include_foreign: Some(false),
 			owner_api_include_mqs_listener: Some(false),
+			owner_api_include_keybase_listener: Some(false),
 			data_file_dir: ".".to_string(),
 			grinbox_address_index: None,
 			no_commit_cache: Some(false),
