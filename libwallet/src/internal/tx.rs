@@ -578,7 +578,7 @@ where
 		keychain_mask,
 		None,
 		Some(slate.id),
-		Some(parent_key_id),
+		None,
 		false,
 		None,
 		None,
