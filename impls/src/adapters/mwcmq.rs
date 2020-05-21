@@ -61,12 +61,14 @@ pub fn get_mwcmqs_brocker() -> Option<(MWCMQPublisher, MWCMQSubscriber)> {
 
 pub struct MwcMqsChannel {
 	des_address: String,
+	finalize: bool,
 }
 
 impl MwcMqsChannel {
-	pub fn new(des_address: String) -> Self {
+	pub fn new(des_address: String, finalize: bool) -> Self {
 		Self {
 			des_address: des_address,
+			finalize: finalize,
 		}
 	}
 
@@ -75,10 +77,17 @@ impl MwcMqsChannel {
 		slate: &Slate,
 		mwcmqs_publisher: MWCMQPublisher,
 		rx_slate: Receiver<Slate>,
+
+		tx_finalize: Sender<bool>,
 	) -> Result<Slate, Error> {
 		let des_address = MWCMQSAddress::from_str(self.des_address.as_ref()).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Invalid destination address, {}", e))
 		})?;
+
+		tx_finalize.send(self.finalize).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable to contact MQS worker, {}", e))
+		})?;
+
 		mwcmqs_publisher
 			.post_slate(&slate, &des_address)
 			.map_err(|e| {
@@ -113,10 +122,12 @@ impl SlateSender for MwcMqsChannel {
 		if let Some((mwcmqs_publisher, mwcmqs_subscriber)) = get_mwcmqs_brocker() {
 			// Creating channels for notification
 			let (tx_slate, rx_slate) = channel(); //this chaneel is used for listener thread to send message to other thread
+			//this chaneel is used for listener thread to receive message from other thread
+			let (tx_finalize, rx_finalize) = channel();
 
-			mwcmqs_subscriber.set_notification_channels(&slate.id, tx_slate);
-			let res = self.send_tx_to_mqs(slate, mwcmqs_publisher, rx_slate);
-			mwcmqs_subscriber.reset_notification_channels(&slate.id);
+			mwcmqs_subscriber.set_notification_channels(tx_slate, rx_finalize);
+			let res = self.send_tx_to_mqs(slate, mwcmqs_publisher, rx_slate, tx_finalize);
+			mwcmqs_subscriber.reset_notification_channels();
 			res
 		} else {
 			return Err(ErrorKind::MqsGenericError(format!(
@@ -192,9 +203,8 @@ impl Publisher for MWCMQPublisher {
 			&self.secret_key,
 			&source_address,
 		)
-		.map_err(|e| {
-			ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}", e))
-		})?;
+
+		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}",e)) )?;
 
 		let slate = serde_json::to_string(&slate).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))

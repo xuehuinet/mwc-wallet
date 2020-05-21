@@ -735,6 +735,10 @@ where
 							&sa.dest,
 							&sa.apisecret,
 							tor_config_lock.clone(),
+<<<<<<< HEAD
+=======
+							sa.finalize,
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/339  - merge with mwc713 changes
 						)
 						.map_err(|e| {
 							ErrorKind::GenericError(format!("Unable to create a sender, {}", e))

@@ -473,14 +473,27 @@ where
 				}
 
 				method => {
-					let original_slate = slate.clone();
+
 					let sender =
-						create_sender(method, &args.dest, &args.apisecret, tor_config)?;
+						create_sender(method, &args.dest, &args.apisecret, tor_config, true)?;
 					slate = sender.send_tx(&slate)?;
-					// Restore back ttl, because it can be gone
-					slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
-					// Checking is sender didn't do any harm to slate
-					Slate::compare_slates_send( &original_slate, &slate)?;
+				}
+			}
+
+			//for http slate needs to be finalized and posted
+			//for mwcmqs & keybase, slate has already been finalized in the listener thread, here only needs to be posted.
+			//right now mwcmqs tx_proof is done in listener thread in finalizing step.
+			match args.method.as_str() {
+				"http" => {
+					api.tx_lock_outputs(m, &slate, Some(args.dest.clone()), 0)?; //this step needs to be done before finalizing the slate
+				}
+
+				_ => {}
+			}
+
+			match args.method.as_str() {
+				"mwcmqs" | "keybase" => {}
+				_ => {
 					api.verify_slate_messages(m, &slate).map_err(|e| {
 						error!("Error validating participant messages: {}", e);
 						e
@@ -766,9 +779,8 @@ where
 					})?;
 				}
 				method => {
-					let sender = create_sender(method, &args.dest, &None, tor_config)?;
-					// We want to lock outputs for original slate. Sender can respond with anyhting. No reasons to check respond if lock works fine for original slate
-					let _ = sender.send_tx(&slate)?;
+					let sender = create_sender(method, &args.dest, &None, tor_config, true)?;
+					slate = sender.send_tx(&slate)?;
 					api.tx_lock_outputs(m, &slate, Some(args.dest.clone()), 1)?;
 				}
 			}

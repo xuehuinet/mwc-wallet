@@ -1,5 +1,6 @@
 //The following is support mqs usage in mwc713
 use crate::error::{Error, ErrorKind};
+use crate::libwallet::proof::tx_proof::TxProof;
 use grin_wallet_libwallet::Slate;
 use std::sync::mpsc::Sender;
 use url::Url; //only for the Address::parse
@@ -230,9 +231,14 @@ impl Display for HttpsAddress {
 
 impl dyn Address {
 	pub fn parse(address: &str) -> Result<Box<dyn Address>, Error> {
+<<<<<<< HEAD
 		let re = Regex::new(ADDRESS_REGEX).map_err(|e| {
 			ErrorKind::KeybaseGenericError(format!("Unable to construct address parser, {}", e))
 		})?;
+=======
+		let re = Regex::new(ADDRESS_REGEX)
+			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to construct address parser, {}",e)))?;
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/339  - merge with mwc713 changes
 		let captures = re.captures(address);
 		if captures.is_none() {
 			return Ok(Box::new(MWCMQSAddress::from_str(address)?));
