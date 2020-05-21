@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::types::{Address, AddressType, Publisher, Subscriber, SubscriptionHandler};
-use crate::error::ErrorKind;
+use super::types::{Address, Publisher, Subscriber, SubscriptionHandler};
+use crate::adapters::types::MWCMQSAddress;
+use crate::error::{Error, ErrorKind};
 use crate::libwallet::proof::crypto;
 use crate::libwallet::proof::crypto::Hex;
 use crate::util::Mutex;
-use failure::Error;
+use crate::SlateSender;
 use grin_util::RwLock;
 use grin_wallet_libwallet::proof::message::EncryptedMessage;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
@@ -26,10 +27,9 @@ use grin_wallet_libwallet::{Slate, VersionedSlate};
 use grin_wallet_util::grin_util::secp::key::SecretKey;
 use regex::Regex;
 use std::collections::HashMap;
-use std::fmt::{self, Debug, Display};
 use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
 use std::{thread, time};
@@ -37,8 +37,6 @@ use std::{thread, time};
 extern crate nanoid;
 
 const TIMEOUT_ERROR_REGEX: &str = r"timed out";
-const DEFAULT_MWCMQS_DOMAIN: &str = "mqs.mwc.mw";
-pub const DEFAULT_MWCMQS_PORT: u16 = 443;
 
 // MQS enforced to have a single instance. And different compoments migth manage
 // instances separatlly.
@@ -58,86 +56,73 @@ pub fn get_mwcmqs_brocker() -> Option<(MWCMQPublisher, MWCMQSubscriber)> {
 	MWCMQS_BROKER.read().clone()
 }
 
-#[derive(Clone, Debug)]
-pub struct MWCMQSAddress {
-	pub address: ProvableAddress,
-	pub domain: String,
-	pub port: u16,
+pub struct MwcMqsChannel {
+	des_address: String,
+	finalize: bool,
 }
 
-const MWCMQ_ADDRESS_REGEX: &str = r"^(mwcmqs://)?(?P<public_key>[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{52})(@(?P<domain>[a-zA-Z0-9\.]+)(:(?P<port>[0-9]*))?)?$";
-
-impl MWCMQSAddress {
-	pub fn new(address: ProvableAddress, domain: Option<String>, port: Option<u16>) -> Self {
+impl MwcMqsChannel {
+	pub fn new(des_address: String, finalize: bool) -> Self {
 		Self {
-			address,
-			domain: domain.unwrap_or(DEFAULT_MWCMQS_DOMAIN.to_string()),
-			port: port.unwrap_or(DEFAULT_MWCMQS_PORT),
+			des_address: des_address,
+			finalize: finalize,
 		}
+	}
+
+	fn send_tx_to_mqs(
+		&self,
+		slate: &Slate,
+		mwcmqs_publisher: MWCMQPublisher,
+		rx_slate: Receiver<Slate>,
+		tx_finalize: Sender<bool>,
+	) -> Result<Slate, Error> {
+		let des_address = MWCMQSAddress::from_str(self.des_address.as_ref()).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Invalid destination address, {}", e))
+		})?;
+		tx_finalize.send(self.finalize).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable to contact MQS worker, {}", e))
+		})?;
+		mwcmqs_publisher
+			.post_slate(&slate, &des_address)
+			.map_err(|e| {
+				ErrorKind::MqsGenericError(format!(
+					"MQS unable to transfer slate {} to the worker, {}",
+					slate.id, e
+				))
+			})?;
+
+		//expect to get slate back.
+		let slate_returned = rx_slate
+			.recv_timeout(Duration::from_secs(120))
+			.map_err(|e| {
+				ErrorKind::MqsGenericError(format!(
+					"MQS unable to process slate {}, {}",
+					slate.id, e
+				))
+			})?;
+		return Ok(slate_returned);
 	}
 }
 
-impl Display for MWCMQSAddress {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "mwcmqs://{}", self.address.public_key)?;
-		if self.domain != DEFAULT_MWCMQS_DOMAIN || self.port != DEFAULT_MWCMQS_PORT {
-			write!(f, "@{}", self.domain)?;
-			if self.port != DEFAULT_MWCMQS_PORT {
-				write!(f, ":{}", self.port)?;
-			}
+impl SlateSender for MwcMqsChannel {
+	fn send_tx(&self, slate: &Slate) -> Result<Slate, Error> {
+		if let Some((mwcmqs_publisher, mwcmqs_subscriber)) = get_mwcmqs_brocker() {
+			// Creating channels for notification
+			let (tx_slate, rx_slate) = channel(); //this chaneel is used for listener thread to send message to other thread
+			//this chaneel is used for listener thread to receive message from other thread
+			let (tx_finalize, rx_finalize) = channel();
+
+			mwcmqs_subscriber.set_notification_channels(tx_slate, rx_finalize);
+			let res = self.send_tx_to_mqs(slate, mwcmqs_publisher, rx_slate, tx_finalize);
+			mwcmqs_subscriber.reset_notification_channels();
+			res
+		} else {
+			return Err(ErrorKind::MqsGenericError(format!(
+				"MQS is not started, not able to send the slate {}",
+				slate.id
+			))
+			.into());
 		}
-		Ok(())
-	}
-}
-impl Address for MWCMQSAddress {
-	/// Extract the address plus additional data
-	fn from_str(s: &str) -> Result<Self, Error> {
-		let re = Regex::new(MWCMQ_ADDRESS_REGEX).unwrap();
-		let captures = re.captures(s);
-		if captures.is_none() {
-			Err(ErrorKind::MqsGenericError(format!(
-				"Unable to parse MWC address {}",
-				s
-			)))?;
-		}
-
-		let captures = captures.unwrap();
-		let public_key = captures
-			.name("public_key")
-			.ok_or(ErrorKind::MqsGenericError(format!(
-				"Unable to parse MWC MQS address {}, public key part is not found",
-				s
-			)))?
-			.as_str()
-			.to_string();
-
-		let domain = captures.name("domain").map(|m| m.as_str().to_string());
-		let port = match captures.name("port") {
-			Some(m) => Some(u16::from_str_radix(m.as_str(), 10).map_err(|_| {
-				ErrorKind::MqsGenericError(format!("Unable to parse MWC MQS port value"))
-			})?),
-			None => None,
-		};
-
-		Ok(MWCMQSAddress::new(
-			ProvableAddress::from_str(&public_key).map_err(|e| {
-				ErrorKind::MqsGenericError(format!("Invalid MQS address {}, {}", s, e))
-			})?,
-			domain,
-			port,
-		))
-	}
-
-	fn get_stripped(&self) -> String {
-		format!("{}", self)[9..].to_string()
-	}
-
-	fn get_full_name(&self) -> String {
-		"mwcmqs://".to_string() + &self.get_stripped()
-	}
-
-	fn address_type(&self) -> AddressType {
-		AddressType::MWCMQS
 	}
 }
 
@@ -204,7 +189,8 @@ impl Publisher for MWCMQPublisher {
 			signature.clone(),
 			&self.secret_key,
 			&source_address,
-		)?;
+		)
+		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}",e)) )?;
 
 		let slate = serde_json::to_string(&slate).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))

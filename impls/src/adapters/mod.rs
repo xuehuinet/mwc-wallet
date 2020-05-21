@@ -20,7 +20,10 @@ mod types;
 
 pub use self::file::PathToSlate;
 pub use self::http::HttpSlateSender;
-pub use self::keybase::{KeybaseAllChannels, KeybaseChannel};
+pub use self::keybase::{
+	get_keybase_brocker, init_keybase_access_data, KeybaseChannel, KeybasePublisher,
+	KeybaseSubscriber, TOPIC_SLATE_NEW,
+};
 
 use crate::config::{TorConfig, WalletConfig};
 use crate::error::{Error, ErrorKind};
@@ -28,15 +31,12 @@ use crate::libwallet::Slate;
 use crate::tor::config::complete_tor_address;
 use crate::util::ZeroingString;
 pub use mwcmq::{
-	get_mwcmqs_brocker, init_mwcmqs_access_data, MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber,
+	get_mwcmqs_brocker, init_mwcmqs_access_data, MWCMQPublisher, MWCMQSubscriber, MwcMqsChannel,
 };
 pub use types::{
-	Address, AddressType, CloseReason, HttpsAddress, KeybaseAddress, Publisher, Subscriber,
-	SubscriptionHandler,
+	Address, AddressType, CloseReason, HttpsAddress, KeybaseAddress, MWCMQSAddress, Publisher,
+	Subscriber, SubscriptionHandler,
 };
-
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::time::Duration;
 
 /// Sends transactions to a corresponding SlateReceiver
 pub trait SlateSender {
@@ -76,7 +76,7 @@ pub fn create_sender(
 	dest: &str,
 	apisecret: &Option<String>,
 	tor_config: Option<TorConfig>,
-	mqs_channel: Option<MwcMqsChannel>,
+	finalize: bool,
 ) -> Result<Box<dyn SlateSender>, Error> {
 	let invalid = |e| {
 		ErrorKind::WalletComms(format!(
@@ -115,15 +115,8 @@ pub fn create_sender(
 				.map_err(|e| invalid(e))?,
 			),
 		},
-		"keybase" => Box::new(KeybaseChannel::new(dest)?),
-		"mwcmqs" => {
-			if mqs_channel.is_none() {
-				return Err(
-					ErrorKind::WalletComms("No MQS channel found for mwcmqs".to_string()).into(),
-				);
-			}
-			Box::new(mqs_channel.unwrap())
-		}
+		"keybase" => Box::new(KeybaseChannel::new(dest, finalize)),
+		"mwcmqs" => Box::new(MwcMqsChannel::new(dest, finalize)),
 		"self" => {
 			return Err(ErrorKind::WalletComms(
 				"No sender implementation for \"self\".".to_string(),
@@ -144,76 +137,4 @@ pub fn create_sender(
 			.into());
 		}
 	})
-}
-
-//===============add with mwcmqs feature=============
-//may need to move to other place later
-pub struct MwcMqsChannel {
-	des_address: String,
-	finalize: bool,
-}
-
-impl MwcMqsChannel {
-	pub fn new(des_address: String, finalize: bool) -> Self {
-		Self {
-			des_address: des_address,
-			finalize: finalize,
-		}
-	}
-
-	fn send_tx_to_mqs(
-		&self,
-		slate: &Slate,
-		mwcmqs_publisher: MWCMQPublisher,
-		rx_slate: Receiver<Slate>,
-		tx_finalize: Sender<bool>,
-	) -> Result<Slate, Error> {
-		let des_address = MWCMQSAddress::from_str(self.des_address.as_ref()).map_err(|e| {
-			ErrorKind::MqsGenericError(format!("Invalid destination address, {}", e))
-		})?;
-		tx_finalize.send(self.finalize).map_err(|e| {
-			ErrorKind::MqsGenericError(format!("Unable to contact MQS worker, {}", e))
-		})?;
-		mwcmqs_publisher
-			.post_slate(&slate, &des_address)
-			.map_err(|e| {
-				ErrorKind::MqsGenericError(format!(
-					"MQS unable to transfer slate {} to the worker, {}",
-					slate.id, e
-				))
-			})?;
-
-		//expect to get slate back.
-		let slate_returned = rx_slate
-			.recv_timeout(Duration::from_secs(120))
-			.map_err(|e| {
-				ErrorKind::MqsGenericError(format!(
-					"MQS unable to process slate {}, {}",
-					slate.id, e
-				))
-			})?;
-		return Ok(slate_returned);
-	}
-}
-
-impl SlateSender for MwcMqsChannel {
-	fn send_tx(&self, slate: &Slate) -> Result<Slate, Error> {
-		if let Some((mwcmqs_publisher, mwcmqs_subscriber)) = get_mwcmqs_brocker() {
-			// Creating channels for notification
-			let (tx_slate, rx_slate) = channel(); //this chaneel is used for listener thread to send message to other thread
-									  //this chaneel is used for listener thread to receive message from other thread
-			let (tx_finalize, rx_finalize) = channel();
-
-			mwcmqs_subscriber.set_notification_channels(tx_slate, rx_finalize);
-			let res = self.send_tx_to_mqs(slate, mwcmqs_publisher, rx_slate, tx_finalize);
-			mwcmqs_subscriber.reset_notification_channels();
-			res
-		} else {
-			return Err(ErrorKind::MqsGenericError(format!(
-				"MQS is not started, not able to send the slate {}",
-				slate.id
-			))
-			.into());
-		}
-	}
 }

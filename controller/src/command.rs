@@ -20,7 +20,7 @@ use crate::config::{MQSConfig, TorConfig, WalletConfig, WALLET_CONFIG_FILE_NAME}
 use crate::core::{core, global};
 use crate::error::{Error, ErrorKind};
 use crate::impls::{
-	create_sender, KeybaseAllChannels, MwcMqsChannel, SlateGetter as _, SlateReceiver as _,
+	create_sender, SlateGetter as _,
 };
 use crate::impls::{PathToSlate, SlatePutter};
 use crate::keychain;
@@ -171,17 +171,17 @@ where
 			}
 		}
 		"keybase" => {
-			KeybaseAllChannels::new()?
-				.listen(
-					config.clone(),
-					g_args.password.clone().unwrap(),
-					&g_args.account,
-					g_args.node_api_secret.clone(),
-				)
-				.map_err(|e| {
-					error!("Unable to start keybase listener, {}", e);
-					Error::from(ErrorKind::ListenerError)
-				})?;
+			let wallet_inst = owner_api.wallet_inst.clone();
+			let _ = controller::init_start_keybase_listener(
+				config.clone(),
+				wallet_inst,
+				keychain_mask,
+				true,
+			)
+			.map_err(|e| {
+				error!("Unable to start keybase listener, {}", e);
+				Error::from(ErrorKind::ListenerError)
+			})?;
 		}
 		"mwcmqs" => {
 			let wallet_inst = owner_api.wallet_inst.clone();
@@ -229,6 +229,16 @@ where
 			config.clone(),
 			owner_api.wallet_inst.clone(),
 			mqs_config.clone(),
+			km.clone(),
+			false,
+		)?;
+	}
+
+	// Starting Keybase
+	if config.owner_api_include_keybase_listener.unwrap_or(false) {
+		let _ = controller::init_start_keybase_listener(
+			config.clone(),
+			owner_api.wallet_inst.clone(),
 			km.clone(),
 			false,
 		)?;
@@ -389,6 +399,20 @@ where
 
 			//if it is mwcmqs, start listner first.
 			match args.method.as_str() {
+				"keybase" => {
+					let km = match keychain_mask.as_ref() {
+						None => None,
+						Some(&m) => Some(m.to_owned()),
+					};
+					//start the listener
+					let _ = controller::init_start_keybase_listener(
+						config.clone(),
+						wallet_inst.clone(),
+						Arc::new(Mutex::new(km)),
+						false,
+					)?;
+					thread::sleep(Duration::from_millis(2000));
+				}
 				"mwcmqs" => {
 					//check to see if mqs_config is there, if not, return error
 					let mqs_config_unwrapped;
@@ -449,22 +473,17 @@ where
 				}
 
 				method => {
-					let sender = create_sender(
-						method,
-						&args.dest,
-						&args.apisecret,
-						tor_config,
-						Some(MwcMqsChannel::new(args.dest.clone(), true)),
-					)?;
+					let sender =
+						create_sender(method, &args.dest, &args.apisecret, tor_config, true)?;
 					slate = sender.send_tx(&slate)?;
 				}
 			}
 
-			//for http and keybase, slate needs to be finalized and posted
-			//for mwcmqs, slate has already been finalized in the listener thread, here only needs to be posted.
+			//for http slate needs to be finalized and posted
+			//for mwcmqs & keybase, slate has already been finalized in the listener thread, here only needs to be posted.
 			//right now mwcmqs tx_proof is done in listener thread in finalizing step.
 			match args.method.as_str() {
-				"http" | "keybase" => {
+				"http" => {
 					api.tx_lock_outputs(m, &slate, Some(args.dest.clone()), 0)?; //this step needs to be done before finalizing the slate
 				}
 
@@ -472,8 +491,7 @@ where
 			}
 
 			match args.method.as_str() {
-				"mwcmqs" => {}
-
+				"mwcmqs" | "keybase" => {}
 				_ => {
 					api.verify_slate_messages(m, &slate).map_err(|e| {
 						error!("Error validating participant messages: {}", e);
@@ -757,7 +775,7 @@ where
 					})?;
 				}
 				method => {
-					let sender = create_sender(method, &args.dest, &None, tor_config, None)?;
+					let sender = create_sender(method, &args.dest, &None, tor_config, true)?;
 					slate = sender.send_tx(&slate)?;
 					api.tx_lock_outputs(m, &slate, Some(args.dest.clone()), 1)?;
 				}

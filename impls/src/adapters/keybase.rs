@@ -58,7 +58,7 @@ impl KeybaseChannel {
 				"Keybase executable not found, make sure it is installed and in your PATH"
 					.to_owned(),
 			)
-			.into());
+				.into());
 		}
 
 		Ok(KeybaseChannel(channel))
@@ -145,7 +145,7 @@ fn read_from_channel(channel: &str, topic: &str) -> Result<Vec<String>, Error> {
 			}
 		}
 	))
-	.unwrap();
+		.unwrap();
 
 	let res = api_send(&payload)
 		.map_err(|e| ErrorKind::GenericError(format!("keybase api fail, {}", e)))?;
@@ -154,12 +154,12 @@ fn read_from_channel(channel: &str, topic: &str) -> Result<Vec<String>, Error> {
 		.as_array()
 		.unwrap_or(&vec![json!({})])
 		.iter()
-	{
-		if (msg["msg"]["content"]["type"] == "text") && (msg["msg"]["unread"] == true) {
-			let message = msg["msg"]["content"]["text"]["body"].as_str().unwrap_or("");
-			unread.push(message.to_owned());
+		{
+			if (msg["msg"]["content"]["type"] == "text") && (msg["msg"]["unread"] == true) {
+				let message = msg["msg"]["content"]["text"]["body"].as_str().unwrap_or("");
+				unread.push(message.to_owned());
+			}
 		}
-	}
 	Ok(unread)
 }
 
@@ -173,7 +173,7 @@ fn get_unread(topic: &str) -> Result<HashMap<String, String>, Error> {
 			},
 		}
 	}))
-	.unwrap();
+		.unwrap();
 
 	let res = api_send(&payload)
 		.map_err(|e| ErrorKind::GenericError(format!("keybase api fail, {}", e)))?;
@@ -185,16 +185,16 @@ fn get_unread(topic: &str) -> Result<HashMap<String, String>, Error> {
 		.as_array()
 		.unwrap_or(&vec![json!({})])
 		.iter()
-	{
-		if (msg["unread"] == true) && (msg["channel"]["topic_name"] == topic) {
-			let channel = msg["channel"]["name"]
-				.as_str()
-				.ok_or(ErrorKind::GenericError(
-					"Keybase unable to read 'channel', 'name' value from the message".to_string(),
-				))?;
-			channels.insert(channel.to_string());
+		{
+			if (msg["unread"] == true) && (msg["channel"]["topic_name"] == topic) {
+				let channel = msg["channel"]["name"]
+					.as_str()
+					.ok_or(ErrorKind::GenericError(
+						"Keybase unable to read 'channel', 'name' value from the message".to_string(),
+					))?;
+				channels.insert(channel.to_string());
+			}
 		}
-	}
 
 	let mut unread: HashMap<String, String> = HashMap::new();
 	for channel in channels.iter() {
@@ -230,7 +230,7 @@ fn send<T: Serialize>(message: T, channel: &str, topic: &str, ttl: u16) -> bool 
 			}
 		}
 	}))
-	.unwrap();
+		.unwrap();
 	let response = api_send(&payload);
 	if let Ok(res) = response {
 		match res["result"]["message"].as_str() {
@@ -262,7 +262,7 @@ fn notify(message: &str, channel: &str, ttl: u16) -> bool {
 			}
 		}
 	}))
-	.unwrap();
+		.unwrap();
 	let response = api_send(&payload);
 	if let Ok(res) = response {
 		match res["result"]["message"].as_str() {
@@ -346,7 +346,7 @@ impl KeybaseAllChannels {
 				"Keybase executable not found, make sure it is installed and in your PATH"
 					.to_owned(),
 			)
-			.into())
+				.into())
 		} else {
 			Ok(KeybaseAllChannels { _priv: () })
 		}
@@ -368,13 +368,13 @@ impl SlateReceiver for KeybaseAllChannels {
 		let mut wallet =
 			Box::new(DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client).unwrap())
 				as Box<
-					dyn WalletInst<
-						'static,
-						DefaultLCProvider<HTTPNodeClient, ExtKeychain>,
-						HTTPNodeClient,
-						ExtKeychain,
-					>,
-				>;
+				dyn WalletInst<
+					'static,
+					DefaultLCProvider<HTTPNodeClient, ExtKeychain>,
+					HTTPNodeClient,
+					ExtKeychain,
+				>,
+			>;
 		let lc = wallet.lc_provider().unwrap();
 		lc.set_top_level_directory(&config.data_file_dir)?;
 		let mask = lc.open_wallet(
