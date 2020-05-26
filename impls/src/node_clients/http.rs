@@ -116,7 +116,7 @@ impl HTTPNodeClient {
 		self.get_chain_tip()
 	}
 
-	fn send_json_request_impl<D: serde::de::DeserializeOwned>(
+	fn send_json_request<D: serde::de::DeserializeOwned>(
 		&self,
 		method: &str,
 		params: &serde_json::Value,
@@ -131,7 +131,7 @@ impl HTTPNodeClient {
 				if counter>0 {
 					debug!("Retrying to call Node API method {}: {}", method, e);
 					thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
-					return self.send_json_request_impl(method, params, counter-1);
+					return self.send_json_request(method, params, counter-1);
 				}
 				let report = format!("Error calling {}: {}", method, e);
 				error!("{}", report);
@@ -143,7 +143,7 @@ impl HTTPNodeClient {
 					if counter>0 {
 						debug!("Retrying to call Node API method {}: {}", method, e);
 						thread::sleep(Duration::from_millis(NODE_CALL_DELAY[(counter-1) as usize]));
-						return self.send_json_request_impl(method, params, counter-1);
+						return self.send_json_request(method, params, counter-1);
 					}
 					error!("{:?}", inner);
 					let report = format!("Unable to parse response for {}: {}", method, e);
@@ -152,14 +152,6 @@ impl HTTPNodeClient {
 				}
 			},
 		}
-	}
-
-	fn send_json_request<D: serde::de::DeserializeOwned>(
-		&self,
-		method: &str,
-		params: &serde_json::Value,
-	) -> Result<D, libwallet::Error> {
-		self.send_json_request_impl(method, params, NODE_CALL_RETRY)
 	}
 
 	/// Return Connected peers
@@ -390,7 +382,7 @@ impl NodeClient for HTTPNodeClient {
 			return Some(v.clone());
 		}
 		let retval = match self
-			.send_json_request::<GetVersionResp>("get_version", &serde_json::Value::Null)
+			.send_json_request::<GetVersionResp>("get_version", &serde_json::Value::Null, 2)
 		{
 			Ok(n) => NodeVersionInfo {
 				node_version: n.node_version,
@@ -423,7 +415,7 @@ impl NodeClient for HTTPNodeClient {
 	/// Posts a transaction to a grin node
 	fn post_tx(&self, tx: &Transaction, fluff: bool) -> Result<(), libwallet::Error> {
 		let params = json!([tx, fluff]);
-		self.send_json_request::<serde_json::Value>("push_transaction", &params)?;
+		self.send_json_request::<serde_json::Value>("push_transaction", &params, NODE_CALL_RETRY)?;
 		Ok(())
 	}
 
@@ -433,7 +425,7 @@ impl NodeClient for HTTPNodeClient {
 			return Ok(tip);
 		}
 
-		let result = self.send_json_request::<GetTipResp>("get_tip", &serde_json::Value::Null)?;
+		let result = self.send_json_request::<GetTipResp>("get_tip", &serde_json::Value::Null, 1)?;
 		let res = (
 			result.height,
 			result.last_block_pushed,
@@ -450,7 +442,7 @@ impl NodeClient for HTTPNodeClient {
 		}
 
 		let params = json!([Some(height), None::<Option<String>>, None::<Option<String>>]);
-		let r = self.send_json_request::<api::BlockHeaderPrintable>("get_header", &params)?;
+		let r = self.send_json_request::<api::BlockHeaderPrintable>("get_header", &params, NODE_CALL_RETRY)?;
 
 		assert!(r.height == height);
 		let hdr = HeaderInfo {
@@ -468,7 +460,7 @@ impl NodeClient for HTTPNodeClient {
 	fn get_connected_peer_info(
 		&self,
 	) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error> {
-		self.get_connected_peer_info_impls(NODE_CALL_RETRY)
+		self.get_connected_peer_info_impls(1)
 	}
 
 	/// Get kernel implementation
@@ -509,7 +501,7 @@ impl NodeClient for HTTPNodeClient {
 			Vec::new();
 
 		let params = json!([start_index, end_index, max_outputs, Some(true)]);
-		let res = self.send_json_request::<OutputListing>("get_unspent_outputs", &params)?;
+		let res = self.send_json_request::<OutputListing>("get_unspent_outputs", &params, NODE_CALL_RETRY)?;
 		for out in res.outputs {
 			if out.spent {
 				continue;
@@ -558,7 +550,7 @@ impl NodeClient for HTTPNodeClient {
 		end_height: Option<u64>,
 	) -> Result<(u64, u64), libwallet::Error> {
 		let params = json!([start_height, end_height]);
-		let res = self.send_json_request::<OutputListing>("get_pmmr_indices", &params)?;
+		let res = self.send_json_request::<OutputListing>("get_pmmr_indices", &params, NODE_CALL_RETRY)?;
 
 		Ok((res.last_retrieved_index, res.highest_index))
 	}
@@ -597,7 +589,7 @@ impl NodeClient for HTTPNodeClient {
 				else {
 					let params = json!([Some(height), None::<Option<String>>, None::<Option<String>>]);
 					tasks.push(async move {
-						self.send_json_request::<api::BlockPrintable>("get_block", &params)
+						self.send_json_request::<api::BlockPrintable>("get_block", &params, NODE_CALL_RETRY)
 					});
 				}
 				height += 1;
