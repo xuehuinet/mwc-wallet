@@ -41,6 +41,7 @@ use std::fs::File;
 use std::io::Write;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use crate::proof::tx_proof::pop_proof_for_slate;
 
 const USER_MESSAGE_MAX_LEN: usize = 256;
 use crate::proof::crypto;
@@ -648,7 +649,21 @@ where
 		batch.delete_private_context(sl.id.as_bytes(), 0)?;
 		batch.commit()?;
 	}
-	println!("owner finalize slate returned slate = {:?}", slate);
+
+	// If Proof available, we can store it at that point
+	if let Some(mut proof) = pop_proof_for_slate(&slate.id) {
+		proof.amount = context.amount;
+		proof.fee = context.fee;
+		for input in &context.input_commits {
+			proof.inputs.push(input.clone());
+		}
+		for output in &context.output_commits {
+			proof.outputs.push(output.clone());
+		}
+
+		proof.store_tx_proof(w.get_data_file_dir(), &slate.id.to_string())?;
+	};
+
 	Ok((sl, context))
 }
 

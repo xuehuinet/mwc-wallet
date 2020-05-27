@@ -47,26 +47,16 @@ use crate::keychain::Keychain;
 use easy_jsonrpc_mw::{Handler, MaybeReply};
 use grin_wallet_libwallet::proof::crypto;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
-use grin_wallet_libwallet::proof::tx_proof::TxProof;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::pin::Pin;
-use std::sync::mpsc::{Receiver, Sender};
-use std::sync::{RwLock,Arc};
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
-use std::collections::HashSet;
 
 lazy_static! {
 	pub static ref MWC_OWNER_BASIC_REALM: HeaderValue =
 		HeaderValue::from_str("Basic realm=MWC-OwnerAPI").unwrap();
-
-	// Slates that are scheduled to flaff instead of dandelion
-    static ref FLUFFED_SLATES: RwLock<HashSet<String>> = RwLock::new(HashSet::new());
-}
-
-pub fn set_fluff_for_slate(slate_id: String) {
-	FLUFFED_SLATES.write().unwrap().insert(slate_id);
 }
 
 // This function has to use libwallet errots because of callback and runs on libwallet side
@@ -232,8 +222,7 @@ where
 	// Autoinvoice
 	max_auto_accept_invoice: Option<u64>,
 
-	slate_send_channel: Arc<Mutex<Option<Sender<Slate>>>>,
-	message_receive_channel: Arc<Mutex<Option<Receiver<bool>>>>,
+	slate_send_channel: Arc<Mutex< HashMap< uuid::Uuid, Sender<Slate>>>>,
 	keychain_mask: Arc<Mutex<Option<SecretKey>>>,
 	// what to do with logs. Print them to console or into the logs
 	print_to_log: bool,
@@ -266,8 +255,7 @@ where
 			wallet,
 			publisher: Arc::new(Mutex::new(None)),
 			max_auto_accept_invoice,
-			slate_send_channel: Arc::new(Mutex::new(None)),
-			message_receive_channel: Arc::new(Mutex::new(None)),
+			slate_send_channel: Arc::new(Mutex::new(HashMap::new())),
 			keychain_mask,
 			print_to_log,
 		}
@@ -280,7 +268,6 @@ where
 			publisher: self.publisher.clone(),
 			max_auto_accept_invoice: self.max_auto_accept_invoice.clone(),
 			slate_send_channel: self.slate_send_channel.clone(),
-			message_receive_channel: self.message_receive_channel.clone(),
 			keychain_mask: self.keychain_mask.clone(),
 			print_to_log: self.print_to_log,
 		}
@@ -292,11 +279,10 @@ where
 
 	fn process_incoming_slate(
 		&self,
-		address: Option<String>,
+		from: &dyn Address,
 		slate: &mut Slate,
 		dest_acct_name: Option<&str>,
-		proof: Option<&mut TxProof>,
-	) -> Result<bool, Error> {
+	) -> Result<(), Error> {
 		let owner_api = Owner::new(self.wallet.clone(), None);
 		let foreign_api = Foreign::new(self.wallet.clone(), None, None);
 		let mask = self.keychain_mask.lock().clone();
@@ -345,7 +331,7 @@ where
 					ttl_blocks: None,
 					/// If set, require a payment proof for the particular recipient
 					payment_proof_recipient_address: None,
-					address: address.clone(),
+					address: Some(from.get_full_name()),
 					/// If true, just return an estimate of the resulting slate, containing fees and amounts
 					/// locked without actually locking outputs or creating the transaction. Note if this is set to
 					/// 'true', the amount field in the slate will contain the total amount locked, not the provided
@@ -360,10 +346,10 @@ where
 
 				*slate = owner_api.process_invoice_tx((&mask).as_ref(), slate, params)?;
 
-				owner_api.tx_lock_outputs((&mask).as_ref(), slate, address, 1)?;
+				owner_api.tx_lock_outputs((&mask).as_ref(), slate, Some(from.get_full_name()), 1)?;
 			} else {
 				let s = foreign_api
-					.receive_tx(slate, address, dest_acct_name, None)
+					.receive_tx(slate, Some(from.get_full_name()), dest_acct_name, None)
 					.map_err(|e| {
 						ErrorKind::LibWallet(format!(
 							"Unable to process incoming slate, receive_tx failed, {}",
@@ -372,79 +358,38 @@ where
 					})?;
 				*slate = s;
 			}
-			Ok(false)
+
+			// Send slate back
+			self.publisher
+				.lock()
+				.as_ref()
+				.expect("call set_publisher() method!!!")
+				.post_slate(slate, from)
+				.map_err(|e| {
+					self.do_log_error(format!("ERROR: Unable to send slate back, {}", e));
+					e
+				})?;
+
+			self.do_log_info(format!(
+				"slate [{}] sent back to [{}] successfully",
+				slate.id.to_string(),
+				from.get_stripped()
+			));
+
+			Ok(())
 		} else {
 			//request may come to here from owner api or send command
 
-			if let Some(slate_sender) = &*self.slate_send_channel.lock() {
-				//this happens when the request is from owner_api
-
-				let mut should_finalize = false;
-
-				if let Some(finalize_reciever) = &*self.message_receive_channel.lock() {
-					//this happens when the request is from owner_api
-					//unless get false from owner_api, it should always finalize tx here.
-					should_finalize = finalize_reciever
-						.recv_timeout(Duration::from_secs(15))
-						.unwrap_or_else(|_| true);
-				}
-
-				if should_finalize {
-					slate
-						.verify_messages()
-						.map_err(|e| ErrorKind::VerifySlateMessagesError(format!("{}", e)))?;
-					owner_api.tx_lock_outputs((&mask).as_ref(), slate, address, 0)?;
-					*slate = owner_api
-						.finalize_tx_with_proof((&mask).as_ref(), slate, proof)
-						.map_err(|e| {
-							ErrorKind::LibWallet(format!("Unable to finalize slate, {}", e))
-						})?;
-				}
-
-				//send the slate to owner_api
+			if let Some(slate_sender) = self.slate_send_channel.lock().get(&slate.id) {
+				//this happens when the request is from sender. Sender just want have a respond back
 				let slate_immutable = slate.clone();
 				let _ = slate_sender.send(slate_immutable);
 			} else {
-				//verify slate message
-				slate
-					.verify_messages()
-					.map_err(|e| ErrorKind::VerifySlateMessagesError(format!("{}", e)))?;
-				owner_api.tx_lock_outputs((&mask).as_ref(), slate, address, 0)?;
-
-				//finalize_tx first and then post_tx
-
-				let mut should_post = {
-					*slate = owner_api
-						.finalize_tx_with_proof((&mask).as_ref(), slate, proof)
-						.map_err(|e| {
-							ErrorKind::LibWallet(format!("Unable to finalize slate, {}", e))
-						})?;
-
-					true
-				};
-
-				if !should_post {
-					should_post = {
-						*slate = foreign_api.finalize_invoice_tx(&slate).map_err(|e| {
-							ErrorKind::LibWallet(format!("Unable to finalize slate, {}", e))
-						})?;
-						true
-					}
-				}
-				if should_post {
-					let fluff = FLUFFED_SLATES.write().unwrap().remove(&slate.id.to_string());
-					owner_api
-						.post_tx((&mask).as_ref(), &slate.tx, fluff)
-						.map_err(|e| {
-							ErrorKind::LibWallet(format!(
-								"Unable to broadcast slate to blockchain network, {}",
-								e
-							))
-						})?;
-				}
+				// Report error. We are not processing any finalization transactions if nobody waiting for that
+				self.do_log_warn(format!("Get back slate {}. Because slate arrive too late, wallet not processing it", slate.id));
 			}
 
-			Ok(true)
+			Ok(())
 		}
 	}
 
@@ -483,7 +428,7 @@ where
 		self.do_log_warn(format!("listener started for [{}]", self.name));
 	}
 
-	fn on_slate(&self, from: &dyn Address, slate: &mut Slate, proof: Option<&mut TxProof>) {
+	fn on_slate(&self, from: &dyn Address, slate: &mut Slate) {
 		let display_from = from.get_stripped();
 
 		if slate.num_participants > slate.participant_data.len() {
@@ -512,41 +457,14 @@ where
 				core::amount_to_hr_string(slate.amount, false)
 			));
 		};
-		let from_address_full_name = from.get_full_name();
 
 		let result = self
-			.process_incoming_slate(Some(from_address_full_name), slate, None, proof)
-			.and_then(|is_finalized| {
-				if !is_finalized {
-					self.publisher
-						.lock()
-						.as_ref()
-						.expect("call set_publisher() method!!!")
-						.post_slate(slate, from)
-						.map_err(|e| {
-							self.do_log_error(format!("ERROR: Unable to send slate back, {}", e));
-							e
-						})
-						.expect("failed posting slate!");
-					self.do_log_info(format!(
-						"slate [{}] sent back to [{}] successfully",
-						slate.id.to_string(),
-						display_from
-					));
-				} else {
-					self.do_log_info(format!(
-						"slate [{}] finalized successfully",
-						slate.id.to_string()
-					));
-				}
-				Ok(())
-			});
+			.process_incoming_slate(from, slate, None);
 
 		//send the message back
-
 		match result {
 			Ok(()) => {}
-			Err(e) => self.do_log_error(format!("{}", e)),
+			Err(e) => self.do_log_error(format!("Unable to process incoming slate, {}", e)),
 		}
 	}
 
@@ -573,18 +491,14 @@ where
 
 	fn set_notification_channels(
 		&self,
+		slate_id: &uuid::Uuid,
 		slate_send_channel: Sender<Slate>,
-		message_receive_channel: Receiver<bool>,
 	) {
-		self.slate_send_channel.lock().replace(slate_send_channel);
-		self.message_receive_channel
-			.lock()
-			.replace(message_receive_channel);
+		self.slate_send_channel.lock().insert(slate_id.clone(), slate_send_channel);
 	}
 
-	fn reset_notification_channels(&self) {
-		let _ = self.slate_send_channel.lock().take();
-		let _ = self.message_receive_channel.lock().take();
+	fn reset_notification_channels(&self, slate_id: &uuid::Uuid) {
+		let _ = self.slate_send_channel.lock().remove(slate_id);
 	}
 }
 
