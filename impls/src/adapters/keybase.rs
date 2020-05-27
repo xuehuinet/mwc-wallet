@@ -58,35 +58,29 @@ pub fn get_keybase_brocker() -> Option<(KeybasePublisher, KeybaseSubscriber)> {
 
 pub struct KeybaseChannel {
 	des_address: String,
-	finalize: bool,
 }
 
 impl KeybaseChannel {
-	pub fn new(des_address: String, finalize: bool) -> Self {
+	pub fn new(des_address: String) -> Self {
 		Self {
 			des_address: des_address,
-			finalize: finalize,
 		}
 	}
 
 	fn send_tx_keybase(
 		&self,
 		slate: &Slate,
-		mwcmqs_publisher: KeybasePublisher,
+		keybase_publisher: KeybasePublisher,
 		rx_slate: Receiver<Slate>,
-		tx_finalize: Sender<bool>,
 	) -> Result<Slate, Error> {
 		let des_address = KeybaseAddress::from_str(self.des_address.as_ref()).map_err(|e| {
 			ErrorKind::KeybaseGenericError(format!("Invalid destination address, {}", e))
 		})?;
-		tx_finalize.send(self.finalize).map_err(|e| {
-			ErrorKind::KeybaseGenericError(format!("Unable to contact MQS worker, {}", e))
-		})?;
-		mwcmqs_publisher
+		keybase_publisher
 			.post_slate(&slate, &des_address)
 			.map_err(|e| {
 				ErrorKind::KeybaseGenericError(format!(
-					"MQS unable to transfer slate {} to the worker, {}",
+					"Keybase unable to transfer slate {} to the worker, {}",
 					slate.id, e
 				))
 			})?;
@@ -109,12 +103,10 @@ impl SlateSender for KeybaseChannel {
 		if let Some((keybase_publisher, keybase_subscriber)) = get_keybase_brocker() {
 			// Creating channels for notification
 			let (tx_slate, rx_slate) = channel(); //this chaneel is used for listener thread to send message to other thread
-			//this chaneel is used for listener thread to receive message from other thread
-			let (tx_finalize, rx_finalize) = channel();
 
-			keybase_subscriber.set_notification_channels(tx_slate, rx_finalize);
-			let res = self.send_tx_keybase(slate, keybase_publisher, rx_slate, tx_finalize);
-			keybase_subscriber.reset_notification_channels();
+			keybase_subscriber.set_notification_channels( &slate.id, tx_slate);
+			let res = self.send_tx_keybase(slate, keybase_publisher, rx_slate);
+			keybase_subscriber.reset_notification_channels(&slate.id);
 			res
 		} else {
 			return Err(ErrorKind::KeybaseGenericError(format!(
@@ -228,7 +220,7 @@ impl Subscriber for KeybaseSubscriber {
 						username: sender.to_string(),
 						topic: Some(reply_topic),
 					};
-					self.handler.lock().on_slate(&address, &mut slate, None);
+					self.handler.lock().on_slate(&address, &mut slate);
 				}
 			} else {
 				if !dropped {
@@ -262,16 +254,16 @@ impl Subscriber for KeybaseSubscriber {
 
 	fn set_notification_channels(
 		&self,
-		slate_send_channel: Sender<Slate>,
-		message_receive_channel: Receiver<bool>,
+		slate_id: &uuid::Uuid,
+		slate_send_channel: Sender<Slate>
 	) {
 		self.handler
 			.lock()
-			.set_notification_channels(slate_send_channel, message_receive_channel);
+			.set_notification_channels(slate_id, slate_send_channel);
 	}
 
-	fn reset_notification_channels(&self) {
-		self.handler.lock().reset_notification_channels();
+	fn reset_notification_channels(&self, slate_id: &uuid::Uuid) {
+		self.handler.lock().reset_notification_channels(slate_id);
 	}
 }
 

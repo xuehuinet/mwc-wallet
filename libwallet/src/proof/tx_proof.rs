@@ -26,9 +26,26 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::{fs, path};
+use util::Mutex;
+use std::collections::HashMap;
 
 /// Dir name with proof files
 pub const TX_PROOF_SAVE_DIR: &'static str = "saved_proofs";
+
+lazy_static! {
+	/// Global proof in memory storage.
+	static ref SLATE_PROOFS: Mutex< HashMap<uuid::Uuid, TxProof> > = { Mutex::new(HashMap::new()) };
+}
+
+/// Add a txProof into the mem storage
+pub fn push_proof_for_slate( uuid: &uuid::Uuid, proof: TxProof ) {
+	SLATE_PROOFS.lock().insert(uuid.clone(), proof);
+}
+
+/// Get txProof form the mem storage. At step we suppose to Finalize
+pub fn pop_proof_for_slate(uuid: &uuid::Uuid) -> Option<TxProof> {
+	SLATE_PROOFS.lock().remove(uuid)
+}
 
 /// Tx Proof - the mwc713 based proof that can be made for any address that is a public key.
 #[derive(Debug, Serialize, Deserialize)]

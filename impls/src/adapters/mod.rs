@@ -76,7 +76,6 @@ pub fn create_sender(
 	dest: &str,
 	apisecret: &Option<String>,
 	tor_config: Option<TorConfig>,
-	finalize: bool,
 ) -> Result<Box<dyn SlateSender>, Error> {
 	let invalid = |e| {
 		ErrorKind::WalletComms(format!(
@@ -115,8 +114,8 @@ pub fn create_sender(
 				.map_err(|e| invalid(e))?,
 			),
 		},
-		"keybase" => Box::new(KeybaseChannel::new(dest, finalize)),
-		"mwcmqs" => Box::new(MwcMqsChannel::new(dest, finalize)),
+		"keybase" => Box::new(KeybaseChannel::new(dest)),
+		"mwcmqs" => Box::new(MwcMqsChannel::new(dest)),
 		"self" => {
 			return Err(ErrorKind::WalletComms(
 				"No sender implementation for \"self\".".to_string(),
