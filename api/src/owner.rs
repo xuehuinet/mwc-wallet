@@ -735,10 +735,7 @@ where
 							&sa.dest,
 							&sa.apisecret,
 							tor_config_lock.clone(),
-<<<<<<< HEAD
-=======
-							sa.finalize,
->>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/339  - merge with mwc713 changes
+
 						)
 						.map_err(|e| {
 							ErrorKind::GenericError(format!("Unable to create a sender, {}", e))
@@ -760,11 +757,14 @@ where
 					}
 				};
 
+<<<<<<< HEAD
 				// Restore back ttl, because it can be gone
 				slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
 				// Checking is sender didn't do any harm to slate
 				Slate::compare_slates_send( &original_slate, &slate)?;
 
+=======
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 				self.verify_slate_messages(keychain_mask, &slate).map_err(|e| {
 					error!("Unable to validate participant messages at slate {}: {}", slate.id,  e);
 					e

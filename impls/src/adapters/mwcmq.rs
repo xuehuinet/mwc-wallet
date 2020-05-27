@@ -61,14 +61,12 @@ pub fn get_mwcmqs_brocker() -> Option<(MWCMQPublisher, MWCMQSubscriber)> {
 
 pub struct MwcMqsChannel {
 	des_address: String,
-	finalize: bool,
 }
 
 impl MwcMqsChannel {
-	pub fn new(des_address: String, finalize: bool) -> Self {
+	pub fn new(des_address: String) -> Self {
 		Self {
 			des_address: des_address,
-			finalize: finalize,
 		}
 	}
 
@@ -77,17 +75,23 @@ impl MwcMqsChannel {
 		slate: &Slate,
 		mwcmqs_publisher: MWCMQPublisher,
 		rx_slate: Receiver<Slate>,
+<<<<<<< HEAD
 
 		tx_finalize: Sender<bool>,
+=======
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 	) -> Result<Slate, Error> {
 		let des_address = MWCMQSAddress::from_str(self.des_address.as_ref()).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Invalid destination address, {}", e))
 		})?;
+<<<<<<< HEAD
 
 		tx_finalize.send(self.finalize).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable to contact MQS worker, {}", e))
 		})?;
 
+=======
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 		mwcmqs_publisher
 			.post_slate(&slate, &des_address)
 			.map_err(|e| {
@@ -122,12 +126,10 @@ impl SlateSender for MwcMqsChannel {
 		if let Some((mwcmqs_publisher, mwcmqs_subscriber)) = get_mwcmqs_brocker() {
 			// Creating channels for notification
 			let (tx_slate, rx_slate) = channel(); //this chaneel is used for listener thread to send message to other thread
-			//this chaneel is used for listener thread to receive message from other thread
-			let (tx_finalize, rx_finalize) = channel();
 
-			mwcmqs_subscriber.set_notification_channels(tx_slate, rx_finalize);
-			let res = self.send_tx_to_mqs(slate, mwcmqs_publisher, rx_slate, tx_finalize);
-			mwcmqs_subscriber.reset_notification_channels();
+			mwcmqs_subscriber.set_notification_channels(&slate.id, tx_slate);
+			let res = self.send_tx_to_mqs(slate, mwcmqs_publisher, rx_slate);
+			mwcmqs_subscriber.reset_notification_channels(&slate.id);
 			res
 		} else {
 			return Err(ErrorKind::MqsGenericError(format!(
@@ -266,7 +268,15 @@ impl Subscriber for MWCMQSubscriber {
 		self.broker.is_running()
 	}
 
+<<<<<<< HEAD
 	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>) {
+=======
+	fn set_notification_channels(
+		&self,
+		slate_id: &uuid::Uuid,
+		slate_send_channel: Sender<Slate>,
+	) {
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 		self.broker
 			.handler
 			.lock()
@@ -274,10 +284,14 @@ impl Subscriber for MWCMQSubscriber {
 	}
 
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid) {
+<<<<<<< HEAD
 		self.broker
 			.handler
 			.lock()
 			.reset_notification_channels(slate_id);
+=======
+		self.broker.handler.lock().reset_notification_channels(slate_id);
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 	}
 }
 
@@ -921,9 +935,18 @@ impl MWCMQSBroker {
 									}
 								};
 
+<<<<<<< HEAD
 								push_proof_for_slate(&slate.id, tx_proof);
 
 								self.handler.lock().on_slate(&from, &mut slate);
+=======
+								push_proof_for_slate( &slate.id, tx_proof );
+
+								self.handler.lock().on_slate(
+									&from,
+									&mut slate,
+								);
+>>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 								break;
 							}
 						}
