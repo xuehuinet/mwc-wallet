@@ -219,6 +219,7 @@ pub fn output_torrc(
 	for dir in service_dirs {
 		let service_file_name = format!("./{}{}{}", HIDDEN_SERVICES_DIR, MAIN_SEPARATOR, dir);
 		props.add_item("HiddenServiceDir", &service_file_name);
+		props.add_item("HiddenServiceVersion", &format!("3"));
 		props.add_item("HiddenServicePort", &format!("80 {}", wallet_listener_addr));
 	}
 
