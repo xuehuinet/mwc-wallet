@@ -30,6 +30,7 @@ variables:
 
 jobs:
 - job: linux
+  timeoutInMinutes: 120
   pool:
     vmImage: ubuntu-16.04
   strategy:
@@ -51,6 +52,7 @@ jobs:
     - template: '.ci/test.yml'
     - template: '.ci/release.yml'
 - job: macos
+  timeoutInMinutes: 120
   pool:
     vmImage: macOS-latest
   strategy:
@@ -65,6 +67,7 @@ jobs:
     - template: '.ci/test.yml'
     - template: '.ci/release.yml'
 - job: windows
+  timeoutInMinutes: 120
   pool:
     vmImage: windows-2019
   strategy:
