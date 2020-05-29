@@ -29,13 +29,13 @@ use grin_wallet_controller::{Error, ErrorKind};
 use grin_wallet_impls::tor::config::is_tor_address;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl};
 use grin_wallet_impls::{PathToSlate, SlateGetter as _};
+use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::Slate;
 use grin_wallet_libwallet::{IssueInvoiceTxArgs, NodeClient, WalletInst, WalletLCProvider};
 use grin_wallet_util::grin_core as core;
 use grin_wallet_util::grin_core::core::amount_to_hr_string;
 use grin_wallet_util::grin_core::global;
 use grin_wallet_util::grin_keychain as keychain;
-use grin_wallet_util::OnionV3Address;
 use linefeed::terminal::Signal;
 use linefeed::{Interface, ReadResult};
 use rpassword;
@@ -314,9 +314,16 @@ where
 {
 	// Checking is wallet data
 	let mut wallet_data_path = PathBuf::from(&config.data_file_dir);
-	wallet_data_path.push(config.wallet_data_dir.clone().unwrap_or(GRIN_WALLET_DIR.to_string()) );
+	wallet_data_path.push(
+		config
+			.wallet_data_dir
+			.clone()
+			.unwrap_or(GRIN_WALLET_DIR.to_string()),
+	);
 	if wallet_data_path.exists() && !test_mode {
-		return Err(ParseError::WalletExists(wallet_data_path.to_str().unwrap_or("unknown").to_string()));
+		return Err(ParseError::WalletExists(
+			wallet_data_path.to_str().unwrap_or("unknown").to_string(),
+		));
 	}
 
 	let list_length = match args.is_present("short_wordlist") {
@@ -491,11 +498,11 @@ pub fn parse_send_args(args: &ArgMatches) -> Result<command::SendArgs, ParseErro
 			true => {
 				// if the destination address is a TOR address, we don't need the address
 				// separately
-				match OnionV3Address::try_from(dest) {
+				match ProvableAddress::from_str(dest) {
 					Ok(a) => Some(a),
 					Err(_) => {
 						let addr = parse_required(args, "proof_address")?;
-						match OnionV3Address::try_from(addr) {
+						match ProvableAddress::from_str(addr) {
 							Ok(a) => Some(a),
 							Err(e) => {
 								let msg = format!("Invalid proof address: {:?}", e);

@@ -19,7 +19,6 @@ use crate::libwallet::{
 };
 use crate::util;
 use colored::*;
-use grin_wallet_util::OnionV3Address;
 use prettytable;
 
 /// Display outputs in a pretty way
@@ -575,7 +574,7 @@ pub fn payment_proof(tx: &TxLogEntry) -> Result<(), Error> {
 
 	println!();
 	let receiver_signature = match pp.receiver_signature {
-		Some(s) => util::to_hex(s.to_bytes().to_vec()),
+		Some(s) => util::to_hex(s.as_bytes().to_vec()),
 		None => "None".to_owned(),
 	};
 	let fee = match tx.fee {
@@ -592,7 +591,7 @@ pub fn payment_proof(tx: &TxLogEntry) -> Result<(), Error> {
 	};
 
 	let sender_signature = match pp.sender_signature {
-		Some(s) => util::to_hex(s.to_bytes().to_vec()),
+		Some(s) => util::to_hex(s.as_bytes().to_vec()),
 		None => "None".to_owned(),
 	};
 	let kernel_excess = match tx.kernel_excess {
@@ -600,17 +599,11 @@ pub fn payment_proof(tx: &TxLogEntry) -> Result<(), Error> {
 		None => "None".to_owned(),
 	};
 
-	println!(
-		"Receiver Address: {}",
-		OnionV3Address::from_bytes(pp.receiver_address.to_bytes())
-	);
+	println!("Receiver Address: {}", pp.receiver_address.public_key);
 	println!("Receiver Signature: {}", receiver_signature);
 	println!("Amount: {}", amount);
 	println!("Kernel Excess: {}", kernel_excess);
-	println!(
-		"Sender Address: {}",
-		OnionV3Address::from_bytes(pp.sender_address.to_bytes())
-	);
+	println!("Sender Address: {}", pp.sender_address.public_key);
 	println!("Sender Signature: {}", sender_signature);
 
 	println!();

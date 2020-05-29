@@ -19,6 +19,8 @@ use crate::api_impl::owner::check_ttl;
 use crate::grin_keychain::Keychain;
 use crate::grin_util::secp::key::SecretKey;
 use crate::internal::{tx, updater};
+use crate::proof::crypto;
+use crate::proof::message::EncryptedMessage;
 use crate::slate_versions::SlateVersion;
 use crate::{
 	address, BlockFees, CbData, Error, ErrorKind, NodeClient, Slate, TxLogEntryType, VersionInfo,
@@ -163,7 +165,7 @@ where
 		let sig = tx::create_payment_proof_signature(
 			ret_slate.amount,
 			&excess,
-			p.sender_address,
+			p.sender_address.clone(),
 			address::address_from_derivation_path(&keychain, &parent_key_id, 0)?,
 		)?;
 

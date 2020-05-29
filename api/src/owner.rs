@@ -35,6 +35,7 @@ use crate::util::logger::LoggingConfig;
 use crate::util::secp::key::SecretKey;
 use crate::util::{from_hex, static_secp_instance, Mutex, ZeroingString};
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
+use grin_wallet_util::grin_util::secp::key::PublicKey;
 use grin_wallet_util::OnionV3Address;
 use std::convert::TryFrom;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -2157,7 +2158,7 @@ where
 		&self,
 		keychain_mask: Option<&SecretKey>,
 		derivation_index: u32,
-	) -> Result<DalekPublicKey, Error> {
+	) -> Result<PublicKey, Error> {
 		owner::get_public_proof_address(self.wallet_inst.clone(), keychain_mask, derivation_index)
 	}
 
@@ -2363,7 +2364,8 @@ macro_rules! doctest_helper_setup_doc_env {
 		wallet_config.data_file_dir = dir.to_owned();
 		let pw = ZeroingString::from("");
 
-		let node_client = HTTPNodeClient::new(&wallet_config.check_node_api_http_addr, None).unwrap();
+		let node_client =
+			HTTPNodeClient::new(&wallet_config.check_node_api_http_addr, None).unwrap();
 		let mut wallet = Box::new(
 			DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client.clone()).unwrap(),
 			)

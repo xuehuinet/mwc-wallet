@@ -25,6 +25,7 @@ use crate::grin_util::secp;
 use crate::grin_util::secp::key::PublicKey;
 use crate::grin_util::secp::pedersen::{Commitment, RangeProof};
 use crate::grin_util::secp::Signature;
+use crate::proof::proofaddress::ProvableAddress;
 use crate::slate::CompatKernelFeatures;
 use crate::slate_versions::ser as dalek_ser;
 use ed25519_dalek::PublicKey as DalekPublicKey;
@@ -109,13 +110,20 @@ pub struct ParticipantDataV3 {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PaymentInfoV3 {
+pub struct PaymentInfoV3Old {
 	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
 	pub sender_address: DalekPublicKey,
 	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
 	pub receiver_address: DalekPublicKey,
 	#[serde(with = "dalek_ser::option_dalek_sig_serde")]
 	pub receiver_signature: Option<DalekSignature>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PaymentInfoV3 {
+	pub sender_address: ProvableAddress,
+	pub receiver_address: ProvableAddress,
+	pub receiver_signature: Option<String>,
 }
 
 /// A transaction

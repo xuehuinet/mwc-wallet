@@ -24,6 +24,7 @@ use crate::util::OnionV3Address;
 
 use crate::api_impl::owner_updater::StatusMessage;
 use crate::grin_keychain::{Identifier, Keychain};
+use crate::grin_util::secp::key::PublicKey;
 use crate::internal::{keys, scan, selection, tx, updater};
 use crate::slate::{PaymentInfo, Slate};
 use crate::types::{AcctPathMapping, Context, NodeClient, TxLogEntry, WalletBackend, WalletInfo};
@@ -42,6 +43,8 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 const USER_MESSAGE_MAX_LEN: usize = 256;
+use crate::proof::crypto;
+use crate::proof::proofaddress;
 
 /// List of accounts
 pub fn accounts<'a, T: ?Sized, C, K>(w: &mut T) -> Result<Vec<AcctPathMapping>, Error>
@@ -84,7 +87,7 @@ pub fn get_public_proof_address<'a, L, C, K>(
 	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
 	keychain_mask: Option<&SecretKey>,
 	index: u32,
-) -> Result<DalekPublicKey, Error>
+) -> Result<PublicKey, Error>
 where
 	L: WalletLCProvider<'a, C, K>,
 	C: NodeClient + 'a,
@@ -93,9 +96,10 @@ where
 	wallet_lock!(wallet_inst, w);
 	let parent_key_id = w.parent_key_id();
 	let k = w.keychain(keychain_mask)?;
-	let sec_addr_key = address::address_from_derivation_path(&k, &parent_key_id, index)?;
-	let addr = OnionV3Address::from_private(&sec_addr_key.0)?;
-	Ok(addr.to_ed25519()?)
+	//	let sec_addr_key = address::address_from_derivation_path(&k, &parent_key_id, index)?;
+	//	let addr = OnionV3Address::from_private(&sec_addr_key.0)?;
+	let pub_key = proofaddress::payment_proof_address_pubkey(&k, &parent_key_id, index)?;
+	Ok(pub_key)
 }
 
 fn perform_refresh_from_node<'a, L, C, K>(
@@ -315,9 +319,9 @@ where
 	Ok(PaymentProof {
 		amount: amount,
 		excess: excess,
-		recipient_address: OnionV3Address::from_bytes(proof.receiver_address.to_bytes()),
+		recipient_address: proof.receiver_address,
 		recipient_sig: r_sig,
-		sender_address: OnionV3Address::from_bytes(proof.sender_address.to_bytes()),
+		sender_address: proof.sender_address,
 		sender_sig: s_sig,
 	})
 }
@@ -401,17 +405,17 @@ where
 	// Payment Proof, add addresses to slate and save address
 	// TODO: Note we only use single derivation path for now,
 	// probably want to allow sender to specify which one
+	//right now use 0
 	let deriv_path = 0u32;
 
 	if let Some(a) = args.payment_proof_recipient_address {
 		let k = w.keychain(keychain_mask)?;
 
-		let sec_addr_key = address::address_from_derivation_path(&k, &parent_key_id, deriv_path)?;
-		let sender_address = OnionV3Address::from_private(&sec_addr_key.0)?;
+		let sender_a = proofaddress::payment_proof_address(&k, &parent_key_id, deriv_path)?;
 
 		slate.payment_proof = Some(PaymentInfo {
-			sender_address: sender_address.to_ed25519()?,
-			receiver_address: a.to_ed25519()?,
+			sender_address: sender_a,
+			receiver_address: a,
 			receiver_signature: None,
 		});
 
@@ -1118,7 +1122,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	let sender_pubkey = proof.sender_address.to_ed25519()?;
+	let sender_pubkey = proof.sender_address.clone().public_key;
 	let msg = tx::payment_proof_message(proof.amount, &proof.excess, sender_pubkey)?;
 
 	let (mut client, parent_key_id, keychain) = {
@@ -1150,26 +1154,22 @@ where
 	};
 
 	// Check Sigs
-	let recipient_pubkey = proof.recipient_address.to_ed25519()?;
-	if recipient_pubkey.verify(&msg, &proof.recipient_sig).is_err() {
-		return Err(ErrorKind::PaymentProof("Invalid recipient signature".to_owned()).into());
-	};
+	let recipient_pubkey = proof.recipient_address.public_key()?;
+	//check receiver signature
+	//todo figure out a way to verify receiver and sender signature
+	//	if recipient_pubkey.verify(&msg, &proof.recipient_sig).is_err() {
+	//		return Err(ErrorKind::PaymentProof("Invalid recipient signature".to_owned()).into());
+	//	};
 
-	let sender_pubkey = proof.sender_address.to_ed25519()?;
-	if sender_pubkey.verify(&msg, &proof.sender_sig).is_err() {
-		return Err(ErrorKind::PaymentProof("Invalid sender signature".to_owned()).into());
-	};
+	let sender_pubkey = proof.sender_address.public_key()?;
+	//	if sender_pubkey.verify(&msg, &proof.sender_sig).is_err() {
+	//		return Err(ErrorKind::PaymentProof("Invalid sender signature".to_owned()).into());
+	//	};
 
 	// for now, simple test as to whether one of the addresses belongs to this wallet
-	let sec_key = address::address_from_derivation_path(&keychain, &parent_key_id, 0)?;
-	let d_skey = match DalekSecretKey::from_bytes(&sec_key.0) {
-		Ok(k) => k,
-		Err(e) => {
-			return Err(ErrorKind::ED25519Key(format!("{}", e)).into());
-		}
-	};
-	let my_address_pubkey: DalekPublicKey = (&d_skey).into();
-
+	//yang todo we need the index from args.
+	let my_address_pubkey =
+		proofaddress::payment_proof_address_pubkey(&keychain, &parent_key_id, 0)?;
 	let sender_mine = my_address_pubkey == sender_pubkey;
 	let recipient_mine = my_address_pubkey == recipient_pubkey;
 

@@ -33,6 +33,7 @@ use crate::util::secp::pedersen;
 use crate::util::{static_secp_instance, ZeroingString};
 use crate::{ECDHPubkey, Owner, PubAddress, Token};
 use easy_jsonrpc_mw;
+use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use rand::thread_rng;
 use std::time::Duration;
 
@@ -1984,7 +1985,7 @@ pub trait OwnerRpcS {
 		&self,
 		token: Token,
 		derivation_index: u32,
-	) -> Result<PubAddress, ErrorKind>;
+	) -> Result<ProvableAddress, ErrorKind>;
 
 	/**
 	Networked version of [Owner::proof_address_from_onion_v3](struct.Owner.html#method.proof_address_from_onion_v3).
@@ -2513,14 +2514,14 @@ where
 		&self,
 		token: Token,
 		derivation_index: u32,
-	) -> Result<PubAddress, ErrorKind> {
+	) -> Result<ProvableAddress, ErrorKind> {
 		let address = Owner::get_public_proof_address(
 			self,
 			(&token.keychain_mask).as_ref(),
 			derivation_index,
 		)
 		.map_err(|e| e.kind())?;
-		Ok(PubAddress { address })
+		Ok(ProvableAddress::from_pub_key(&address))
 	}
 
 	fn retrieve_payment_proof(

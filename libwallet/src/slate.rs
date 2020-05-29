@@ -30,9 +30,6 @@ use crate::grin_util::secp::key::{PublicKey, SecretKey};
 use crate::grin_util::secp::pedersen::Commitment;
 use crate::grin_util::secp::Signature;
 use crate::grin_util::{self, secp, RwLock};
-use crate::slate_versions::ser as dalek_ser;
-use ed25519_dalek::PublicKey as DalekPublicKey;
-use ed25519_dalek::Signature as DalekSignature;
 use rand::rngs::mock::StepRng;
 use rand::thread_rng;
 use serde::ser::{Serialize, Serializer};
@@ -47,17 +44,15 @@ use crate::slate_versions::v3::{
 	TransactionV3, TxKernelV3, VersionCompatInfoV3,
 };
 // use crate::slate_versions::{CURRENT_SLATE_VERSION, GRIN_BLOCK_HEADER_VERSION};
+use crate::proof::proofaddress::ProvableAddress;
 use crate::types::CbData;
 use crate::SlateVersion;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentInfo {
-	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
-	pub sender_address: DalekPublicKey,
-	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
-	pub receiver_address: DalekPublicKey,
-	#[serde(with = "dalek_ser::option_dalek_sig_serde")]
-	pub receiver_signature: Option<DalekSignature>,
+	pub sender_address: ProvableAddress,
+	pub receiver_address: ProvableAddress,
+	pub receiver_signature: Option<String>,
 }
 
 /// Public data for each participant in the slate
@@ -935,9 +930,9 @@ impl From<&PaymentInfo> for PaymentInfoV3 {
 			receiver_address,
 			receiver_signature,
 		} = data;
-		let sender_address = *sender_address;
-		let receiver_address = *receiver_address;
-		let receiver_signature = *receiver_signature;
+		let sender_address = sender_address.clone();
+		let receiver_address = receiver_address.clone();
+		let receiver_signature = receiver_signature.clone(); //todo fingure out a better way to do this.
 		PaymentInfoV3 {
 			sender_address,
 			receiver_address,
@@ -1114,9 +1109,9 @@ impl From<&PaymentInfoV3> for PaymentInfo {
 			receiver_address,
 			receiver_signature,
 		} = data;
-		let sender_address = *sender_address;
-		let receiver_address = *receiver_address;
-		let receiver_signature = *receiver_signature;
+		let sender_address = sender_address.clone();
+		let receiver_address = receiver_address.clone();
+		let receiver_signature = receiver_signature.clone();
 		PaymentInfo {
 			sender_address,
 			receiver_address,

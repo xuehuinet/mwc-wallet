@@ -13,9 +13,12 @@
 // limitations under the License.
 
 use super::base58::Base58;
-use crate::error::Error;
+use crate::address;
+use crate::error::{Error, ErrorKind};
 use crate::grin_util::secp::key::PublicKey;
+use crate::proof::crypto;
 use grin_core::global;
+use grin_wallet_util::grin_keychain::{Identifier, Keychain};
 use std::fmt::{self, Display};
 
 /// Address prefixes for mainnet
@@ -23,7 +26,7 @@ pub const PROOFABLE_ADDRESS_VERSION_MAINNET: [u8; 2] = [1, 69];
 /// Address prefixes for floonet
 pub const PROOFABLE_ADDRESS_VERSION_TESTNET: [u8; 2] = [1, 121];
 
-/// Address that can have a proof. Such address need to be able to convetable to
+/// Address that can have a proof. Such address need to be able to be convertable to
 /// the public key
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProvableAddress {
@@ -54,7 +57,7 @@ impl ProvableAddress {
 		})
 	}
 
-	/// Create address from publi key
+	/// Create address from public key
 	pub fn from_pub_key(public_key: &PublicKey) -> Self {
 		Self {
 			public_key: public_key.to_base58_check(version_bytes()),
@@ -76,4 +79,32 @@ pub fn version_bytes() -> Vec<u8> {
 	} else {
 		PROOFABLE_ADDRESS_VERSION_TESTNET.to_vec()
 	}
+}
+
+/// provable address public key
+pub fn payment_proof_address<K>(
+	keychain: &K,
+	parent_key_id: &Identifier,
+	index: u32,
+) -> Result<ProvableAddress, Error>
+where
+	K: Keychain,
+{
+	let sender_address_secret_key =
+		address::address_from_derivation_path(keychain, &parent_key_id, index)?;
+	let sender_address_pub_key = crypto::public_key_from_secret_key(&sender_address_secret_key)?;
+	Ok(ProvableAddress::from_pub_key(&sender_address_pub_key))
+}
+
+pub fn payment_proof_address_pubkey<K>(
+	keychain: &K,
+	parent_key_id: &Identifier,
+	index: u32,
+) -> Result<PublicKey, Error>
+where
+	K: Keychain,
+{
+	let sender_address_secret_key =
+		address::address_from_derivation_path(keychain, &parent_key_id, index)?;
+	crypto::public_key_from_secret_key(&sender_address_secret_key)
 }
