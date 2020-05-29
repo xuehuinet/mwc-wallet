@@ -98,6 +98,8 @@ where
 	let parent_key_id = w.parent_key_id();
 	let k = w.keychain(keychain_mask)?;
 
+	//	let sec_addr_key = address::address_from_derivation_path(&k, &parent_key_id, index)?;
+
 	let pub_key = proofaddress::payment_proof_address_pubkey(&k, &parent_key_id, index)?;
 	Ok(pub_key)
 }
@@ -636,7 +638,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	println!("owner finalize slate got slate = {:?}", slate);
+	debug!("owner finalize slate got slate = {:?}", slate);
 	let mut sl = slate.clone();
 	check_ttl(w, &sl)?;
 	let context = w.get_private_context(keychain_mask, sl.id.as_bytes(), 0)?;
@@ -1182,8 +1184,11 @@ where
 	//	};
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof checkin
+=======
+>>>>>>> proof first checkin
 	crypto::verify_signature(
 		//	std::str::from_utf8(&msg).unwrap(),
 		&msg,
@@ -1192,10 +1197,15 @@ where
 	)
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof first checkin
 =======
 >>>>>>> proof checkin
+=======
+=======
+>>>>>>> proof first checkin
+>>>>>>> proof first checkin
 
 	let sender_pubkey = proof.sender_address.public_key()?;
 	//	if sender_pubkey.verify(&msg, &proof.sender_sig).is_err() {
@@ -1203,8 +1213,11 @@ where
 	//	};
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof checkin
+=======
+>>>>>>> proof first checkin
 	crypto::verify_signature(
 		&msg,
 		&crypto::signature_from_string(&proof.sender_sig).unwrap(),
@@ -1212,10 +1225,15 @@ where
 	)
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof first checkin
 =======
 >>>>>>> proof checkin
+=======
+=======
+>>>>>>> proof first checkin
+>>>>>>> proof first checkin
 
 	// for now, simple test as to whether one of the addresses belongs to this wallet
 	//yang todo we need the index from args.

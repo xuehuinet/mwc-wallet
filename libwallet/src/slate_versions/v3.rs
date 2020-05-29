@@ -25,6 +25,7 @@ use crate::grin_util::secp;
 use crate::grin_util::secp::key::PublicKey;
 use crate::grin_util::secp::pedersen::{Commitment, RangeProof};
 use crate::grin_util::secp::Signature;
+
 use crate::proof::proofaddress;
 
 use crate::proof::proofaddress::ProvableAddress;

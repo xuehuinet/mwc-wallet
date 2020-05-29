@@ -19,7 +19,10 @@ use crate::grin_util::secp::key::PublicKey;
 use crate::proof::crypto;
 use grin_core::global;
 use grin_wallet_util::grin_keychain::{Identifier, Keychain};
+<<<<<<< HEAD
 use serde::{Deserialize, Deserializer, Serializer};
+=======
+>>>>>>> proof first checkin
 use std::fmt::{self, Display};
 
 /// Address prefixes for mainnet
