@@ -102,6 +102,7 @@ where
 		address::address_from_derivation_path(keychain, &parent_key_id, index)?;
 	crypto::public_key_from_secret_key(&sender_address_secret_key)
 }
+<<<<<<< HEAD
 
 /// ProvableAddress
 pub fn proof_address_from_string<'de, D>(deserializer: D) -> Result<ProvableAddress, D::Error>
@@ -176,3 +177,5 @@ where
 //	}
 //
 //}
+=======
+>>>>>>> proof first checkin

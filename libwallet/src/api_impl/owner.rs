@@ -97,6 +97,7 @@ where
 	wallet_lock!(wallet_inst, w);
 	let parent_key_id = w.parent_key_id();
 	let k = w.keychain(keychain_mask)?;
+
 	let pub_key = proofaddress::payment_proof_address_pubkey(&k, &parent_key_id, index)?;
 	Ok(pub_key)
 }
@@ -1178,6 +1179,7 @@ where
 	//	if recipient_pubkey.verify(&msg, &proof.recipient_sig).is_err() {
 	//		return Err(ErrorKind::PaymentProof("Invalid recipient signature".to_owned()).into());
 	//	};
+<<<<<<< HEAD
 	crypto::verify_signature(
 		//	std::str::from_utf8(&msg).unwrap(),
 		&msg,
@@ -1185,17 +1187,22 @@ where
 		&recipient_pubkey,
 	)
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+=======
+>>>>>>> proof first checkin
 
 	let sender_pubkey = proof.sender_address.public_key()?;
 	//	if sender_pubkey.verify(&msg, &proof.sender_sig).is_err() {
 	//		return Err(ErrorKind::PaymentProof("Invalid sender signature".to_owned()).into());
 	//	};
+<<<<<<< HEAD
 	crypto::verify_signature(
 		&msg,
 		&crypto::signature_from_string(&proof.sender_sig).unwrap(),
 		&sender_pubkey,
 	)
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+=======
+>>>>>>> proof first checkin
 
 	// for now, simple test as to whether one of the addresses belongs to this wallet
 	//yang todo we need the index from args.

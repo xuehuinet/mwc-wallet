@@ -1701,6 +1701,7 @@ pub fn run_doctest_owner(
 		let proof_address = match payment_proof {
 			true => {
 				let address = "xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2";
+
 				Some(ProvableAddress::from_str(address).unwrap())
 			}
 			false => None,

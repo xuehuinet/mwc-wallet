@@ -45,12 +45,14 @@ use crate::slate_versions::v3::{
 };
 // use crate::slate_versions::{CURRENT_SLATE_VERSION, GRIN_BLOCK_HEADER_VERSION};
 use crate::proof::proofaddress;
+
 use crate::proof::proofaddress::ProvableAddress;
 use crate::types::CbData;
 use crate::{SlateVersion, CURRENT_SLATE_VERSION};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentInfo {
+<<<<<<< HEAD
 	#[serde(
 		serialize_with = "proofaddress::as_string",
 		deserialize_with = "proofaddress::proof_address_from_string"
@@ -60,6 +62,9 @@ pub struct PaymentInfo {
 		serialize_with = "proofaddress::as_string",
 		deserialize_with = "proofaddress::proof_address_from_string"
 	)]
+=======
+	pub sender_address: ProvableAddress,
+>>>>>>> proof first checkin
 	pub receiver_address: ProvableAddress,
 	pub receiver_signature: Option<String>,
 }

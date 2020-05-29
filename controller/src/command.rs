@@ -30,10 +30,8 @@ use crate::libwallet::{
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
 use crate::{controller, display};
-
+use grin_wallet_libwallet::{TxLogEntry, Slate};
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
-use grin_wallet_libwallet::TxLogEntry;
-
 use serde_json as json;
 use std::fs::File;
 use std::io::{Read, Write};
