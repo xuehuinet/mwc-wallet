@@ -72,8 +72,6 @@ jobs:
     vmImage: windows-2019
   strategy:
     matrix:
-      test:
-        CI_JOB: test-all
       release:
         CI_JOB: release
         PLATFORM: win-x64
