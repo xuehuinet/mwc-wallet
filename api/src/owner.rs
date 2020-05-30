@@ -725,7 +725,8 @@ where
 
 		match send_args {
 			Some(sa) => {
-				//TODO: in case of keybase, the response might take 60s and leave the service hanging
+				let original_slate = slate.clone();
+
 				match sa.method.as_ref() {
 					"http" | "keybase" | "mwcmqs" => {
 						let tor_config_lock = self.tor_config.lock();
@@ -754,6 +755,9 @@ where
 						.into());
 					}
 				};
+
+				// Checking is sender didn't do any harm to slate
+				Slate::compare_slates( &original_slate, &slate)?;
 
 				self.verify_slate_messages(keychain_mask, &slate).map_err(|e| {
 					error!("Unable to validate participant messages at slate {}: {}", slate.id,  e);

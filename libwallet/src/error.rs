@@ -221,6 +221,10 @@ pub enum ErrorKind {
 	#[fail(display = "Unknown Slate Version: {}", _0)]
 	SlateVersion(u16),
 
+	/// Slate Validation error
+	#[fail(display = "Unable to validate slate, {}", _0)]
+	SlateValidation(String),
+
 	/// Compatibility error between incoming slate versions and what's expected
 	#[fail(display = "Compatibility Error: {}", _0)]
 	Compatibility(String),
