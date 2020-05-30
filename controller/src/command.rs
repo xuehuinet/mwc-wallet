@@ -32,6 +32,7 @@ use crate::util::{Mutex, ZeroingString};
 use crate::{controller, display};
 use grin_wallet_libwallet::{TxLogEntry, Slate};
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
+
 use serde_json as json;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -473,10 +474,16 @@ where
 				}
 
 				method => {
+<<<<<<< HEAD
 
+=======
+					let original_slate = slate.clone();
+>>>>>>> Check slate that we get from sender
 					let sender =
 						create_sender(method, &args.dest, &args.apisecret, tor_config)?;
 					slate = sender.send_tx(&slate)?;
+					// Checking is sender didn't do any harm to slate
+					Slate::compare_slates( &original_slate, &slate)?;
 					api.verify_slate_messages(m, &slate).map_err(|e| {
 						error!("Error validating participant messages: {}", e);
 						e
@@ -763,7 +770,8 @@ where
 				}
 				method => {
 					let sender = create_sender(method, &args.dest, &None, tor_config)?;
-					slate = sender.send_tx(&slate)?;
+					// We want to lock outputs for original slate. Sender can respond with anyhting. No reasons to check respond if lock works fine for original slate
+					let _ = sender.send_tx(&slate)?;
 					api.tx_lock_outputs(m, &slate, Some(args.dest.clone()), 1)?;
 				}
 			}

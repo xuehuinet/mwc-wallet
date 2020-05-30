@@ -284,8 +284,10 @@ impl Slate {
 		}
 	}
 
-	/// Compare two slates for send: sended and responded. Just want to check if sender didn't mess with slate
-	pub fn compare_slates_send( send_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+
+	/// Compare to slates: sended and responded. Just want to check if sender didn't mess with slate
+	pub fn compare_slates( send_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+
 		if send_slate.id != respond_slate.id {
 			return Err(ErrorKind::SlateValidation("uuid mismatch".to_string()).into());
 		}
@@ -302,7 +304,11 @@ impl Slate {
 			return Err(ErrorKind::SlateValidation("heigh mismatch".to_string()).into());
 		}
 		if send_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height  {
+<<<<<<< HEAD
 			return Err(ErrorKind::SlateValidation("ttl_cutoff mismatch".to_string()).into());
+=======
+			return Err(ErrorKind::SlateValidation("amount mismatch".to_string()).into());
+>>>>>>> Check slate that we get from sender
 		}
 		// Checking transaction...
 		// Inputs must match excatly
@@ -314,6 +320,7 @@ impl Slate {
 			return Err(ErrorKind::SlateValidation("kernels mismatch".to_string()).into());
 		}
 		// Respond outputs must include send_slate's. Expected that some was added
+<<<<<<< HEAD
 		for output in &send_slate.tx.body.outputs {
 			if !respond_slate.tx.body.outputs.contains(&output) {
 				return Err(ErrorKind::SlateValidation("outputs mismatch".to_string()).into());
@@ -356,6 +363,13 @@ impl Slate {
 				return Err(ErrorKind::SlateValidation("participant data mismatch".to_string()).into());
 			}
 		}
+=======
+		for input in &send_slate.tx.body.outputs {
+			if !respond_slate.tx.body.outputs.contains(&input) {
+				return Err(ErrorKind::SlateValidation("outputs mismatch".to_string()).into());
+			}
+		}
+>>>>>>> Check slate that we get from sender
 
 		Ok(())
 	}
