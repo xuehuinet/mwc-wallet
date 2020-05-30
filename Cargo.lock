@@ -1345,7 +1345,6 @@ dependencies = [
  "grin_wallet_util",
  "http 0.1.21",
  "hyper 0.13.6",
- "hyper-rustls 0.19.1",
  "hyper-rustls 0.20.0",
  "hyper-socks2",
  "hyper-timeout",
