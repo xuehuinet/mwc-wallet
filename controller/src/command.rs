@@ -479,8 +479,10 @@ where
 					let sender =
 						create_sender(method, &args.dest, &args.apisecret, tor_config)?;
 					slate = sender.send_tx(&slate)?;
+					// Restore back ttl, because it can be gone
+					slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
 					// Checking is sender didn't do any harm to slate
-					Slate::compare_slates( &original_slate, &slate)?;
+					Slate::compare_slates_send( &original_slate, &slate)?;
 					api.verify_slate_messages(m, &slate).map_err(|e| {
 						error!("Error validating participant messages: {}", e);
 						e

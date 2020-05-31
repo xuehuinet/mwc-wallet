@@ -65,7 +65,7 @@ pub struct PaymentInfo {
 }
 
 /// Public data for each participant in the slate
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct ParticipantData {
 	/// Id of participant in the transaction. (For now, 0=sender, 1=rec)
 	#[serde(with = "secp_ser::string_or_u64")]
@@ -281,8 +281,8 @@ impl Slate {
 		}
 	}
 
-	/// Compare to slates: sended and responded. Just want to check if sender didn't mess with slate
-	pub fn compare_slates( send_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+	/// Compare two slates for send: sended and responded. Just want to check if sender didn't mess with slate
+	pub fn compare_slates_send( send_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
 		if send_slate.id != respond_slate.id {
 			return Err(ErrorKind::SlateValidation("uuid mismatch".to_string()).into());
 		}
@@ -299,7 +299,7 @@ impl Slate {
 			return Err(ErrorKind::SlateValidation("heigh mismatch".to_string()).into());
 		}
 		if send_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height  {
-			return Err(ErrorKind::SlateValidation("amount mismatch".to_string()).into());
+			return Err(ErrorKind::SlateValidation("ttl_cutoff mismatch".to_string()).into());
 		}
 		// Checking transaction...
 		// Inputs must match excatly
@@ -311,9 +311,46 @@ impl Slate {
 			return Err(ErrorKind::SlateValidation("kernels mismatch".to_string()).into());
 		}
 		// Respond outputs must include send_slate's. Expected that some was added
-		for input in &send_slate.tx.body.outputs {
-			if !respond_slate.tx.body.outputs.contains(&input) {
+		for output in &send_slate.tx.body.outputs {
+			if !respond_slate.tx.body.outputs.contains(&output) {
 				return Err(ErrorKind::SlateValidation("outputs mismatch".to_string()).into());
+			}
+		}
+		// Checking if participant data match each other
+		for pat_data in &send_slate.participant_data {
+			if !respond_slate.participant_data.contains(&pat_data) {
+				return Err(ErrorKind::SlateValidation("participant data mismatch".to_string()).into());
+			}
+		}
+
+		Ok(())
+	}
+
+	/// Compare two slates for invoice: sended and responded. Just want to check if sender didn't mess with slate
+	pub fn compare_slates_invoice( invoice_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+		if invoice_slate.id != respond_slate.id {
+			return Err(ErrorKind::SlateValidation("uuid mismatch".to_string()).into());
+		}
+		if invoice_slate.amount != respond_slate.amount {
+			return Err(ErrorKind::SlateValidation("amount mismatch".to_string()).into());
+		}
+		if invoice_slate.height != respond_slate.height {
+			return Err(ErrorKind::SlateValidation("heigh mismatch".to_string()).into());
+		}
+		if invoice_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height  {
+			return Err(ErrorKind::SlateValidation("ttl_cutoff mismatch".to_string()).into());
+		}
+		assert!(invoice_slate.tx.body.inputs.is_empty());
+		// Respond outputs must include original ones. Expected that some was added
+		for output in &invoice_slate.tx.body.outputs {
+			if !respond_slate.tx.body.outputs.contains(&output) {
+				return Err(ErrorKind::SlateValidation("outputs mismatch".to_string()).into());
+			}
+		}
+		// Checking if participant data match each other
+		for pat_data in &invoice_slate.participant_data {
+			if !respond_slate.participant_data.contains(&pat_data) {
+				return Err(ErrorKind::SlateValidation("participant data mismatch".to_string()).into());
 			}
 		}
 
