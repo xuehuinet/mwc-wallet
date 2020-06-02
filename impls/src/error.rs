@@ -141,6 +141,9 @@ pub enum ErrorKind {
 
 	#[fail(display = "could not parse `{}` to a https address!", 0)]
 	HttpsAddressParsingError(String),
+
+	#[fail(display = "Swap message error, {}", _0)]
+	SwapMessageGenericError(String),
 }
 
 impl Fail for Error {

@@ -43,10 +43,13 @@ use crate::config::{MQSConfig, TorConfig, WalletConfig};
 use crate::core::global;
 use crate::impls::tor::config as tor_config;
 use crate::impls::tor::process as tor_process;
+use crate::impls::swap::dealer::SwapDealer;
 use crate::keychain::Keychain;
 use easy_jsonrpc_mw::{Handler, MaybeReply};
 use grin_wallet_libwallet::proof::crypto;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
+
+use grinswap::swap::message::Message;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -393,6 +396,22 @@ where
 		}
 	}
 
+	fn process_incoming_swap_message(
+		&self,
+		from: &dyn Address,
+		swapmessage: Message
+	) -> Result<(), Error> {
+		let swap_dealer = SwapDealer::new();
+		let config = WalletConfig::default();
+		let publisher = self.publisher.lock().unwrap();
+		let wallet = self.wallet.lock().as_ref();
+
+		swap_dealer.process_swap_message(wallet, from, message, &config, publisher.as_ref());
+		//let owner_api = Owner::new(self.wallet.clone(), None);
+		//let mask = self.keychain_mask.lock().clone();
+		Ok(())
+	}
+
 	fn do_log_info(&self, message: String) {
 		if self.print_to_log {
 			info!("{}", message);
@@ -465,6 +484,15 @@ where
 		match result {
 			Ok(()) => {}
 			Err(e) => self.do_log_error(format!("Unable to process incoming slate, {}", e)),
+		}
+	}
+
+	fn on_message(&self, from: &dyn Address, swap: Message) {
+		let result = self.process_incoming_swap_message(from, swap);
+
+		match result {
+			Err(e) => self.do_log_error(format!("{}", e)),
+			_ => {}
 		}
 	}
 

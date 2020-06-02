@@ -46,12 +46,11 @@ grin_wallet_config = { path = "../config", version = "3.2.1" }
 #grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
 
 # For bleeding edge
-grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_p2p = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_core= { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_keychain = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_util = { git = "https://github.com/mwcproject/mwc-node", branch = "master"  }
-
+grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grin_p2p = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grin_core= { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grin_keychain = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grin_util = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap"  }
 
 # For local testing
 #grin_api = { path = "../../mwc-node/api", version= "3.1.3"}

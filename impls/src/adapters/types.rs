@@ -1,6 +1,7 @@
 //The following is support mqs usage in mwc713
 use crate::error::{Error, ErrorKind};
 use grin_wallet_libwallet::Slate;
+use grinswap::swap::message::Message;
 use std::sync::mpsc::Sender;
 use url::Url; //only for the Address::parse
 
@@ -29,6 +30,7 @@ pub trait Publisher {
 		signature: String,
 		source_address: &ProvableAddress,
 	) -> Result<String, Error>;
+	fn post_take(&self, message: &Message, to: &dyn Address) -> Result<(), Error>;
 }
 
 pub trait Subscriber {
@@ -36,11 +38,7 @@ pub trait Subscriber {
 	fn stop(&mut self) -> bool;
 	fn is_running(&self) -> bool;
 
-	fn set_notification_channels(
-		&self,
-		slate_id: &uuid::Uuid,
-		slate_send_channel: Sender<Slate>,
-	);
+	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>);
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid);
 }
 
@@ -50,12 +48,9 @@ pub trait SubscriptionHandler: Send {
 	fn on_close(&self, result: CloseReason);
 	fn on_dropped(&self);
 	fn on_reestablished(&self);
+	fn on_message(&self, from: &dyn Address, swap: Message);
 
-	fn set_notification_channels(
-		&self,
-		slate_id: &uuid::Uuid,
-		slate_send_channel: Sender<Slate>,
-	);
+	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>);
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid);
 }
 
@@ -238,8 +233,9 @@ impl Display for HttpsAddress {
 
 impl dyn Address {
 	pub fn parse(address: &str) -> Result<Box<dyn Address>, Error> {
-		let re = Regex::new(ADDRESS_REGEX)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to construct address parser, {}",e)))?;
+		let re = Regex::new(ADDRESS_REGEX).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!("Unable to construct address parser, {}", e))
+		})?;
 		let captures = re.captures(address);
 		if captures.is_none() {
 			return Ok(Box::new(MWCMQSAddress::from_str(address)?));

@@ -56,10 +56,14 @@ grin_wallet_libwallet = { path = "../libwallet", version = "3.2.1" }
 #grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1"  }
 
 # For bleeding edge
-grin_p2p = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_core = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_util = { git = "https://github.com/mwcproject/mwc-node", branch = "master"  }
+grin_p2p = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grin_core = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grin_util = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap"  }
+grin_keychain = { git = "https://github.com/mwcproject/mwc-node", branch = "topic/hcasalet/swap" }
+grinswap = {git = "https://github.com/mwcproject/mwcswap", branch = "topic/hcasalet/swap"}
+bitcoin = { version = "0.19", git = "https://github.com/mwcproject/rust-bitcoin", branch = "zkp", features = ["bitcoinconsensus"] }
+
 
 # For local testing
 #grin_p2p = { path = "../../mwc-node/p2p", version= "3.1.3"}
