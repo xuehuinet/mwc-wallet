@@ -1089,40 +1089,6 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 [[package]]
 name = "grin_api"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "bytes 0.5.4",
- "easy-jsonrpc-mw",
- "failure",
- "failure_derive",
- "futures 0.3.5",
- "grin_chain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_p2p 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_pool 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "http 0.1.21",
- "hyper 0.13.6",
- "hyper-rustls 0.19.1",
- "hyper-rustls 0.20.0",
- "hyper-timeout",
- "lazy_static",
- "log",
- "regex",
- "ring",
- "rustls 0.16.0",
- "serde",
- "serde_derive",
- "serde_json",
- "tokio 0.2.21",
- "tokio-rustls 0.12.3",
- "url 1.7.2",
-]
-
-[[package]]
-name = "grin_api"
-version = "3.2.1"
 source = "git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap#238f2a08941b9750f3e1b57a16be3672ca6cdf47"
 dependencies = [
  "bytes 0.5.4",
@@ -1130,12 +1096,12 @@ dependencies = [
  "failure",
  "failure_derive",
  "futures 0.3.5",
- "grin_chain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_p2p 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_pool 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_chain",
+ "grin_core",
+ "grin_p2p",
+ "grin_pool",
+ "grin_store",
+ "grin_util",
  "http 0.1.21",
  "hyper 0.13.6",
  "hyper-rustls 0.19.1",
@@ -1157,29 +1123,6 @@ dependencies = [
 [[package]]
 name = "grin_chain"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "bit-vec",
- "bitflags 1.2.1",
- "byteorder",
- "chrono",
- "croaring-mw",
- "failure",
- "failure_derive",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "lazy_static",
- "log",
- "lru-cache",
- "serde",
- "serde_derive",
-]
-
-[[package]]
-name = "grin_chain"
-version = "3.2.1"
 source = "git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap#238f2a08941b9750f3e1b57a16be3672ca6cdf47"
 dependencies = [
  "bit-vec",
@@ -1189,41 +1132,15 @@ dependencies = [
  "croaring-mw",
  "failure",
  "failure_derive",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_core",
+ "grin_keychain",
+ "grin_store",
+ "grin_util",
  "lazy_static",
  "log",
  "lru-cache",
  "serde",
  "serde_derive",
-]
-
-[[package]]
-name = "grin_core"
-version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "blake2-rfc",
- "byteorder",
- "chrono",
- "croaring-mw",
- "enum_primitive",
- "failure",
- "failure_derive",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "lazy_static",
- "log",
- "lru-cache",
- "num",
- "num-bigint",
- "rand 0.6.5",
- "serde",
- "serde_derive",
- "siphasher 0.2.3",
- "zeroize 0.9.3",
 ]
 
 [[package]]
@@ -1238,8 +1155,8 @@ dependencies = [
  "enum_primitive",
  "failure",
  "failure_derive",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_keychain",
+ "grin_util",
  "lazy_static",
  "log",
  "lru-cache",
@@ -1255,30 +1172,6 @@ dependencies = [
 [[package]]
 name = "grin_keychain"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "blake2-rfc",
- "byteorder",
- "digest 0.7.6",
- "failure",
- "failure_derive",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "hmac",
- "lazy_static",
- "log",
- "pbkdf2",
- "rand 0.6.5",
- "ripemd160",
- "serde",
- "serde_derive",
- "serde_json",
- "sha2 0.7.1",
- "zeroize 0.9.3",
-]
-
-[[package]]
-name = "grin_keychain"
-version = "3.2.1"
 source = "git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap#238f2a08941b9750f3e1b57a16be3672ca6cdf47"
 dependencies = [
  "blake2-rfc",
@@ -1286,7 +1179,7 @@ dependencies = [
  "digest 0.7.6",
  "failure",
  "failure_derive",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_util",
  "hmac",
  "lazy_static",
  "log",
@@ -1303,30 +1196,6 @@ dependencies = [
 [[package]]
 name = "grin_p2p"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "bitflags 1.2.1",
- "chrono",
- "enum_primitive",
- "failure",
- "failure_derive",
- "grin_chain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "log",
- "lru-cache",
- "net2",
- "num",
- "rand 0.6.5",
- "serde",
- "serde_derive",
- "tempfile",
-]
-
-[[package]]
-name = "grin_p2p"
-version = "3.2.1"
 source = "git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap#238f2a08941b9750f3e1b57a16be3672ca6cdf47"
 dependencies = [
  "bitflags 1.2.1",
@@ -1334,10 +1203,10 @@ dependencies = [
  "enum_primitive",
  "failure",
  "failure_derive",
- "grin_chain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_chain",
+ "grin_core",
+ "grin_store",
+ "grin_util",
  "log",
  "lru-cache",
  "net2",
@@ -1351,25 +1220,6 @@ dependencies = [
 [[package]]
 name = "grin_pool"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "blake2-rfc",
- "chrono",
- "env_logger 0.5.13",
- "failure",
- "failure_derive",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "log",
- "rand 0.6.5",
- "serde",
- "serde_derive",
-]
-
-[[package]]
-name = "grin_pool"
-version = "3.2.1"
 source = "git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap#238f2a08941b9750f3e1b57a16be3672ca6cdf47"
 dependencies = [
  "blake2-rfc",
@@ -1377,9 +1227,9 @@ dependencies = [
  "env_logger 0.5.13",
  "failure",
  "failure_derive",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_core",
+ "grin_keychain",
+ "grin_util",
  "log",
  "rand 0.6.5",
  "serde",
@@ -1404,34 +1254,14 @@ dependencies = [
 [[package]]
 name = "grin_store"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "byteorder",
- "croaring-mw",
- "failure",
- "failure_derive",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "libc",
- "lmdb-zero",
- "log",
- "memmap",
- "serde",
- "serde_derive",
- "tempfile",
-]
-
-[[package]]
-name = "grin_store"
-version = "3.2.1"
 source = "git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap#238f2a08941b9750f3e1b57a16be3672ca6cdf47"
 dependencies = [
  "byteorder",
  "croaring-mw",
  "failure",
  "failure_derive",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_core",
+ "grin_util",
  "libc",
  "lmdb-zero",
  "log",
@@ -1439,27 +1269,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "tempfile",
-]
-
-[[package]]
-name = "grin_util"
-version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-node#e277c2dba9325d16ee091db942a7e7e0440d36be"
-dependencies = [
- "backtrace",
- "base64 0.9.3",
- "byteorder",
- "grin_secp256k1zkp",
- "lazy_static",
- "log",
- "log4rs",
- "parking_lot 0.6.4",
- "rand 0.6.5",
- "serde",
- "serde_derive",
- "walkdir",
- "zeroize 0.9.3",
- "zip",
 ]
 
 [[package]]
@@ -1512,7 +1321,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_config"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#4f1a1d8cdfc2c4970b5651ad6aba262d80e4b4fe"
+source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#f29445fd2246479754da1553c2eb8ad865a76b6e"
 dependencies = [
  "dirs 1.0.5",
  "failure",
@@ -1584,11 +1393,11 @@ dependencies = [
  "failure",
  "failure_derive",
  "futures 0.3.5",
- "grin_api 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_p2p 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_api",
+ "grin_core",
+ "grin_keychain",
+ "grin_p2p",
+ "grin_util",
  "grin_wallet_config 3.2.1",
  "grin_wallet_libwallet 3.2.1",
  "grin_wallet_util 3.2.1",
@@ -1618,7 +1427,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_libwallet"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#4f1a1d8cdfc2c4970b5651ad6aba262d80e4b4fe"
+source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#f29445fd2246479754da1553c2eb8ad865a76b6e"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -1628,11 +1437,11 @@ dependencies = [
  "ed25519-dalek",
  "failure",
  "failure_derive",
- "grin_api 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_p2p 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_api",
+ "grin_core",
+ "grin_keychain",
+ "grin_p2p",
+ "grin_util",
  "grin_wallet_config 3.2.1 (git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs)",
  "grin_wallet_util 3.2.1 (git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs)",
  "hmac",
@@ -1665,11 +1474,11 @@ dependencies = [
  "ed25519-dalek",
  "failure",
  "failure_derive",
- "grin_api 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_p2p 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_api",
+ "grin_core",
+ "grin_keychain",
+ "grin_p2p",
+ "grin_util",
  "grin_wallet_config 3.2.1",
  "grin_wallet_util 3.2.1",
  "hmac",
@@ -1693,18 +1502,18 @@ dependencies = [
 [[package]]
 name = "grin_wallet_util"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#4f1a1d8cdfc2c4970b5651ad6aba262d80e4b4fe"
+source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#f29445fd2246479754da1553c2eb8ad865a76b6e"
 dependencies = [
  "data-encoding",
  "ed25519-dalek",
  "failure",
  "failure_derive",
- "grin_api 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_chain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
+ "grin_api",
+ "grin_chain",
+ "grin_core",
+ "grin_keychain",
+ "grin_store",
+ "grin_util",
  "rand 0.6.5",
  "serde",
  "serde_derive",
@@ -1719,12 +1528,12 @@ dependencies = [
  "ed25519-dalek",
  "failure",
  "failure_derive",
- "grin_api 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_chain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
+ "grin_api",
+ "grin_chain",
+ "grin_core",
+ "grin_keychain",
+ "grin_store",
+ "grin_util",
  "pretty_assertions",
  "rand 0.6.5",
  "serde",
@@ -1735,7 +1544,7 @@ dependencies = [
 [[package]]
 name = "grinswap"
 version = "0.1.0"
-source = "git+https://github.com/mwcproject/mwcswap?branch=topic/hcasalet/swap#fc83fcf43fbb702d0c7383a0396fd68cb48f57af"
+source = "git+https://github.com/mwcproject/mwcswap?branch=topic/hcasalet/swap#1a6de96634afeaec1842441296d816a277bb7ddb"
 dependencies = [
  "bitcoin",
  "bitcoin_hashes",
@@ -1744,10 +1553,10 @@ dependencies = [
  "chrono",
  "failure",
  "failure_derive",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_store 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_core",
+ "grin_keychain",
+ "grin_store",
+ "grin_util",
  "grin_wallet_libwallet 3.2.1 (git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs)",
  "hex",
  "lazy_static",
