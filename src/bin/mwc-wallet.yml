@@ -1,7 +1,7 @@
 name: mwc-wallet
-version: "3.2.1-beta.1"
+version: "3.2.1"
 about: Reference MWC Wallet
-author: The Grin Team
+author: The MWC Team
 
 args:
   - floonet:
