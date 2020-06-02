@@ -95,9 +95,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.31"
+version = "0.1.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26c4f3195085c36ea8d24d32b2f828d23296a9370a28aa39d111f6f16bef9f3b"
+checksum = "0eb7f9ad01405feb3c1dac82463038945cf88eea4569acaf3ad662233496dd96"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.6",
@@ -1512,7 +1512,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_config"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#312309a41c631b3f275381cac21d113da7870982"
+source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#4f1a1d8cdfc2c4970b5651ad6aba262d80e4b4fe"
 dependencies = [
  "dirs 1.0.5",
  "failure",
@@ -1618,7 +1618,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_libwallet"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#312309a41c631b3f275381cac21d113da7870982"
+source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#4f1a1d8cdfc2c4970b5651ad6aba262d80e4b4fe"
 dependencies = [
  "blake2-rfc",
  "byteorder",
@@ -1628,11 +1628,11 @@ dependencies = [
  "ed25519-dalek",
  "failure",
  "failure_derive",
- "grin_api 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_p2p 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
- "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node)",
+ "grin_api 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_core 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_keychain 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_p2p 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
+ "grin_util 3.2.1 (git+https://github.com/mwcproject/mwc-node?branch=topic/hcasalet/swap)",
  "grin_wallet_config 3.2.1 (git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs)",
  "grin_wallet_util 3.2.1 (git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs)",
  "hmac",
@@ -1693,7 +1693,7 @@ dependencies = [
 [[package]]
 name = "grin_wallet_util"
 version = "3.2.1"
-source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#312309a41c631b3f275381cac21d113da7870982"
+source = "git+https://github.com/mwcproject/mwc-wallet?branch=topic/hcasalet/mqs#4f1a1d8cdfc2c4970b5651ad6aba262d80e4b4fe"
 dependencies = [
  "data-encoding",
  "ed25519-dalek",
