@@ -48,3 +48,6 @@ serde = "1"
 serde_derive = "1"
 serde_json = "1"
 easy-jsonrpc = "0.5.1"
+
+[patch.crates-io]
+grin_secp256k1zkp = { git = "https://github.com/mwcproject/rust-secp256k1-zkp", branch = "master" }
