@@ -40,8 +40,6 @@ grin_core = { git = "https://github.com/mwcproject/mwc-node", branch = "master" 
 grin_keychain = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
 grin_util = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
 grin_store = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_p2p = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
-grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
 
 
 # For local testing
