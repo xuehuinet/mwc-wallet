@@ -228,25 +228,23 @@ mod tests {
 		fn set_node_api_secret(&mut self, _node_api_secret: Option<String>) {
 			unimplemented!()
 		}
-		fn get_chain_tip(&self) -> Result<(u64, String, u64), libwallet::Error>  {
-			let res = (
-				self.state.lock().height,
-				"testnodehash".to_string(),
-				123455,
-			);
+		fn get_chain_tip(&self) -> Result<(u64, String, u64), libwallet::Error> {
+			let res = (self.state.lock().height, "testnodehash".to_string(), 123455);
 			Ok(res)
 		}
-		fn get_header_info(&self, height: u64) -> Result<libwallet::HeaderInfo, libwallet::Error>   {
+		fn get_header_info(&self, height: u64) -> Result<libwallet::HeaderInfo, libwallet::Error> {
 			unimplemented!()
 		}
-		fn get_connected_peer_info(&self) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error>   {
+		fn get_connected_peer_info(
+			&self,
+		) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error> {
 			unimplemented!()
 		}
 		fn height_range_to_pmmr_indices(
 			&self,
 			start_height: u64,
 			end_height: Option<u64>,
-		) -> Result<(u64, u64), libwallet::Error>  {
+		) -> Result<(u64, u64), libwallet::Error> {
 			unimplemented!()
 		}
 		fn get_blocks_by_height(
@@ -254,10 +252,12 @@ mod tests {
 			start_height: u64,
 			end_height: u64,
 			threads_number: usize,
-		) -> Result<Vec<grin_api::BlockPrintable>, libwallet::Error>   {
+		) -> Result<Vec<grin_api::BlockPrintable>, libwallet::Error> {
 			unimplemented!()
 		}
-		fn reset_cache(&self) {unimplemented!()}
+		fn reset_cache(&self) {
+			unimplemented!()
+		}
 		fn post_tx(&self, tx: &Transaction, _fluff: bool) -> Result<(), libwallet::Error> {
 			//let wrapper1 = from_hex(tx.)
 			//let wrapper = from_hex(tx.body.   clone()).unwrap();
@@ -280,7 +280,9 @@ mod tests {
 				for tx_pending in state.pending.iter() {
 					for in_pending in tx_pending.inputs() {
 						if in_pending.commit == input.commit {
-							return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
+							return Err(
+								libwallet::ErrorKind::Node("Node failure".to_string()).into()
+							);
 						}
 					}
 				}
@@ -294,7 +296,9 @@ mod tests {
 				for tx_pending in state.pending.iter() {
 					for out_pending in tx_pending.outputs() {
 						if out_pending.commit == output.commit {
-							return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
+							return Err(
+								libwallet::ErrorKind::Node("Node failure".to_string()).into()
+							);
 						}
 					}
 				}
@@ -309,7 +313,9 @@ mod tests {
 				for tx_pending in state.pending.iter() {
 					for kernel_pending in tx_pending.kernels() {
 						if kernel_pending.excess == kernel.excess {
-							return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
+							return Err(
+								libwallet::ErrorKind::Node("Node failure".to_string()).into()
+							);
 						}
 					}
 				}
