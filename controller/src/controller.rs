@@ -88,7 +88,7 @@ fn check_middleware(
 }
 
 /// initiate the tor listener
-fn init_tor_listener<L, C, K>(
+pub fn init_tor_listener<L, C, K>(
 	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K> + 'static>>>,
 	keychain_mask: Arc<Mutex<Option<SecretKey>>>,
 	addr: &str,
