@@ -71,7 +71,7 @@
     "version_info": {
       "version": 2,
       "orig_version": 2,
-      "block_header_version": 2
+      "block_header_version": 1
     },
     "num_participants": 2,
     "id": "55b79f54-c40d-45e1-9544-a52dcf426db2",
@@ -139,7 +139,7 @@
     "version_info": {
       "version": 2,
       "orig_version": 2,
-      "block_header_version": 2
+      "block_header_version": 1
     },
     "num_participants": 2,
     "id": "703fac15-913c-4e66-a7c2-5f648ca4ca7d",
@@ -197,7 +197,7 @@
     "version_info": {
       "version": 2,
       "orig_version": 2,
-      "block_header_version": 2
+      "block_header_version": 1
     },
     "num_participants": 2,
     "id": "78aa5af1-048e-4c49-8776-a2e66d4a460c",

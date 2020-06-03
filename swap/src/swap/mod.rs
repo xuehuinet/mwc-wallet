@@ -56,7 +56,7 @@ pub fn is_test_mode() -> bool {
 	TEST_MODE.load(Ordering::Relaxed)
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 
 mod tests {
 	use crate::bitcoin::network::constants::Network as BtcNetwork;
@@ -229,7 +229,12 @@ mod tests {
 			unimplemented!()
 		}
 		fn get_chain_tip(&self) -> Result<(u64, String, u64), libwallet::Error>  {
-			unimplemented!()
+			let res = (
+				self.state.lock().height,
+				"testnodehash".to_string(),
+				123455,
+			);
+			Ok(res)
 		}
 		fn get_header_info(&self, height: u64) -> Result<libwallet::HeaderInfo, libwallet::Error>   {
 			unimplemented!()
@@ -254,27 +259,28 @@ mod tests {
 		}
 		fn reset_cache(&self) {unimplemented!()}
 		fn post_tx(&self, tx: &Transaction, _fluff: bool) -> Result<(), libwallet::Error> {
-			let wrapper = from_hex(tx.tx_hex.clone()).unwrap();
-			let mut cursor = Cursor::new(wrapper);
-			let tx: Transaction = deserialize(&mut cursor, ProtocolVersion(1)).unwrap();
+			//let wrapper1 = from_hex(tx.)
+			//let wrapper = from_hex(tx.body.   clone()).unwrap();
+			//let mut cursor = Cursor::new(wrapper);
+			//let tx: Transaction = deserialize(&mut cursor, ProtocolVersion(1)).unwrap();
 			tx.validate(
 				Weighting::AsTransaction,
 				Arc::new(RwLock::new(LruVerifierCache::new())),
 			)
-			.map_err(|_| libwallet::ErrorKind::Node)?;
+			.map_err(|_| libwallet::ErrorKind::Node("Node failure".to_string()))?;
 
 			let mut state = self.state.lock();
 			for input in tx.inputs() {
 				// Output not unspent
 				if !state.outputs.contains_key(&input.commit) {
-					return Err(libwallet::ErrorKind::Node.into());
+					return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
 				}
 
 				// Double spend attempt
 				for tx_pending in state.pending.iter() {
 					for in_pending in tx_pending.inputs() {
 						if in_pending.commit == input.commit {
-							return Err(libwallet::ErrorKind::Node.into());
+							return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
 						}
 					}
 				}
@@ -282,13 +288,13 @@ mod tests {
 			// Check for duplicate output
 			for output in tx.outputs() {
 				if state.outputs.contains_key(&output.commit) {
-					return Err(libwallet::ErrorKind::Node.into());
+					return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
 				}
 
 				for tx_pending in state.pending.iter() {
 					for out_pending in tx_pending.outputs() {
 						if out_pending.commit == output.commit {
-							return Err(libwallet::ErrorKind::Node.into());
+							return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
 						}
 					}
 				}
@@ -297,18 +303,18 @@ mod tests {
 			for kernel in tx.kernels() {
 				// Duplicate kernel
 				if state.kernels.contains_key(&kernel.excess) {
-					return Err(libwallet::ErrorKind::Node.into());
+					return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
 				}
 
 				for tx_pending in state.pending.iter() {
 					for kernel_pending in tx_pending.kernels() {
 						if kernel_pending.excess == kernel.excess {
-							return Err(libwallet::ErrorKind::Node.into());
+							return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
 						}
 					}
 				}
 			}
-			state.pending.push(tx);
+			state.pending.push(tx.clone());
 
 			Ok(())
 		}
@@ -326,10 +332,10 @@ mod tests {
 			let state = self.state.lock();
 			for output in wallet_outputs {
 				if let Some(height) = state.outputs.get(&output) {
-					map.insert(output, (to_hex(output.0.to_vec()), *height, 0));
+					map.insert(output.clone(), (to_hex(output.0.to_vec()), *height, 0));
 				}
 			}
-			Ok(map.unwrap())
+			Ok(map)
 		}
 		fn get_outputs_by_pmmr_index(
 			&self,
@@ -428,18 +434,18 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_sell_1.json",
+				"test/swap_sell_10001.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 
 			write(
-				"test/message_1.json",
+				"test/message_10001.json",
 				serde_json::to_string_pretty(&message_1).unwrap(),
 			)
 			.unwrap();
 			write(
-				"test/context_sell.json",
+				"test/context_sell0001.json",
 				serde_json::to_string_pretty(&ctx_sell).unwrap(),
 			)
 			.unwrap();
@@ -909,4 +915,4 @@ mod tests {
 			println!("OK MSG {}", i);
 		}
 	}
-}*/
+}
