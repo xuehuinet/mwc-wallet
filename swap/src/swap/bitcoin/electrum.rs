@@ -383,7 +383,7 @@ mod tests {
 	use grin_util::secp::{ContextFlag, Secp256k1};
 	use rand::{thread_rng, Rng};
 
-	#[test]
+	/*#[test]
 	fn test_electrum() {
 		let secp = Secp256k1::with_caps(ContextFlag::Commit);
 		let addresses = vec![
@@ -462,5 +462,5 @@ mod tests {
 				.unwrap();
 		let tx = client.transaction(&tx_hash).unwrap();
 		assert!(tx.is_none());
-	}
+	}*/
 }
