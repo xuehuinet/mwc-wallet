@@ -13,8 +13,6 @@
 // limitations under the License.
 
 //! Generic implementation of owner API functions
-use strum::IntoEnumIterator;
-use grin_core::core::amount_to_hr_string;
 use crate::api_impl::owner::check_ttl;
 use crate::grin_keychain::Keychain;
 use crate::grin_util::secp::key::SecretKey;
@@ -26,7 +24,9 @@ use crate::{
 	address, BlockFees, CbData, Error, ErrorKind, NodeClient, Slate, TxLogEntryType, VersionInfo,
 	WalletBackend,
 };
+use grin_core::core::amount_to_hr_string;
 use std::sync::RwLock;
+use strum::IntoEnumIterator;
 
 const FOREIGN_API_VERSION: u16 = 2;
 const USER_MESSAGE_MAX_LEN: usize = 256;
@@ -92,23 +92,31 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-
 	let display_from = "http listener";
 	let slate_message = &slate.participant_data[0].message;
 	if slate_message.is_some() {
-		println!("{}", format!(
-			"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
-			slate.id.to_string(),
-			display_from,
-			amount_to_hr_string(slate.amount, false),
-			slate_message.clone().unwrap()).to_string());
+		println!(
+			"{}",
+			format!(
+				"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
+				slate.id.to_string(),
+				display_from,
+				amount_to_hr_string(slate.amount, false),
+				slate_message.clone().unwrap()
+			)
+			.to_string()
+		);
 	} else {
-		println!("{}", format!(
-			"slate [{}] received from [{}] for [{}] MWCs.",
-			slate.id.to_string(),
-			display_from,
-			amount_to_hr_string(slate.amount, false)
-			).to_string());
+		println!(
+			"{}",
+			format!(
+				"slate [{}] received from [{}] for [{}] MWCs.",
+				slate.id.to_string(),
+				display_from,
+				amount_to_hr_string(slate.amount, false)
+			)
+			.to_string()
+		);
 	}
 
 	let mut ret_slate = slate.clone();
