@@ -14,7 +14,7 @@
 
 //! Generic implementation of owner API functions
 use strum::IntoEnumIterator;
-
+use grin_core::core::amount_to_hr_string;
 use crate::api_impl::owner::check_ttl;
 use crate::grin_keychain::Keychain;
 use crate::grin_util::secp::key::SecretKey;
@@ -92,7 +92,25 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-	println!("foreign just received_tx just got slate = {:?}", slate);
+
+	let display_from = "http listener";
+	let slate_message = &slate.participant_data[0].message;
+	if slate_message.is_some() {
+		println!("{}", format!(
+			"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
+			slate.id.to_string(),
+			display_from,
+			amount_to_hr_string(slate.amount, false),
+			slate_message.clone().unwrap()).to_string());
+	} else {
+		println!("{}", format!(
+			"slate [{}] received from [{}] for [{}] MWCs.",
+			slate.id.to_string(),
+			display_from,
+			amount_to_hr_string(slate.amount, false)
+			).to_string());
+	}
+
 	let mut ret_slate = slate.clone();
 	check_ttl(w, &ret_slate)?;
 
