@@ -13,11 +13,9 @@
 // limitations under the License.
 
 //! Generic implementation of owner API functions
-<<<<<<< HEAD
-=======
+
 use strum::IntoEnumIterator;
 use grin_core::core::amount_to_hr_string;
->>>>>>> print out slate messages on listener
 use crate::api_impl::owner::check_ttl;
 use crate::grin_keychain::Keychain;
 use crate::grin_util::secp::key::SecretKey;
@@ -101,19 +99,28 @@ where
 	let display_from = "http listener";
 	let slate_message = &slate.participant_data[0].message;
 	if slate_message.is_some() {
-		println!("{}", format!(
-			"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
-			slate.id.to_string(),
-			display_from,
-			amount_to_hr_string(slate.amount, false),
-			slate_message.clone().unwrap()).to_string());
+		println!(
+			"{}",
+			format!(
+				"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
+				slate.id.to_string(),
+				display_from,
+				amount_to_hr_string(slate.amount, false),
+				slate_message.clone().unwrap()
+			)
+			.to_string()
+		);
 	} else {
-		println!("{}", format!(
-			"slate [{}] received from [{}] for [{}] MWCs.",
-			slate.id.to_string(),
-			display_from,
-			amount_to_hr_string(slate.amount, false)
-			).to_string());
+		println!(
+			"{}",
+			format!(
+				"slate [{}] received from [{}] for [{}] MWCs.",
+				slate.id.to_string(),
+				display_from,
+				amount_to_hr_string(slate.amount, false)
+			)
+			.to_string()
+		);
 	}
 
 	let mut ret_slate = slate.clone();
