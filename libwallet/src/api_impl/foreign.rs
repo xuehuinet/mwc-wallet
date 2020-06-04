@@ -13,6 +13,11 @@
 // limitations under the License.
 
 //! Generic implementation of owner API functions
+<<<<<<< HEAD
+=======
+use strum::IntoEnumIterator;
+use grin_core::core::amount_to_hr_string;
+>>>>>>> print out slate messages on listener
 use crate::api_impl::owner::check_ttl;
 use crate::grin_keychain::Keychain;
 use crate::grin_util::secp::key::SecretKey;
@@ -92,39 +97,23 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
+
 	let display_from = "http listener";
 	let slate_message = &slate.participant_data[0].message;
-	let mut address_for_logging = address.clone();
-
-	if address.is_none() { // that means it's not mqs so need to print it
-		if slate_message.is_some() {
-			println!(
-				"{}",
-				format!(
-					"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
-					slate.id.to_string(),
-					display_from,
-					amount_to_hr_string(slate.amount, false),
-					slate_message.clone().unwrap()
-				)
-				.to_string()
-			);
-		} else {
-			println!(
-				"{}",
-				format!(
-					"slate [{}] received from [{}] for [{}] MWCs.",
-					slate.id.to_string(),
-					display_from,
-					amount_to_hr_string(slate.amount, false)
-				)
-				.to_string()
-			);
-		}
-
-		// if address is none, it must be an http send. file doesn't go here. so let's set it for tx_log
-		// purposes
-		address_for_logging = Some("http".to_string());
+	if slate_message.is_some() {
+		println!("{}", format!(
+			"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
+			slate.id.to_string(),
+			display_from,
+			amount_to_hr_string(slate.amount, false),
+			slate_message.clone().unwrap()).to_string());
+	} else {
+		println!("{}", format!(
+			"slate [{}] received from [{}] for [{}] MWCs.",
+			slate.id.to_string(),
+			display_from,
+			amount_to_hr_string(slate.amount, false)
+			).to_string());
 	}
 
 	let mut ret_slate = slate.clone();
@@ -206,7 +195,7 @@ where
 
 		p.receiver_signature = Some(sig);
 	}
-	println!("foreign just received_tx returned slate = {:?}", ret_slate);
+	debug!("foreign just received_tx returned slate = {:?}", ret_slate);
 
 	Ok(ret_slate)
 }
