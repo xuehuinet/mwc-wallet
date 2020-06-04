@@ -87,6 +87,29 @@ fn check_middleware(
 	}
 }
 
+/// get the tor address
+pub fn get_tor_address<L, C, K>(
+        wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K> + 'static>>>,
+        keychain_mask: Arc<Mutex<Option<SecretKey>>>,
+) -> Result<String, Error>
+where
+        L: WalletLCProvider<'static, C, K> + 'static,
+        C: NodeClient + 'static,
+        K: Keychain + 'static,
+{
+	let mask = keychain_mask.lock();
+	// eventually want to read a list of service config keys
+	let mut w_lock = wallet.lock();
+	let lc = w_lock.lc_provider()?;
+	let w_inst = lc.wallet_inst()?;
+	let k = w_inst.keychain((&mask).as_ref())?;
+	let parent_key_id = w_inst.parent_key_id();
+	let sec_key = address::address_from_derivation_path(&k, &parent_key_id, 0).map_err(|e| {
+		ErrorKind::TorConfig(format!("Unable to build key for onion address, {}", e))
+	})?;
+	Ok(format!("{}", OnionV3Address::from_private(&sec_key.0).unwrap()))
+}
+
 /// initiate the tor listener
 pub fn init_tor_listener<L, C, K>(
 	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K> + 'static>>>,
