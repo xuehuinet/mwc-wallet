@@ -17,12 +17,13 @@
 use super::types::{
 	Address, CloseReason, KeybaseAddress, Publisher, Subscriber, SubscriptionHandler,
 };
-use grin_core::core::amount_to_hr_string;
 use crate::adapters::SlateSender;
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::Slate;
 use crate::util::Mutex;
+use grin_core::core::amount_to_hr_string;
 use grin_util::RwLock;
+use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashSet;
@@ -33,7 +34,6 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
-use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 
 pub const TOPIC_SLATE_NEW: &str = "grin_slate_new";
 pub const TOPIC_WALLET_SLATES: &str = "wallet713_grin_slate";
@@ -44,7 +44,8 @@ const SLEEP_DURATION: Duration = Duration::from_millis(5000);
 // instances separatlly.
 // Since instance is single, interface will be global
 lazy_static! {
-	static ref KEYBASE_BROKER: RwLock<Option<(KeybasePublisher, KeybaseSubscriber)>> = RwLock::new(None);
+	static ref KEYBASE_BROKER: RwLock<Option<(KeybasePublisher, KeybaseSubscriber)>> =
+		RwLock::new(None);
 }
 
 /// Init mwc mqs objects for the access.
@@ -112,7 +113,7 @@ impl SlateSender for KeybaseChannel {
 			// Creating channels for notification
 			let (tx_slate, rx_slate) = channel(); //this chaneel is used for listener thread to send message to other thread
 
-			keybase_subscriber.set_notification_channels( &slate.id, tx_slate);
+			keybase_subscriber.set_notification_channels(&slate.id, tx_slate);
 			let res = self.send_tx_keybase(slate, keybase_publisher, rx_slate);
 
 			keybase_subscriber.reset_notification_channels(&slate.id);
@@ -136,7 +137,10 @@ pub struct KeybasePublisher {
 impl KeybasePublisher {
 	pub fn new(ttl: Option<String>, keybase_binary: Option<String>) -> Result<Self, Error> {
 		let _broker = KeybaseBroker::new(keybase_binary.clone())?;
-		Ok(Self { ttl, keybase_binary })
+		Ok(Self {
+			ttl,
+			keybase_binary,
+		})
 	}
 }
 
@@ -148,7 +152,10 @@ pub struct KeybaseSubscriber {
 }
 
 impl KeybaseSubscriber {
-	pub fn new(keybase_binary: Option<String>, handler: Box<dyn SubscriptionHandler + Send>) -> Self {
+	pub fn new(
+		keybase_binary: Option<String>,
+		handler: Box<dyn SubscriptionHandler + Send>,
+	) -> Self {
 		Self {
 			handler: Arc::new(Mutex::new(handler)),
 			stop_signal: Arc::new(Mutex::new(true)),
@@ -172,7 +179,13 @@ impl Publisher for KeybasePublisher {
 			None => TOPIC_WALLET_SLATES,
 		};
 
-		KeybaseBroker::send(&slate, &to.get_stripped(), topic, ttl, self.keybase_binary.clone())?;
+		KeybaseBroker::send(
+			&slate,
+			&to.get_stripped(),
+			topic,
+			ttl,
+			self.keybase_binary.clone(),
+		)?;
 
 		Ok(())
 	}
@@ -205,11 +218,14 @@ impl Subscriber for KeybaseSubscriber {
 			if *self.stop_signal.lock() {
 				break Ok(());
 			};
-			let result = KeybaseBroker::get_unread(self.keybase_binary.clone(), HashSet::from_iter(vec![
-				TOPIC_WALLET_SLATES,
-				TOPIC_SLATE_NEW,
-				TOPIC_SLATE_SIGNED,
-			]));
+			let result = KeybaseBroker::get_unread(
+				self.keybase_binary.clone(),
+				HashSet::from_iter(vec![
+					TOPIC_WALLET_SLATES,
+					TOPIC_SLATE_NEW,
+					TOPIC_SLATE_SIGNED,
+				]),
+			);
 			if let Ok(unread) = result {
 				if !subscribed {
 					subscribed = true;
@@ -261,11 +277,7 @@ impl Subscriber for KeybaseSubscriber {
 		!*guard
 	}
 
-	fn set_notification_channels(
-		&self,
-		slate_id: &uuid::Uuid,
-		slate_send_channel: Sender<Slate>
-	) {
+	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>) {
 		self.handler
 			.lock()
 			.set_notification_channels(slate_id, slate_send_channel);
@@ -297,11 +309,25 @@ impl KeybaseBroker {
 		};
 
 		let status = if keybase_binary.is_some() {
-			proc.arg(keybase_binary.unwrap()).stdout(Stdio::null()).status()
-				.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to locate keybase binary, {}", e)))?
+			proc.arg(keybase_binary.unwrap())
+				.stdout(Stdio::null())
+				.status()
+				.map_err(|e| {
+					ErrorKind::KeybaseGenericError(format!(
+						"Unable to locate keybase binary, {}",
+						e
+					))
+				})?
 		} else {
-			proc.arg("keybase").stdout(Stdio::null()).status()
-				.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to locate keybase binary, {}", e)))?
+			proc.arg("keybase")
+				.stdout(Stdio::null())
+				.status()
+				.map_err(|e| {
+					ErrorKind::KeybaseGenericError(format!(
+						"Unable to locate keybase binary, {}",
+						e
+					))
+				})?
 		};
 
 		if status.success() {
@@ -319,32 +345,46 @@ impl KeybaseBroker {
 		};
 		proc.args(&["chat", "api", "-m", &payload]);
 		let output = proc.output().expect("No output").stdout;
-		let response = std::str::from_utf8(&output)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to read keybase response, {}", e)))?;
-		let response: Value = serde_json::from_str(response)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to parse as json keybase response {}, {}", response, e)))?;
+		let response = std::str::from_utf8(&output).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!("Unable to read keybase response, {}", e))
+		})?;
+		let response: Value = serde_json::from_str(response).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!(
+				"Unable to parse as json keybase response {}, {}",
+				response, e
+			))
+		})?;
 		Ok(response)
 	}
 
-	pub fn read_from_channel(channel: &str, topic: &str, keybase_binary: Option<String>) -> Result<Vec<(String, String, String)>, Error> {
+	pub fn read_from_channel(
+		channel: &str,
+		topic: &str,
+		keybase_binary: Option<String>,
+	) -> Result<Vec<(String, String, String)>, Error> {
 		let payload = json!({
-            "method": "read",
-            "params": {
-                "options": {
-                    "channel": {
-                        "name": channel,
-                        "topic_type": "dev",
-                        "topic_name": topic
-                    },
-                    "unread_only": true,
-                    "peek": false
-                },
-            }
-        });
-		let payload = serde_json::to_string(&payload)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable convert internal payload to Json, {}", e)))?;
-		let response = KeybaseBroker::api_send(keybase_binary, &payload)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Failed to send paylod {}, {}", payload, e)))?;
+			"method": "read",
+			"params": {
+				"options": {
+					"channel": {
+						"name": channel,
+						"topic_type": "dev",
+						"topic_name": topic
+					},
+					"unread_only": true,
+					"peek": false
+				},
+			}
+		});
+		let payload = serde_json::to_string(&payload).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!(
+				"Unable convert internal payload to Json, {}",
+				e
+			))
+		})?;
+		let response = KeybaseBroker::api_send(keybase_binary, &payload).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!("Failed to send paylod {}, {}", payload, e))
+		})?;
 
 		let mut unread: Vec<(String, String, String)> = Vec::new();
 		let messages = response["result"]["messages"].as_array();
@@ -362,19 +402,27 @@ impl KeybaseBroker {
 		Ok(unread)
 	}
 
-	pub fn get_unread(keybase_binary: Option<String>, topics: HashSet<&str>) -> Result<Vec<(String, String, String)>, Error> {
+	pub fn get_unread(
+		keybase_binary: Option<String>,
+		topics: HashSet<&str>,
+	) -> Result<Vec<(String, String, String)>, Error> {
 		let payload = json!({
-            "method": "list",
-            "params": {
-                "options": {
-                    "topic_type": "dev",
-                },
-            }
-        });
-		let payload = serde_json::to_string(&payload)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable convert internal payload to Json, {}", e)))?;
-		let response = KeybaseBroker::api_send(keybase_binary.clone(), &payload)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Failed to send paylod {}, {}", payload, e)))?;
+			"method": "list",
+			"params": {
+				"options": {
+					"topic_type": "dev",
+				},
+			}
+		});
+		let payload = serde_json::to_string(&payload).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!(
+				"Unable convert internal payload to Json, {}",
+				e
+			))
+		})?;
+		let response = KeybaseBroker::api_send(keybase_binary.clone(), &payload).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!("Failed to send paylod {}, {}", payload, e))
+		})?;
 
 		let mut channels = HashSet::new();
 		let messages = response["result"]["conversations"].as_array();
@@ -390,7 +438,8 @@ impl KeybaseBroker {
 
 		let mut unread: Vec<(String, String, String)> = Vec::new();
 		for (channel, topic) in channels.iter() {
-			let mut messages = KeybaseBroker::read_from_channel(channel, topic, keybase_binary.clone())?;
+			let mut messages =
+				KeybaseBroker::read_from_channel(channel, topic, keybase_binary.clone())?;
 			unread.append(&mut messages);
 		}
 		Ok(unread)
@@ -404,36 +453,47 @@ impl KeybaseBroker {
 		keybase_binary: Option<String>,
 	) -> Result<(), Error> {
 		let mut payload = json!({
-            "method": "send",
-            "params": {
-                "options": {
-                    "channel": {
-                        "name": channel,
-                        "topic_name": topic,
-                        "topic_type": "dev"
-                    },
-                    "message": {
-                        "body": serde_json::to_string(&message)
-                        	.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to serialize a message, {}", e)))?
-                    }
-                }
-            }
-        });
+			"method": "send",
+			"params": {
+				"options": {
+					"channel": {
+						"name": channel,
+						"topic_name": topic,
+						"topic_type": "dev"
+					},
+					"message": {
+						"body": serde_json::to_string(&message)
+							.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to serialize a message, {}", e)))?
+					}
+				}
+			}
+		});
 
 		if let Some(ttl) = ttl {
 			payload["params"]["options"]["exploding_lifetime"] = json!(ttl);
 		}
 
-		let payload = serde_json::to_string(&payload)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable convert internal payload to Json, {}", e)))?;
+		let payload = serde_json::to_string(&payload).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!(
+				"Unable convert internal payload to Json, {}",
+				e
+			))
+		})?;
 
-		let response = KeybaseBroker::api_send(keybase_binary, &payload)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Failed to send paylod {}, {}", payload, e)))?;
+		let response = KeybaseBroker::api_send(keybase_binary, &payload).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!("Failed to send paylod {}, {}", payload, e))
+		})?;
 
 		match response["result"]["message"].as_str() {
 			Some("message sent") => Ok(()),
-			Some(s) => Err(ErrorKind::KeybaseMessageSendError(format!("keybase responded with {}", s)))?,
-			_ => Err(ErrorKind::KeybaseMessageSendError(format!("Unexpected keybase respond: {}",response) ))?,
+			Some(s) => Err(ErrorKind::KeybaseMessageSendError(format!(
+				"keybase responded with {}",
+				s
+			)))?,
+			_ => Err(ErrorKind::KeybaseMessageSendError(format!(
+				"Unexpected keybase respond: {}",
+				response
+			)))?,
 		}
 	}
 }
