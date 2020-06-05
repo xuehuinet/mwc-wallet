@@ -13,13 +13,13 @@
 // limitations under the License.
 
 use super::types::{Address, Publisher, Subscriber, SubscriptionHandler};
-use grin_core::core::amount_to_hr_string;
 use crate::adapters::types::MWCMQSAddress;
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::proof::crypto;
 use crate::libwallet::proof::crypto::Hex;
 use crate::util::Mutex;
 use crate::SlateSender;
+use grin_core::core::amount_to_hr_string;
 use grin_util::RwLock;
 use grin_wallet_libwallet::proof::message::EncryptedMessage;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
@@ -88,12 +88,12 @@ impl MwcMqsChannel {
 				))
 			})?;
 
-                println!(
-                    "slate [{}] for [{}] MWCs sent successfully to [{}]",
-                    slate.id.to_string(),
-                    amount_to_hr_string(slate.amount, false),
-                    des_address,
-                );
+		println!(
+			"slate [{}] for [{}] MWCs sent successfully to [{}]",
+			slate.id.to_string(),
+			amount_to_hr_string(slate.amount, false),
+			des_address,
+		);
 
 		//expect to get slate back.
 		let slate_returned = rx_slate
@@ -192,7 +192,9 @@ impl Publisher for MWCMQPublisher {
 			&self.secret_key,
 			&source_address,
 		)
-		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}",e)) )?;
+		.map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}", e))
+		})?;
 
 		let slate = serde_json::to_string(&slate).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
@@ -254,11 +256,7 @@ impl Subscriber for MWCMQSubscriber {
 		self.broker.is_running()
 	}
 
-	fn set_notification_channels(
-		&self,
-		slate_id: &uuid::Uuid,
-		slate_send_channel: Sender<Slate>,
-	) {
+	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>) {
 		self.broker
 			.handler
 			.lock()
@@ -266,7 +264,10 @@ impl Subscriber for MWCMQSubscriber {
 	}
 
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid) {
-		self.broker.handler.lock().reset_notification_channels(slate_id);
+		self.broker
+			.handler
+			.lock()
+			.reset_notification_channels(slate_id);
 	}
 }
 
@@ -909,12 +910,9 @@ impl MWCMQSBroker {
 									}
 								};
 
-								push_proof_for_slate( &slate.id, tx_proof );
+								push_proof_for_slate(&slate.id, tx_proof);
 
-								self.handler.lock().on_slate(
-									&from,
-									&mut slate,
-								);
+								self.handler.lock().on_slate(&from, &mut slate);
 								break;
 							}
 						}
