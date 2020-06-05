@@ -92,29 +92,37 @@ where
 {
 	let display_from = "http listener";
 	let slate_message = &slate.participant_data[0].message;
-	if slate_message.is_some() {
-		println!(
-			"{}",
-			format!(
-				"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
-				slate.id.to_string(),
-				display_from,
-				amount_to_hr_string(slate.amount, false),
-				slate_message.clone().unwrap()
-			)
-			.to_string()
-		);
-	} else {
-		println!(
-			"{}",
-			format!(
-				"slate [{}] received from [{}] for [{}] MWCs.",
-				slate.id.to_string(),
-				display_from,
-				amount_to_hr_string(slate.amount, false)
-			)
-			.to_string()
-		);
+	let mut address_for_logging = address.clone();
+
+	if address.is_none() { // that means it's not mqs so need to print it
+		if slate_message.is_some() {
+			println!(
+				"{}",
+				format!(
+					"slate [{}] received from [{}] for [{}] MWCs. Message: [\"{}\"]",
+					slate.id.to_string(),
+					display_from,
+					amount_to_hr_string(slate.amount, false),
+					slate_message.clone().unwrap()
+				)
+				.to_string()
+			);
+		} else {
+			println!(
+				"{}",
+				format!(
+					"slate [{}] received from [{}] for [{}] MWCs.",
+					slate.id.to_string(),
+					display_from,
+					amount_to_hr_string(slate.amount, false)
+				)
+				.to_string()
+			);
+		}
+
+		// if address is none, it must be an http send. file doesn't go here. so let's set it for tx_log
+		// purposes
+		address_for_logging = Some("http".to_string());
 	}
 
 	let mut ret_slate = slate.clone();
@@ -171,7 +179,7 @@ where
 		&mut *w,
 		keychain_mask,
 		&mut ret_slate,
-		address,
+		address_for_logging,
 		key_id_opt,
 		output_amounts,
 		&parent_key_id,
