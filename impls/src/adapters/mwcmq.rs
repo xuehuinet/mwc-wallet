@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use super::types::{Address, Publisher, Subscriber, SubscriptionHandler};
+use grin_core::core::amount_to_hr_string;
 use crate::adapters::types::MWCMQSAddress;
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::proof::crypto;
@@ -84,6 +85,13 @@ impl MwcMqsChannel {
 					slate.id, e
 				))
 			})?;
+
+                println!(
+                    "slate [{}] for [{}] MWCs sent successfully to [{}]",
+                    slate.id.to_string(),
+                    amount_to_hr_string(slate.amount, false),
+                    des_address,
+                );
 
 		//expect to get slate back.
 		let slate_returned = rx_slate

@@ -17,6 +17,7 @@
 use super::types::{
 	Address, CloseReason, KeybaseAddress, Publisher, Subscriber, SubscriptionHandler,
 };
+use grin_core::core::amount_to_hr_string;
 use crate::adapters::SlateSender;
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::Slate;
@@ -85,6 +86,13 @@ impl KeybaseChannel {
 				))
 			})?;
 
+		println!(
+			"slate [{}] for [{}] MWCs sent successfully to [{}]",
+			slate.id.to_string(),
+			amount_to_hr_string(slate.amount, false),
+			des_address,
+		);
+
 		//expect to get slate back.
 		let slate_returned = rx_slate
 			.recv_timeout(Duration::from_secs(120))
@@ -106,6 +114,7 @@ impl SlateSender for KeybaseChannel {
 
 			keybase_subscriber.set_notification_channels( &slate.id, tx_slate);
 			let res = self.send_tx_keybase(slate, keybase_publisher, rx_slate);
+
 			keybase_subscriber.reset_notification_channels(&slate.id);
 			res
 		} else {
