@@ -88,7 +88,7 @@ impl KeybaseChannel {
 			})?;
 
 		println!(
-			"slate [{}] for [{}] MWCs sent successfully to [{}]",
+			"slate [{}] for [{}] MWCs sent to [{}]",
 			slate.id.to_string(),
 			amount_to_hr_string(slate.amount, false),
 			des_address,
