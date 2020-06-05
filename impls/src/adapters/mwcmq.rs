@@ -27,6 +27,7 @@ use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
 use grin_wallet_libwallet::{Slate, VersionedSlate};
 
+
 use grin_wallet_util::grin_util::secp::key::SecretKey;
 use regex::Regex;
 use std::collections::HashMap;
@@ -89,14 +90,10 @@ impl MwcMqsChannel {
 			})?;
 
 		println!(
-			<<<<<<< HEAD
-		"slate [{}] for [{}] MWCs sent to [{}]",
-		=======
-		"slate [{}] for [{}] MWCs sent successfully to [{}]",
-		>>>>>>> rustfmt
-		slate.id.to_string(),
-		amount_to_hr_string(slate.amount, false),
-		des_address,
+			"slate [{}] for [{}] MWCs sent to [{}]",
+			slate.id.to_string(),
+			amount_to_hr_string(slate.amount, false),
+			des_address,
 		);
 
 		//expect to get slate back.
@@ -196,15 +193,9 @@ impl Publisher for MWCMQPublisher {
 			&self.secret_key,
 			&source_address,
 		)
-			<<<<<<< HEAD
 			.map_err(|e| {
 				ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}", e))
 			})?;
-		=======
-		.map_err(|e| {
-			ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}", e))
-		})?;
-		>>>>>>> rustfmt
 
 		let slate = serde_json::to_string(&slate).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
@@ -938,3 +929,4 @@ impl MWCMQSBroker {
 		self.running.load(Ordering::SeqCst)
 	}
 }
+
