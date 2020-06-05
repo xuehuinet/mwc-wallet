@@ -75,23 +75,10 @@ impl MwcMqsChannel {
 		slate: &Slate,
 		mwcmqs_publisher: MWCMQPublisher,
 		rx_slate: Receiver<Slate>,
-<<<<<<< HEAD
-
-		tx_finalize: Sender<bool>,
-=======
->>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 	) -> Result<Slate, Error> {
 		let des_address = MWCMQSAddress::from_str(self.des_address.as_ref()).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Invalid destination address, {}", e))
 		})?;
-<<<<<<< HEAD
-
-		tx_finalize.send(self.finalize).map_err(|e| {
-			ErrorKind::MqsGenericError(format!("Unable to contact MQS worker, {}", e))
-		})?;
-
-=======
->>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 		mwcmqs_publisher
 			.post_slate(&slate, &des_address)
 			.map_err(|e| {
@@ -136,7 +123,7 @@ impl SlateSender for MwcMqsChannel {
 				"MQS is not started, not able to send the slate {}",
 				slate.id
 			))
-			.into());
+				.into());
 		}
 	}
 }
@@ -205,8 +192,9 @@ impl Publisher for MWCMQPublisher {
 			&self.secret_key,
 			&source_address,
 		)
-
-		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}",e)) )?;
+			.map_err(|e| {
+				ErrorKind::MqsGenericError(format!("Unable to build txproof from the payload, {}", e))
+			})?;
 
 		let slate = serde_json::to_string(&slate).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
@@ -268,15 +256,7 @@ impl Subscriber for MWCMQSubscriber {
 		self.broker.is_running()
 	}
 
-<<<<<<< HEAD
 	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>) {
-=======
-	fn set_notification_channels(
-		&self,
-		slate_id: &uuid::Uuid,
-		slate_send_channel: Sender<Slate>,
-	) {
->>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 		self.broker
 			.handler
 			.lock()
@@ -284,14 +264,10 @@ impl Subscriber for MWCMQSubscriber {
 	}
 
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid) {
-<<<<<<< HEAD
 		self.broker
 			.handler
 			.lock()
 			.reset_notification_channels(slate_id);
-=======
-		self.broker.handler.lock().reset_notification_channels(slate_id);
->>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 	}
 }
 
@@ -329,12 +305,9 @@ impl MWCMQSBroker {
 	) -> Result<String, Error> {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
-
-		let serde_json = serde_json::to_string(&VersionedSlate::into_version(
-			slate.clone(),
-			slate.lowest_version(),
-		))
-		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e)))?;
+		let serde_json = serde_json::to_string(&slate).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
+		})?;
 
 
 		let message = EncryptedMessage::new(serde_json, &to.address, &pkey, &skey)
@@ -378,20 +351,6 @@ impl MWCMQSBroker {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
 
-		println!("the slate before post is {:?}", slate);
-		println!(
-			"the slate message before post is {}",
-			serde_json::to_string(&slate).unwrap()
-		);
-
-		let version = slate.lowest_version();
-		let slate = VersionedSlate::into_version(slate.clone(), version);
-
-		println!(
-			"VERSIONED the slate message before post is {}",
-			serde_json::to_string(&slate).unwrap()
-		);
-
 		let message = EncryptedMessage::new(
 			serde_json::to_string(&slate).map_err(|e| {
 				ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
@@ -400,7 +359,7 @@ impl MWCMQSBroker {
 			&pkey,
 			&skey,
 		)
-		.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
+			.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
 
 		let message_ser = &serde_json::to_string(&message).map_err(|e| {
 			ErrorKind::MqsGenericError(format!("Unable convert Message to Json, {}", e))
@@ -935,18 +894,9 @@ impl MWCMQSBroker {
 									}
 								};
 
-<<<<<<< HEAD
 								push_proof_for_slate(&slate.id, tx_proof);
 
 								self.handler.lock().on_slate(&from, &mut slate);
-=======
-								push_proof_for_slate( &slate.id, tx_proof );
-
-								self.handler.lock().on_slate(
-									&from,
-									&mut slate,
-								);
->>>>>>> https://github.com/mwcproject/mwc-qt-wallet/issues/352
 								break;
 							}
 						}
