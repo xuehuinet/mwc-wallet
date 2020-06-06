@@ -478,7 +478,7 @@ impl MWCMQSBroker {
 		// get time from server
 		let mut time_now = "";
 		let mut is_error = false;
-		let secs = 10;
+		let secs = 30;
 		let cl = reqwest::Client::builder()
 			.timeout(Duration::from_secs(secs))
 			.build();
