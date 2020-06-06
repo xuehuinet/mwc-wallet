@@ -112,7 +112,7 @@ pub struct TorProcess {
 impl TorProcess {
 	pub fn new() -> Self {
 		TorProcess {
-			tor_cmd: TOR_EXE_NAME.to_string(),
+			tor_cmd: Self::get_tor_cmd(),
 			args: vec![],
 			torrc_path: None,
 			completion_percent: 100 as u8,
@@ -122,6 +122,23 @@ impl TorProcess {
 			process: None,
 		}
 	}
+
+	fn get_tor_cmd() -> String {
+                let tor_exe_env = Self::getenv("TOR_EXE_NAME");
+                if tor_exe_env.is_some() {
+                        tor_exe_env.unwrap()
+                } else {
+                        TOR_EXE_NAME.to_string()
+                }
+	}
+
+	fn getenv(key: &str) -> Option<String> {
+		match std::env::var(key) {
+			Ok(val) => Some(val),
+			Err(_) => None,
+		}
+	}
+
 
 	pub fn tor_cmd(&mut self, tor_cmd: &str) -> &mut Self {
 		self.tor_cmd = tor_cmd.to_string();
@@ -193,7 +210,7 @@ impl TorProcess {
 			.stderr(Stdio::piped())
 			.spawn()
 			.map_err(|err| {
-				let msg = format!("TOR executable (`{}`) not found. Please ensure TOR is installed and on the path: {:?}", TOR_EXE_NAME, err);
+				let msg = format!("TOR executable (`{}`) not found. Please ensure TOR is installed and on the path: {:?}", err, Self::get_tor_cmd());
 				Error::Process(msg)
 			})?;
 
