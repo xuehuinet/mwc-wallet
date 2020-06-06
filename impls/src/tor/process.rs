@@ -124,12 +124,12 @@ impl TorProcess {
 	}
 
 	fn get_tor_cmd() -> String {
-                let tor_exe_env = Self::getenv("TOR_EXE_NAME");
-                if tor_exe_env.is_some() {
-                        tor_exe_env.unwrap()
-                } else {
-                        TOR_EXE_NAME.to_string()
-                }
+		let tor_exe_env = Self::getenv("TOR_EXE_NAME");
+		if tor_exe_env.is_some() {
+			tor_exe_env.unwrap()
+		} else {
+			TOR_EXE_NAME.to_string()
+		}
 	}
 
 	fn getenv(key: &str) -> Option<String> {
@@ -138,7 +138,6 @@ impl TorProcess {
 			Err(_) => None,
 		}
 	}
-
 
 	pub fn tor_cmd(&mut self, tor_cmd: &str) -> &mut Self {
 		self.tor_cmd = tor_cmd.to_string();
