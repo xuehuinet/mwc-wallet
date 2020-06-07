@@ -115,6 +115,7 @@ pub fn init_tor_listener<L, C, K>(
 	wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K> + 'static>>>,
 	keychain_mask: Arc<Mutex<Option<SecretKey>>>,
 	addr: &str,
+	tor_base: Option<&str>,
 ) -> Result<tor_process::TorProcess, Error>
 where
 	L: WalletLCProvider<'static, C, K> + 'static,
@@ -129,7 +130,12 @@ where
 	let w_inst = lc.wallet_inst()?;
 	let k = w_inst.keychain((&mask).as_ref())?;
 	let parent_key_id = w_inst.parent_key_id();
-	let tor_dir = format!("{}/tor/listener", lc.get_top_level_directory()?);
+	let tor_dir = if tor_base.is_some() {
+		format!("{}/tor/listener", tor_base.unwrap())
+	} else {
+		format!("{}/tor/listener", lc.get_top_level_directory()?)
+	};
+
 	let sec_key = address::address_from_derivation_path(&k, &parent_key_id, 0).map_err(|e| {
 		ErrorKind::TorConfig(format!("Unable to build key for onion address, {}", e))
 	})?;
@@ -816,7 +822,7 @@ where
 	}
 	// need to keep in scope while the main listener is running
 	let _tor_process = match use_tor {
-		true => match init_tor_listener(wallet.clone(), keychain_mask.clone(), addr) {
+		true => match init_tor_listener(wallet.clone(), keychain_mask.clone(), addr, None) {
 			Ok(tp) => Some(tp),
 			Err(e) => {
 				warn!("Unable to start TOR listener; Check that TOR executable is installed and on your path");

@@ -39,7 +39,7 @@ pub struct HttpSlateSender {
 
 impl HttpSlateSender {
 	/// Create, return Err if scheme is not "http"
-	pub fn new(base_url: &str, apisecret: Option<String>) -> Result<HttpSlateSender, Error> {
+	pub fn new(base_url: &str, apisecret: Option<String>, tor_config_dir: Option<String>) -> Result<HttpSlateSender, Error> {
 		if !base_url.starts_with("http") && !base_url.starts_with("https") {
 			Err(ErrorKind::GenericError(format!("Invalid http url: {}", base_url)).into())
 		} else {
@@ -48,7 +48,7 @@ impl HttpSlateSender {
 				apisecret,
 				use_socks: false,
 				socks_proxy_addr: None,
-				tor_config_dir: String::from(""),
+				tor_config_dir: tor_config_dir.unwrap_or(String::from("")),
 			})
 		}
 	}
@@ -58,15 +58,15 @@ impl HttpSlateSender {
 		base_url: &str,
 		apisecret: Option<String>,
 		proxy_addr: &str,
-		tor_config_dir: &str,
+		tor_config_dir: Option<String>,
 	) -> Result<HttpSlateSender, Error> {
-		let mut ret = Self::new(base_url, apisecret)?;
+		let mut ret = Self::new(base_url, apisecret, tor_config_dir.clone())?;
 		ret.use_socks = true;
 		let addr = proxy_addr.parse().map_err(|e| {
 			ErrorKind::GenericError(format!("Anable to parse address {}, {}", proxy_addr, e))
 		})?;
 		ret.socks_proxy_addr = Some(SocketAddr::V4(addr));
-		ret.tor_config_dir = tor_config_dir.into();
+		ret.tor_config_dir = tor_config_dir.unwrap_or(String::from(""));
 		Ok(ret)
 	}
 
