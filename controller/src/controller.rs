@@ -153,7 +153,7 @@ where
 	process
 		.torrc_path(&tor_path)
 		.working_dir(&tor_dir)
-		.timeout(20)
+		.timeout(45)
 		.completion_percent(100)
 		.launch()
 		.map_err(|e| {
