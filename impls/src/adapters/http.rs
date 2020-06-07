@@ -197,7 +197,7 @@ impl SlateSender for HttpSlateSender {
 			let tor_cmd = format!("{}/torrc", &tor_dir);
 			tor.torrc_path(&tor_cmd)
 				.working_dir(&tor_dir)
-				.timeout(20)
+				.timeout(45)
 				.completion_percent(100)
 				.launch()
 				.map_err(|e| {
