@@ -39,7 +39,11 @@ pub struct HttpSlateSender {
 
 impl HttpSlateSender {
 	/// Create, return Err if scheme is not "http"
-	pub fn new(base_url: &str, apisecret: Option<String>, tor_config_dir: Option<String>) -> Result<HttpSlateSender, Error> {
+	pub fn new(
+		base_url: &str,
+		apisecret: Option<String>,
+		tor_config_dir: Option<String>,
+	) -> Result<HttpSlateSender, Error> {
 		if !base_url.starts_with("http") && !base_url.starts_with("https") {
 			Err(ErrorKind::GenericError(format!("Invalid http url: {}", base_url)).into())
 		} else {

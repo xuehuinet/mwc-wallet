@@ -97,7 +97,9 @@ pub fn create_sender(
 	};
 
 	Ok(match method {
-		"http" => Box::new(HttpSlateSender::new(&dest, apisecret.clone(), None).map_err(|e| invalid(e))?),
+		"http" => {
+			Box::new(HttpSlateSender::new(&dest, apisecret.clone(), None).map_err(|e| invalid(e))?)
+		}
 		"tor" => match tor_config {
 			None => {
 				return Err(

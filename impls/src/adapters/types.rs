@@ -36,11 +36,7 @@ pub trait Subscriber {
 	fn stop(&mut self) -> bool;
 	fn is_running(&self) -> bool;
 
-	fn set_notification_channels(
-		&self,
-		slate_id: &uuid::Uuid,
-		slate_send_channel: Sender<Slate>,
-	);
+	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>);
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid);
 }
 
@@ -51,11 +47,7 @@ pub trait SubscriptionHandler: Send {
 	fn on_dropped(&self);
 	fn on_reestablished(&self);
 
-	fn set_notification_channels(
-		&self,
-		slate_id: &uuid::Uuid,
-		slate_send_channel: Sender<Slate>,
-	);
+	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>);
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid);
 }
 
@@ -238,8 +230,9 @@ impl Display for HttpsAddress {
 
 impl dyn Address {
 	pub fn parse(address: &str) -> Result<Box<dyn Address>, Error> {
-		let re = Regex::new(ADDRESS_REGEX)
-			.map_err(|e| ErrorKind::KeybaseGenericError(format!("Unable to construct address parser, {}",e)))?;
+		let re = Regex::new(ADDRESS_REGEX).map_err(|e| {
+			ErrorKind::KeybaseGenericError(format!("Unable to construct address parser, {}", e))
+		})?;
 		let captures = re.captures(address);
 		if captures.is_none() {
 			return Ok(Box::new(MWCMQSAddress::from_str(address)?));
