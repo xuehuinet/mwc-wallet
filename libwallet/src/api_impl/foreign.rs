@@ -92,6 +92,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
+	println!("foreign just received_tx just got slate = {:?}", slate);
 	let mut ret_slate = slate.clone();
 	check_ttl(w, &ret_slate)?;
 
@@ -171,6 +172,7 @@ where
 
 		p.receiver_signature = Some(sig);
 	}
+	println!("foreign just received_tx returned slate = {:?}", ret_slate);
 
 	Ok(ret_slate)
 }

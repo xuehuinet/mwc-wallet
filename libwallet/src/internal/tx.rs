@@ -492,12 +492,16 @@ pub fn payment_proof_message(
 	amount: u64,
 	kernel_commitment: &pedersen::Commitment,
 	sender_address_publickey: String,
-) -> Result<Vec<u8>, Error> {
-	let mut msg = Vec::new();
-	msg.write_u64::<BigEndian>(amount)?;
-	msg.append(&mut kernel_commitment.0.to_vec());
-	msg.append(&mut sender_address_publickey.as_bytes().to_vec());
-	Ok(msg)
+) -> Result<String, Error> {
+	//	let mut msg = Vec::new();
+	//	msg.write_u64::<BigEndian>(amount)?;
+	//	msg.append(&mut kernel_commitment.0.to_vec());
+	//	msg.append(&mut sender_address_publickey.as_bytes().to_vec());
+	//	println!("{:?}", msg);
+	let mut message = String::new();
+	message.push_str("test");
+	message.push_str(&amount.to_string());
+	Ok(message)
 }
 
 /// decode proof message
@@ -549,7 +553,8 @@ pub fn create_payment_proof_signature(
 
 	let mut challenge = String::new();
 	//todo check if this is the correct way.
-	challenge.push_str(std::str::from_utf8(&message_ser).unwrap());
+	//challenge.push_str(std::str::from_utf8(&message_ser).unwrap());
+	challenge.push_str(&message_ser);
 	let signature = crypto::sign_challenge(&challenge, &sec_key)?;
 	let signature = signature.to_hex();
 	Ok(signature)
@@ -588,12 +593,14 @@ where
 
 	let orig_proof_info = tx_vec[0].clone().payment_proof;
 
+	println!("if proof is there in the two parties");
 	if orig_proof_info.is_some() && slate.payment_proof.is_none() {
 		return Err(ErrorKind::PaymentProof(
 			"Expected Payment Proof for this Transaction is not present".to_owned(),
 		)
 		.into());
 	}
+	println!("proof is there in the two parties");
 
 	if let Some(ref p) = slate.payment_proof {
 		let orig_proof_info = match orig_proof_info {
@@ -605,6 +612,8 @@ where
 				.into());
 			}
 		};
+
+		println!("got into proof block");
 		let keychain = wallet.keychain(keychain_mask)?;
 		let index = match context.payment_proof_derivation_index {
 			Some(i) => i,
@@ -667,7 +676,8 @@ where
 		})?;
 		let receiver_pubkey = orig_proof_info.receiver_address.public_key().unwrap();
 		crypto::verify_signature(
-			std::str::from_utf8(&msg).unwrap(),
+			//	std::str::from_utf8(&msg).unwrap(),
+			&msg,
 			&signature,
 			&receiver_pubkey,
 		)
@@ -719,14 +729,19 @@ mod test {
 	fn payment_proof_construction() {
 		let secp_inst = static_secp_instance();
 		let secp = secp_inst.lock();
-		let mut test_rng = StepRng::new(1_234_567_890_u64, 1);
-		let sec_key = secp::key::SecretKey::new(&secp, &mut test_rng);
-		let d_skey = DalekSecretKey::from_bytes(&sec_key.0).unwrap();
-
-		let address: DalekPublicKey = (&d_skey).into();
+		//	let mut test_rng = StepRng::new(1_234_567_890_u64, 1);
+		//		let sec_key = secp::key::SecretKey::new(&secp, &mut test_rng);
+		//		let d_skey = DalekSecretKey::from_bytes(&sec_key.0).unwrap();
+		//
+		//		let address: DalekPublicKey = (&d_skey).into();
+		let identifier = ExtKeychainPath::new(1, 1, 0, 0, 0).to_identifier();
+		let keychain = ExtKeychain::from_random_seed(true).unwrap();
+		let sender_address_secret_key =
+			address::address_from_derivation_path(&keychain, &identifier, 0).unwrap();
+		let public_key = crypto::public_key_from_secret_key(&sender_address_secret_key).unwrap();
 
 		let kernel_excess = {
-			ExtKeychainPath::new(1, 1, 0, 0, 0).to_identifier();
+			//	ExtKeychainPath::new(1, 1, 0, 0, 0).to_identifier();
 			let keychain = ExtKeychain::from_random_seed(true).unwrap();
 			let switch = SwitchCommitmentType::Regular;
 			let id1 = ExtKeychain::derive_key_id(1, 1, 0, 0, 0);
@@ -747,7 +762,7 @@ mod test {
 		};
 
 		let amount = 1_234_567_890_u64;
-		let msg = payment_proof_message(amount, &kernel_excess, address).unwrap();
+		let msg = payment_proof_message(amount, &kernel_excess, public_key.to_hex()).unwrap();
 		println!("payment proof message is (len {}): {:?}", msg.len(), msg);
 
 		//todo don't know know to get PublicKey from bytes same as DalekPublicKey
@@ -755,9 +770,22 @@ mod test {
 		//		assert_eq!(decoded.0, amount);
 		//		assert_eq!(decoded.1, kernel_excess);
 		//		assert_eq!(decoded.2, address);
+		let provable_address =
+			proofaddress::payment_proof_address(&keychain, &identifier, 0).unwrap();
 
-		let sig = create_payment_proof_signature(amount, &kernel_excess, address, sec_key).unwrap();
+		let sig = create_payment_proof_signature(
+			amount,
+			&kernel_excess,
+			provable_address,
+			sender_address_secret_key,
+		)
+		.unwrap();
 
-		assert!(address.verify(&msg, &sig).is_ok());
+		//assert!(address.verify(&msg, &sig).is_ok());
+
+		let secp = Secp256k1::new();
+		let signature = util::from_hex(&sig).unwrap();
+		let signature = Signature::from_der(&secp, &signature).unwrap();
+		assert!(crypto::verify_signature(&msg, &signature, &public_key).is_ok());
 	}
 }

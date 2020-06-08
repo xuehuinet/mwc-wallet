@@ -393,7 +393,7 @@ pub trait OwnerRpcS {
 					"selection_strategy_is_use_all": true,
 					"message": "my message",
 					"target_slate_version": null,
-					"payment_proof_recipient_address": "d03c09e9c19bb74aa9ea44e0fe5ae237a9bf40bddf0941064a80913a4459c8bb",
+					"payment_proof_recipient_address": "xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2",
 					"ttl_blocks": null,
 					"address": null,
 					"estimate_only": false,
@@ -427,7 +427,7 @@ pub trait OwnerRpcS {
 				}
 			  ],
 			  "payment_proof": {
-				"receiver_address": "d03c09e9c19bb74aa9ea44e0fe5ae237a9bf40bddf0941064a80913a4459c8bb",
+				"receiver_address": "xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2",
 				"receiver_signature": null,
 				"sender_address": "294b08ba7422c0e1d9215d98829b7eba4834db80c86d5292ecbb199907d7ae42"
 			  },
@@ -1973,7 +1973,7 @@ pub trait OwnerRpcS {
 		"id": 1,
 		"jsonrpc": "2.0",
 		"result": {
-			"Ok": "294b08ba7422c0e1d9215d98829b7eba4834db80c86d5292ecbb199907d7ae42"
+			"Ok": "xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2"
 		}
 	}
 	# "#
@@ -2521,7 +2521,9 @@ where
 			derivation_index,
 		)
 		.map_err(|e| e.kind())?;
-		Ok(ProvableAddress::from_pub_key(&address))
+		let public_proof_address = ProvableAddress::from_pub_key(&address);
+		println!("public_proof address {}", public_proof_address.public_key);
+		Ok(public_proof_address)
 	}
 
 	fn retrieve_payment_proof(

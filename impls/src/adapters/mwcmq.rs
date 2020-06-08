@@ -361,6 +361,11 @@ impl MWCMQSBroker {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
 
+		println!("the slate before post is {:?}", slate);
+		println!(
+			"the slate message before post is {}",
+			serde_json::to_string(&slate).unwrap()
+		);
 		let message = EncryptedMessage::new(
 			serde_json::to_string(&slate).map_err(|e| {
 				ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))

@@ -19,6 +19,7 @@ use crate::grin_util::secp::key::PublicKey;
 use crate::proof::crypto;
 use grin_core::global;
 use grin_wallet_util::grin_keychain::{Identifier, Keychain};
+use serde::{Deserialize, Deserializer, Serializer};
 use std::fmt::{self, Display};
 
 /// Address prefixes for mainnet
@@ -29,13 +30,10 @@ pub const PROOFABLE_ADDRESS_VERSION_TESTNET: [u8; 2] = [1, 121];
 /// Address that can have a proof. Such address need to be able to be convertable to
 /// the public key
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(transparent)]
 pub struct ProvableAddress {
 	/// Public key that is an address
 	pub public_key: String,
-	/// Place holder for mwc713 backcompability. Value is empty string
-	pub domain: String,
-	/// /// Place holder for mwc713 backcompability. Value is None
-	pub port: Option<u16>,
 }
 
 impl Display for ProvableAddress {
@@ -52,8 +50,6 @@ impl ProvableAddress {
 
 		Ok(Self {
 			public_key: String::from(public_key),
-			domain: String::new(),
-			port: None,
 		})
 	}
 
@@ -61,8 +57,6 @@ impl ProvableAddress {
 	pub fn from_pub_key(public_key: &PublicKey) -> Self {
 		Self {
 			public_key: public_key.to_base58_check(version_bytes()),
-			domain: String::new(),
-			port: None,
 		}
 	}
 
@@ -107,4 +101,37 @@ where
 	let sender_address_secret_key =
 		address::address_from_derivation_path(keychain, &parent_key_id, index)?;
 	crypto::public_key_from_secret_key(&sender_address_secret_key)
+}
+
+/// ProvableAddress
+pub fn proof_address_from_string<'de, D>(deserializer: D) -> Result<ProvableAddress, D::Error>
+where
+	D: Deserializer<'de>,
+{
+	use serde::de::Error;
+	//	let addr_string = String::deserialize(deserializer).map_err(|err| {
+	//		Error::custom(format!("Fail to parse range proof HEX {}, {}", string, err))
+	//	})
+	//
+	//		//.and_then(|string| {
+	//			ProvableAddress::from_str(addr_string)
+	//		//})
+
+	String::deserialize(deserializer).and_then(|string| {
+		ProvableAddress::from_str(&string).map_err(|err| {
+			Error::custom(format!(
+				"Fail to parse provable address {}, {}",
+				string, err
+			))
+		})
+	})
+}
+
+/// Seralizes a provableAddress.
+pub fn as_string<S>(address: &ProvableAddress, serializer: S) -> Result<S::Ok, S::Error>
+where
+	S: Serializer,
+{
+	println!("I am here to serizlize as a string!!");
+	serializer.serialize_str(&address.public_key)
 }

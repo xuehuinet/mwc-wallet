@@ -1700,7 +1700,7 @@ pub fn run_doctest_owner(
 		let w = w_lock.lc_provider().unwrap().wallet_inst().unwrap();
 		let proof_address = match payment_proof {
 			true => {
-				let address = "fc558d4eaaffb62875553e2f5fe549b9713601db84e70ab85e2c900b3b8ac990";
+				let address = "xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2";
 				Some(ProvableAddress::from_str(address).unwrap())
 			}
 			false => None,

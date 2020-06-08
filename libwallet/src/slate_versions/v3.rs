@@ -25,6 +25,7 @@ use crate::grin_util::secp;
 use crate::grin_util::secp::key::PublicKey;
 use crate::grin_util::secp::pedersen::{Commitment, RangeProof};
 use crate::grin_util::secp::Signature;
+use crate::proof::proofaddress;
 use crate::proof::proofaddress::ProvableAddress;
 use crate::slate::CompatKernelFeatures;
 use crate::slate_versions::ser as dalek_ser;
@@ -70,7 +71,7 @@ pub struct SlateV3 {
 	/// is receiver, though this will change for multi-party
 	pub participant_data: Vec<ParticipantDataV3>,
 	/// Payment Proof
-	#[serde(default = "default_payment_none")]
+	///#[serde(default = "default_payment_none")]
 	pub payment_proof: Option<PaymentInfoV3>,
 }
 
@@ -121,7 +122,15 @@ pub struct PaymentInfoV3Old {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentInfoV3 {
+	#[serde(
+		serialize_with = "proofaddress::as_string",
+		deserialize_with = "proofaddress::proof_address_from_string"
+	)]
 	pub sender_address: ProvableAddress,
+	#[serde(
+		serialize_with = "proofaddress::as_string",
+		deserialize_with = "proofaddress::proof_address_from_string"
+	)]
 	pub receiver_address: ProvableAddress,
 	pub receiver_signature: Option<String>,
 }
