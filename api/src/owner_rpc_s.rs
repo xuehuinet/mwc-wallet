@@ -2524,6 +2524,7 @@ where
 		)
 		.map_err(|e| e.kind())?;
 		let public_proof_address = ProvableAddress::from_pub_key(&address);
+
 		Ok(public_proof_address)
 
 	}

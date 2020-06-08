@@ -99,7 +99,7 @@ where
 	let k = w.keychain(keychain_mask)?;
 
 	//	let sec_addr_key = address::address_from_derivation_path(&k, &parent_key_id, index)?;
-
+	//	let addr = OnionV3Address::from_private(&sec_addr_key.0)?;
 	let pub_key = proofaddress::payment_proof_address_pubkey(&k, &parent_key_id, index)?;
 	Ok(pub_key)
 }
@@ -639,6 +639,7 @@ where
 	K: Keychain + 'a,
 {
 	debug!("owner finalize slate got slate = {:?}", slate);
+
 	let mut sl = slate.clone();
 	check_ttl(w, &sl)?;
 	let context = w.get_private_context(keychain_mask, sl.id.as_bytes(), 0)?;
@@ -652,6 +653,7 @@ where
 		batch.delete_private_context(sl.id.as_bytes(), 0)?;
 		batch.commit()?;
 	}
+<<<<<<< HEAD
 
 	// If Proof available, we can store it at that point
 	if let Some(mut proof) = pop_proof_for_slate(&slate.id) {
@@ -667,7 +669,11 @@ where
 		proof.store_tx_proof(w.get_data_file_dir(), &slate.id.to_string())?;
 	};
 
+<<<<<<< HEAD
 
+=======
+	println!("owner finalize slate returned slate = {:?}", slate);
+>>>>>>> proof checkin
 	Ok((sl, context))
 }
 
@@ -1185,10 +1191,15 @@ where
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof checkin
 =======
 >>>>>>> proof first checkin
+=======
+=======
+>>>>>>> proof checkin
+>>>>>>> proof checkin
 	crypto::verify_signature(
 		//	std::str::from_utf8(&msg).unwrap(),
 		&msg,
@@ -1198,14 +1209,20 @@ where
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> proof checkin
 =======
 >>>>>>> proof first checkin
 =======
 >>>>>>> proof checkin
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> proof first checkin
 >>>>>>> proof first checkin
+=======
+>>>>>>> proof checkin
 
 	let sender_pubkey = proof.sender_address.public_key()?;
 	//	if sender_pubkey.verify(&msg, &proof.sender_sig).is_err() {
@@ -1214,10 +1231,15 @@ where
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof checkin
 =======
 >>>>>>> proof first checkin
+=======
+=======
+>>>>>>> proof checkin
+>>>>>>> proof checkin
 	crypto::verify_signature(
 		&msg,
 		&crypto::signature_from_string(&proof.sender_sig).unwrap(),
@@ -1226,14 +1248,19 @@ where
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof first checkin
+=======
+>>>>>>> proof checkin
 =======
 >>>>>>> proof checkin
 =======
 =======
 >>>>>>> proof first checkin
 >>>>>>> proof first checkin
+=======
+>>>>>>> proof checkin
 
 	// for now, simple test as to whether one of the addresses belongs to this wallet
 	//yang todo we need the index from args.

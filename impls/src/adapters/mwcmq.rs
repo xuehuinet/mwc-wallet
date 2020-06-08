@@ -352,6 +352,17 @@ impl MWCMQSBroker {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
 
+
+
+
+		let version = slate.lowest_version();
+		let slate = VersionedSlate::into_version(slate.clone(), version);
+
+		debug!(
+			"VERSIONED the slate message before post is {}",
+			serde_json::to_string(&slate).unwrap()
+		);
+
 		let message = EncryptedMessage::new(
 			serde_json::to_string(&slate).map_err(|e| {
 				ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))

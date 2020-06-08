@@ -492,6 +492,7 @@ pub fn payment_proof_message(
 	amount: u64,
 	kernel_commitment: &pedersen::Commitment,
 	sender_address_publickey: String,
+
 ) -> Result<String, Error> {
 	//	let mut msg = Vec::new();
 	//	msg.write_u64::<BigEndian>(amount)?;
@@ -502,8 +503,6 @@ pub fn payment_proof_message(
 	message.push_str("test");
 	message.push_str(&amount.to_string());
 	Ok(message)
-
-
 }
 
 /// decode proof message
@@ -570,7 +569,11 @@ pub fn create_payment_proof_signature(
 =======
 	challenge.push_str(&message_ser);
 
+<<<<<<< HEAD
 >>>>>>> proof first checkin
+=======
+
+>>>>>>> proof checkin
 	let signature = crypto::sign_challenge(&challenge, &sec_key)?;
 	let signature = signature.to_hex();
 	Ok(signature)
@@ -692,9 +695,14 @@ where
 		})?;
 		let receiver_pubkey = orig_proof_info.receiver_address.public_key().unwrap();
 		crypto::verify_signature(
+<<<<<<< HEAD
 
 			&msg,
 
+=======
+			//	std::str::from_utf8(&msg).unwrap(),
+			&msg,
+>>>>>>> proof checkin
 			&signature,
 			&receiver_pubkey,
 		)
@@ -790,11 +798,18 @@ mod test {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof checkin
 =======
 
 >>>>>>> proof first checkin
+=======
+		let provable_address =
+			proofaddress::payment_proof_address(&keychain, &identifier, 0).unwrap();
+
+<<<<<<< HEAD
+>>>>>>> proof checkin
 		let provable_address =
 			proofaddress::payment_proof_address(&keychain, &identifier, 0).unwrap();
 
@@ -814,6 +829,16 @@ mod test {
 =======
 
 
+=======
+		let sig = create_payment_proof_signature(
+			amount,
+			&kernel_excess,
+			provable_address,
+			sender_address_secret_key,
+		)
+		.unwrap();
+
+>>>>>>> proof checkin
 		//assert!(address.verify(&msg, &sig).is_ok());
 
 >>>>>>> proof checkin
