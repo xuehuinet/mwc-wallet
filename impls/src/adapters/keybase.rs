@@ -29,6 +29,7 @@ use std::process::{Command, Stdio};
 use std::str::from_utf8;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use grin_wallet_libwallet::VersionedSlate;
 
 const TTL: u16 = 60; // TODO: Pass this as a parameter
 const LISTEN_SLEEP_DURATION: Duration = Duration::from_millis(5000);
@@ -308,6 +309,8 @@ impl SlateSender for KeybaseChannel {
 	fn send_tx(&self, slate: &Slate) -> Result<Slate, Error> {
 		let id = slate.id;
 
+		let slate = VersionedSlate::into_version(slate.clone(), slate.lowest_version());
+
 		// Send original slate to recipient with the SLATE_NEW topic
 		match send(&slate, &self.0, SLATE_NEW, TTL) {
 			true => (),
@@ -440,6 +443,9 @@ impl SlateReceiver for KeybaseAllChannels {
 						match res {
 							// Reply to the same channel with topic SLATE_SIGNED
 							Ok(s) => {
+								let version = s.lowest_version();
+								let s = VersionedSlate::into_version(s,version);
+
 								let success = send(s, channel, SLATE_SIGNED, TTL);
 
 								if success {
