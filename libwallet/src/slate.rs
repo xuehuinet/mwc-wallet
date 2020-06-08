@@ -47,7 +47,7 @@ use crate::slate_versions::v3::{
 use crate::proof::proofaddress;
 use crate::proof::proofaddress::ProvableAddress;
 use crate::types::CbData;
-use crate::SlateVersion;
+use crate::{SlateVersion, CURRENT_SLATE_VERSION};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentInfo {
@@ -273,8 +273,8 @@ impl Slate {
 			ttl_cutoff_height: None,
 			participant_data: vec![],
 			version_info: VersionCompatInfo {
-				version: 2,              // CURRENT_SLATE_VERSION,
-				orig_version: 2,         // CURRENT_SLATE_VERSION,
+				version: CURRENT_SLATE_VERSION,
+				orig_version: CURRENT_SLATE_VERSION,
 				block_header_version: 1, // GRIN_BLOCK_HEADER_VERSION,
 			},
 			payment_proof: None,

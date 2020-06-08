@@ -22,7 +22,7 @@ use grin_util::RwLock;
 use grin_wallet_libwallet::proof::message::EncryptedMessage;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
-use grin_wallet_libwallet::Slate;
+use grin_wallet_libwallet::{Slate, VersionedSlate};
 use grin_wallet_util::grin_util::secp::key::SecretKey;
 use regex::Regex;
 use std::collections::HashMap;
@@ -366,6 +366,15 @@ impl MWCMQSBroker {
 			"the slate message before post is {}",
 			serde_json::to_string(&slate).unwrap()
 		);
+
+		let version = slate.lowest_version();
+		let slate = VersionedSlate::into_version(slate.clone(), version);
+
+		println!(
+			"VERSIONED the slate message before post is {}",
+			serde_json::to_string(&slate).unwrap()
+		);
+
 		let message = EncryptedMessage::new(
 			serde_json::to_string(&slate).map_err(|e| {
 				ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
