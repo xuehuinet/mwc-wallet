@@ -52,19 +52,17 @@ use crate::{SlateVersion, CURRENT_SLATE_VERSION};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentInfo {
-<<<<<<< HEAD
+
 	#[serde(
 		serialize_with = "proofaddress::as_string",
 		deserialize_with = "proofaddress::proof_address_from_string"
 	)]
+
 	pub sender_address: ProvableAddress,
 	#[serde(
 		serialize_with = "proofaddress::as_string",
 		deserialize_with = "proofaddress::proof_address_from_string"
 	)]
-=======
-	pub sender_address: ProvableAddress,
->>>>>>> proof first checkin
 	pub receiver_address: ProvableAddress,
 	pub receiver_signature: Option<String>,
 }

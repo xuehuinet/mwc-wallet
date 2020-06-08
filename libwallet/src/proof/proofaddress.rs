@@ -102,7 +102,7 @@ where
 		address::address_from_derivation_path(keychain, &parent_key_id, index)?;
 	crypto::public_key_from_secret_key(&sender_address_secret_key)
 }
-<<<<<<< HEAD
+
 
 /// ProvableAddress
 pub fn proof_address_from_string<'de, D>(deserializer: D) -> Result<ProvableAddress, D::Error>
@@ -136,6 +136,7 @@ where
 	println!("I am here to serizlize as a string!!");
 	serializer.serialize_str(&address.public_key)
 }
+
 
 //pub mod option_provable_address {
 //	use serde::{Deserialize, Deserializer, Serializer};
@@ -177,5 +178,4 @@ where
 //	}
 //
 //}
-=======
->>>>>>> proof first checkin
+

@@ -665,6 +665,7 @@ where
 		proof.store_tx_proof(w.get_data_file_dir(), &slate.id.to_string())?;
 	};
 
+
 	Ok((sl, context))
 }
 
@@ -1180,6 +1181,9 @@ where
 	//		return Err(ErrorKind::PaymentProof("Invalid recipient signature".to_owned()).into());
 	//	};
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> proof checkin
 	crypto::verify_signature(
 		//	std::str::from_utf8(&msg).unwrap(),
 		&msg,
@@ -1187,22 +1191,31 @@ where
 		&recipient_pubkey,
 	)
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+<<<<<<< HEAD
 =======
 >>>>>>> proof first checkin
+=======
+>>>>>>> proof checkin
 
 	let sender_pubkey = proof.sender_address.public_key()?;
 	//	if sender_pubkey.verify(&msg, &proof.sender_sig).is_err() {
 	//		return Err(ErrorKind::PaymentProof("Invalid sender signature".to_owned()).into());
 	//	};
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> proof checkin
 	crypto::verify_signature(
 		&msg,
 		&crypto::signature_from_string(&proof.sender_sig).unwrap(),
 		&sender_pubkey,
 	)
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+<<<<<<< HEAD
 =======
 >>>>>>> proof first checkin
+=======
+>>>>>>> proof checkin
 
 	// for now, simple test as to whether one of the addresses belongs to this wallet
 	//yang todo we need the index from args.
