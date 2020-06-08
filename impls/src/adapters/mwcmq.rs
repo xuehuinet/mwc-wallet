@@ -312,6 +312,7 @@ impl MWCMQSBroker {
 		))
 		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e)))?;
 
+
 		let message = EncryptedMessage::new(serde_json, &to.address, &pkey, &skey)
 			.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
 
