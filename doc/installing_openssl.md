@@ -1,4 +1,4 @@
-The latest versions of mwc-wallet require openssl 1.1 to be installed on the system. Some popoular distributions of Linux
+The latest versions of mwc-wallet require openssl 1.1 to be installed on the system. Some popular distributions of Linux
 (like Ubuntu 16.04) have an older version of openssl and cannot be upgraded via package manager. In order to install openssl
 1.1 on those systems, the following steps are required:
 
