@@ -5,6 +5,7 @@ The latest versions of mwc-wallet require openssl 1.1 to be installed on the sys
 1.) Ensure the system has gcc and make (on ubuntu, this can be done with the following commands:
 
 ```# apt upgrade```
+
 ```# apt install gcc make```
 
 2.) Obtain the openssl 1.1 sources. They can be obtained from the official website here: https://www.openssl.org/source/
