@@ -27,7 +27,6 @@ use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
 use grin_wallet_libwallet::{Slate, VersionedSlate};
 
-
 use grin_wallet_util::grin_util::secp::key::SecretKey;
 use regex::Regex;
 use std::collections::HashMap;
@@ -353,6 +352,15 @@ impl MWCMQSBroker {
 		let skey = secret_key.clone();
 
 
+
+
+		let version = slate.lowest_version();
+		let slate = VersionedSlate::into_version(slate.clone(), version);
+
+		debug!(
+			"VERSIONED the slate message before post is {}",
+			serde_json::to_string(&slate).unwrap()
+		);
 
 
 		let version = slate.lowest_version();
