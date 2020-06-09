@@ -35,6 +35,7 @@ pub struct HttpSlateSender {
 	use_socks: bool,
 	socks_proxy_addr: Option<SocketAddr>,
 	tor_config_dir: String,
+	socks_running: bool,
 }
 
 impl HttpSlateSender {
@@ -43,6 +44,7 @@ impl HttpSlateSender {
 		base_url: &str,
 		apisecret: Option<String>,
 		tor_config_dir: Option<String>,
+		socks_running: bool,
 	) -> Result<HttpSlateSender, Error> {
 		if !base_url.starts_with("http") && !base_url.starts_with("https") {
 			Err(ErrorKind::GenericError(format!("Invalid http url: {}", base_url)).into())
@@ -53,6 +55,7 @@ impl HttpSlateSender {
 				use_socks: false,
 				socks_proxy_addr: None,
 				tor_config_dir: tor_config_dir.unwrap_or(String::from("")),
+				socks_running: socks_running,
 			})
 		}
 	}
@@ -63,8 +66,9 @@ impl HttpSlateSender {
 		apisecret: Option<String>,
 		proxy_addr: &str,
 		tor_config_dir: Option<String>,
+		socks_running: bool,
 	) -> Result<HttpSlateSender, Error> {
-		let mut ret = Self::new(base_url, apisecret, tor_config_dir.clone())?;
+		let mut ret = Self::new(base_url, apisecret, tor_config_dir.clone(), socks_running)?;
 		ret.use_socks = true;
 		let addr = proxy_addr.parse().map_err(|e| {
 			ErrorKind::GenericError(format!("Anable to parse address {}, {}", proxy_addr, e))
@@ -162,6 +166,42 @@ impl HttpSlateSender {
 		let res = client.send_request(req)?;
 		Ok(res)
 	}
+
+	pub fn start_socks(&mut self) -> Result<(), Error> {
+		self.socks_running = true;
+
+		let mut tor = tor_process::TorProcess::new();
+		let tor_dir = format!(
+			"{}{}{}",
+			&self.tor_config_dir, MAIN_SEPARATOR, TOR_CONFIG_PATH
+		);
+		warn!(
+			"Starting TOR Process for send at {:?}",
+			self.socks_proxy_addr
+		);
+		tor_config::output_tor_sender_config(
+			&tor_dir,
+			&self
+				.socks_proxy_addr
+				.ok_or(ErrorKind::GenericError(
+					"Not found socks_proxy_addr value".to_string(),
+				))?
+				.to_string(),
+		)
+		.map_err(|e| ErrorKind::TorConfig(format!("Failed to config tor, {}", e)))?;
+		// Start TOR process
+		let tor_cmd = format!("{}/torrc", &tor_dir);
+		tor.torrc_path(&tor_cmd)
+			.working_dir(&tor_dir)
+			.timeout(20)
+			.completion_percent(100)
+			.launch()
+			.map_err(|e| {
+				ErrorKind::TorProcess(format!("Unable to start tor process {}, {:?}", tor_cmd, e))
+			})?;
+
+		Ok(())
+	}
 }
 
 impl SlateSender for HttpSlateSender {
@@ -173,8 +213,8 @@ impl SlateSender for HttpSlateSender {
 		let url_str = format!("{}{}v2/foreign", self.base_url, trailing);
 
 		// set up tor send process if needed
-		let mut tor = tor_process::TorProcess::new();
-		if self.use_socks {
+		if self.use_socks && !self.socks_running {
+			let mut tor = tor_process::TorProcess::new();
 			let tor_dir = format!(
 				"{}{}{}",
 				&self.tor_config_dir, MAIN_SEPARATOR, TOR_CONFIG_PATH
