@@ -281,7 +281,7 @@ pub fn is_tor_address(input: &str) -> Result<(), Error> {
 
 pub fn complete_tor_address(input: &str) -> Result<String, Error> {
 	let input = if input.ends_with("/") {
-		&input[..input.len()-1]
+		&input[..input.len() - 1]
 	} else {
 		input
 	};
