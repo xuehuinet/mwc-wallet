@@ -331,6 +331,7 @@ pub fn publish_transaction<C: NodeClient>(
 	tx: &tx::Transaction,
 	fluff: bool,
 ) -> Result<(), ErrorKind> {
+	println!("Node client = {}, txn = {:?}", node_client.node_url(), tx);
 	node_client.post_tx(tx, fluff)?;
 	Ok(())
 }

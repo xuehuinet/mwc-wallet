@@ -32,6 +32,9 @@ use serde_json;
 
 use grin_wallet_impls::{Address, CloseReason, MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber, Publisher,
 						Subscriber, SubscriptionHandler, KeybasePublisher, KeybaseSubscriber};
+use grin_wallet_impls::swap::dealer::SwapDealer;
+use grin_wallet_impls::swap::message::SwapConfig;
+use grinswap::swap::message::Message;
 use grin_wallet_libwallet::wallet_lock;
 use grin_wallet_util::grin_core::core;
 
@@ -255,6 +258,7 @@ where
 	keychain_mask: Arc<Mutex<Option<SecretKey>>>,
 	// what to do with logs. Print them to console or into the logs
 	print_to_log: bool,
+	swap_config: Option<SwapConfig>,
 }
 
 impl<L, C, K> Controller<L, C, K>
@@ -269,6 +273,7 @@ where
 		keychain_mask: Arc<Mutex<Option<SecretKey>>>,
 		max_auto_accept_invoice: Option<u64>,
 		print_to_log: bool,
+		swap_config: Option<SwapConfig>,
 	) -> Self
 	where
 		L: WalletLCProvider<'static, C, K>,
@@ -287,6 +292,7 @@ where
 			slate_send_channel: Arc::new(Mutex::new(HashMap::new())),
 			keychain_mask,
 			print_to_log,
+			swap_config,
 		}
 	}
 
@@ -299,6 +305,7 @@ where
 			slate_send_channel: self.slate_send_channel.clone(),
 			keychain_mask: self.keychain_mask.clone(),
 			print_to_log: self.print_to_log,
+			swap_config: self.swap_config.clone(),
 		}
 	}
 
@@ -422,6 +429,25 @@ where
 		}
 	}
 
+	fn process_incoming_swap_message(
+		&self,
+		from: &dyn Address,
+		swapmessage: Message
+	) -> Result<(), Error> {
+		let swap_dealer = SwapDealer::new();
+		if self.swap_config.is_some() {
+			swap_dealer.process_swap_message(self.wallet.clone(),
+											 from,
+											 swapmessage,
+											 self.publisher.lock().as_ref().expect("error"),
+											 self.clone().swap_config.unwrap())
+				.map_err(|e| {
+					ErrorKind::ProcessSwapMessageError(format!("Failed to process swap messages, {}", e))
+				})?;
+		}
+		Ok(())
+	}
+
 	fn do_log_info(&self, message: String) {
 		if self.print_to_log {
 			info!("{}", message);
@@ -497,6 +523,15 @@ where
 		}
 	}
 
+	fn on_message(&self, from: &dyn Address, swap: Message) {
+		let result = self.process_incoming_swap_message(from, swap);
+
+		match result {
+			Err(e) => self.do_log_error(format!("{}", e)),
+			_ => {}
+		}
+	}
+
 	fn on_close(&self, reason: CloseReason) {
 		match reason {
 			CloseReason::Normal => self.do_log_info(format!("listener [{}] stopped", self.name)),
@@ -537,6 +572,7 @@ pub fn init_start_mwcmqs_listener<L, C, K>(
 	mqs_config: MQSConfig,
 	keychain_mask: Arc<Mutex<Option<SecretKey>>>,
 	wait_for_thread: bool,
+	swap_config: Option<SwapConfig>,
 ) -> Result<(MWCMQPublisher, MWCMQSubscriber), Error>
 where
 	L: WalletLCProvider<'static, C, K> + 'static,
@@ -553,6 +589,7 @@ where
 		wait_for_thread,
 		keychain_mask,
 		true,
+		swap_config,
 	)
 	.map_err(|e| ErrorKind::GenericError(format!("cannot start mqs listener, {}", e)).into())
 }
@@ -565,6 +602,7 @@ pub fn start_mwcmqs_listener<L, C, K>(
 	wait_for_thread: bool,
 	keychain_mask: Arc<Mutex<Option<SecretKey>>>,
 	print_to_log: bool,
+	swap_config: Option<SwapConfig>,
 ) -> Result<(MWCMQPublisher, MWCMQSubscriber), Error>
 where
 	L: WalletLCProvider<'static, C, K> + 'static,
@@ -601,6 +639,7 @@ where
 		keychain_mask,
 		None,
 		print_to_log,
+		swap_config,
 	);
 
 	let mwcmqs_publisher = MWCMQPublisher::new(
@@ -686,9 +725,8 @@ pub fn start_keybase_listener<L, C, K>(
 		keychain_mask,
 		None,
 		print_to_log,
+		None,
 	);
-
-
 
 	let keybase_publisher = KeybasePublisher::new(ttl, keybase_binary.clone())?;
 	// Cross reference, need to setup the secondary pointer
@@ -718,7 +756,6 @@ pub fn start_keybase_listener<L, C, K>(
 
 	Ok((keybase_publisher, keybase_subscriber))
 }
-
 
 
 /// Listener version, providing same API but listening for requests on a
