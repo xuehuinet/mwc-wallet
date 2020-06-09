@@ -135,3 +135,44 @@ where
 	println!("I am here to serizlize as a string!!");
 	serializer.serialize_str(&address.public_key)
 }
+
+//pub mod option_provable_address {
+//	use serde::{Deserialize, Deserializer, Serializer};
+//	use serde::de::Error;
+//	use crate::grin_util::{from_hex, secp, static_secp_instance, to_hex};
+//	use crate::proof::proofaddress::ProvableAddress;
+//
+//	///
+//	pub fn serialize<S>(
+//		address: &Option<ProvableAddress>,
+//		serializer: S,
+//	) -> Result<S::Ok, S::Error>
+//		where
+//			S: Serializer,
+//	{
+//		match address {
+//			Some(address) => serializer.serialize_str(&address.public_key),
+//			None => serializer.serialize_none(),
+//		}
+//	}
+//
+//	///
+//	pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<ProvableAddress>, D::Error>
+//		where
+//			D: Deserializer<'de>,
+//	{
+//		let static_secp = static_secp_instance();
+//		let static_secp = static_secp.lock();
+//
+//		Option::<String>::deserialize(deserializer).and_then(|res| match res {
+//			Some(string) => ProvableAddress::from_str(&string).map_err(|err| {
+//					Error::custom(format!(
+//						"Fail to parse provable address {}, {}",
+//						string, err
+//					))}),
+//			None => Ok(None),
+//		})
+//
+//	}
+//
+//}
