@@ -22,6 +22,7 @@ use grin_keychain::Identifier;
 pub trait SwapApi<K: Keychain>: Sync + Send {
 	fn context_key_count(
 		&mut self,
+		_keychain: &K,
 		secondary_currency: Currency,
 		is_seller: bool,
 	) -> Result<usize, ErrorKind>;

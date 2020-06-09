@@ -19,6 +19,7 @@ use crate::config::GRIN_WALLET_DIR;
 use crate::util::file::get_first_line;
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
+
 /// Argument parsing and error handling for wallet commands
 use clap::ArgMatches;
 use failure::Fail;
@@ -314,9 +315,16 @@ where
 {
 	// Checking is wallet data
 	let mut wallet_data_path = PathBuf::from(&config.data_file_dir);
-	wallet_data_path.push(config.wallet_data_dir.clone().unwrap_or(GRIN_WALLET_DIR.to_string()) );
+	wallet_data_path.push(
+		config
+			.wallet_data_dir
+			.clone()
+			.unwrap_or(GRIN_WALLET_DIR.to_string()),
+	);
 	if wallet_data_path.exists() && !test_mode {
-		return Err(ParseError::WalletExists(wallet_data_path.to_str().unwrap_or("unknown").to_string()));
+		return Err(ParseError::WalletExists(
+			wallet_data_path.to_str().unwrap_or("unknown").to_string(),
+		));
 	}
 
 	let list_length = match args.is_present("short_wordlist") {

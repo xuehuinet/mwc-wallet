@@ -19,9 +19,9 @@ use crate::swap::types::{
 	Action, BuyerContext, Context, Currency, Role, RoleContext, SecondaryBuyerContext,
 	SecondarySellerContext, SellerContext, Status,
 };
-use crate::swap::{BuyApi, ErrorKind, Keychain, NodeClient, SellApi, Swap, SwapApi};
+use crate::swap::{BuyApi, ErrorKind, NodeClient, SellApi, Swap, SwapApi};
 use bitcoin::{Address, AddressType};
-use grin_keychain::{Identifier, SwitchCommitmentType};
+use grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
 use grin_util::secp::aggsig::export_secnonce_single as generate_nonce;
 use std::str::FromStr;
 use std::time::Duration;
@@ -120,15 +120,15 @@ where
 		swap: &mut Swap,
 	) -> Result<Option<Action>, ErrorKind> {
 		// Check Grin chain
-		if !swap.is_locked(30) {
+		if !swap.is_locked(3) {
 			match swap.lock_confirmations {
 				None => return Ok(Some(Action::PublishTx)),
 				Some(_) => {
 					let confirmations =
 						swap.update_lock_confirmations(keychain.secp(), &self.node_client)?;
-					if !swap.is_locked(30) {
+					if !swap.is_locked(3) {
 						return Ok(Some(Action::Confirmations {
-							required: 30,
+							required: 3,
 							actual: confirmations,
 						}));
 					}
@@ -139,7 +139,7 @@ where
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
 			let (pending_amount, confirmed_amount, mut least_confirmations) =
-				self.btc_balance(keychain, swap, 6)?;
+				self.btc_balance(keychain, swap, 2)?;
 			if pending_amount + confirmed_amount < swap.secondary_amount {
 				least_confirmations = 0;
 			};
@@ -147,7 +147,7 @@ where
 			if confirmed_amount < swap.secondary_amount {
 				return Ok(Some(Action::ConfirmationsSecondary {
 					currency: swap.secondary_currency,
-					required: 6,
+					required: 2,
 					actual: least_confirmations,
 				}));
 			}
@@ -289,7 +289,7 @@ where
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
 			let (pending_amount, confirmed_amount, least_confirmations) =
-				self.btc_balance(keychain, swap, 6)?;
+				self.btc_balance(keychain, swap, 2)?;
 			let chain_amount = pending_amount + confirmed_amount;
 			if chain_amount < swap.secondary_amount {
 				// At this point, user needs to deposit (more) Bitcoin
@@ -305,6 +305,10 @@ where
 			}
 
 			// Enough confirmed or in mempool
+			print!(
+				"confirmed amount: {}, swap secondary amount: {}",
+				confirmed_amount, swap.secondary_amount
+			);
 			if confirmed_amount < swap.secondary_amount {
 				// Wait for enough confirmations
 				return Ok(Some(Action::ConfirmationsSecondary {
@@ -369,6 +373,7 @@ where
 {
 	fn context_key_count(
 		&mut self,
+		_keychain: &K,
 		secondary_currency: Currency,
 		_is_seller: bool,
 	) -> Result<usize, ErrorKind> {

@@ -24,6 +24,7 @@ use crate::util::Mutex;
 use grin_core::core::amount_to_hr_string;
 use grin_util::RwLock;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
+use grinswap::swap::message::Message;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashSet;
@@ -201,6 +202,10 @@ impl Publisher for KeybasePublisher {
 		_signature: String,
 		_source_address: &ProvableAddress,
 	) -> Result<String, Error> {
+		unimplemented!();
+	}
+
+	fn post_take(&self, _message: &Message, _to: &str) -> Result<(), Error> {
 		unimplemented!();
 	}
 }

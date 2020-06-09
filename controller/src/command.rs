@@ -19,9 +19,7 @@ use crate::apiwallet::Owner;
 use crate::config::{MQSConfig, TorConfig, WalletConfig, WALLET_CONFIG_FILE_NAME};
 use crate::core::{core, global};
 use crate::error::{Error, ErrorKind};
-use crate::impls::{
-	create_sender, SlateGetter as _,
-};
+use crate::impls::{create_sender, SlateGetter as _};
 use crate::impls::{PathToSlate, SlatePutter};
 use crate::keychain;
 use crate::libwallet::{
@@ -30,7 +28,7 @@ use crate::libwallet::{
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
 use crate::{controller, display};
-use grin_wallet_libwallet::{TxLogEntry, Slate};
+use grin_wallet_libwallet::{Slate, TxLogEntry};
 use grin_wallet_util::OnionV3Address;
 use serde_json as json;
 use std::fs::File;
@@ -191,6 +189,7 @@ where
 				mqs_config.clone(),
 				keychain_mask,
 				true,
+				None,
 			)
 			.map_err(|e| {
 				error!("Unable to start mwcmqs listener, {}", e);
@@ -231,6 +230,7 @@ where
 			mqs_config.clone(),
 			km.clone(),
 			false,
+			None,
 		)?;
 	}
 
@@ -436,6 +436,7 @@ where
 						mqs_config_unwrapped,
 						Arc::new(Mutex::new(km)),
 						false,
+						None,
 					)?;
 					thread::sleep(Duration::from_millis(2000));
 				}
@@ -474,13 +475,12 @@ where
 
 				method => {
 					let original_slate = slate.clone();
-					let sender =
-						create_sender(method, &args.dest, &args.apisecret, tor_config)?;
+					let sender = create_sender(method, &args.dest, &args.apisecret, tor_config)?;
 					slate = sender.send_tx(&slate)?;
 					// Restore back ttl, because it can be gone
 					slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
 					// Checking is sender didn't do any harm to slate
-					Slate::compare_slates_send( &original_slate, &slate)?;
+					Slate::compare_slates_send(&original_slate, &slate)?;
 					api.verify_slate_messages(m, &slate).map_err(|e| {
 						error!("Error validating participant messages: {}", e);
 						e
@@ -494,8 +494,8 @@ where
 			let result = api.post_tx(m, &slate.tx, args.fluff);
 			match result {
 				Ok(_) => {
-					info!("slate [{}] finalized successfully",slate.id.to_string());
-					println!("slate [{}] finalized successfully",slate.id.to_string());
+					info!("slate [{}] finalized successfully", slate.id.to_string());
+					println!("slate [{}] finalized successfully", slate.id.to_string());
 					return Ok(());
 				}
 				Err(e) => {
