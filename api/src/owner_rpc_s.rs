@@ -1635,7 +1635,8 @@ pub trait OwnerRpcS {
 			"tor_config" : {
 				"use_tor_listener": true,
 				"socks_proxy_addr": "127.0.0.1:9050",
-				"send_config_dir": "."
+				"send_config_dir": ".",
+				"socks_running": false
 			},
 			"mqs_config" : {
 				"mwcmqs_domain": "mqs.mwc.mw",
@@ -2119,7 +2120,8 @@ pub trait OwnerRpcS {
 			"tor_config": {
 				"use_tor_listener": true,
 				"socks_proxy_addr": "127.0.0.1:59050",
-				"send_config_dir": "."
+				"send_config_dir": ".",
+				"socks_running": false
 			}
 		},
 		"id": 1
