@@ -167,8 +167,13 @@ impl HttpSlateSender {
 		Ok(res)
 	}
 
-	pub fn start_socks(&mut self) -> Result<(), Error> {
+	pub fn start_socks(&mut self, proxy_addr: &str) -> Result<(), Error> {
 		self.socks_running = true;
+
+                let addr = proxy_addr.parse().map_err(|e| {
+                        ErrorKind::GenericError(format!("Anable to parse address {}, {}", proxy_addr, e))
+                })?;
+                self.socks_proxy_addr = Some(SocketAddr::V4(addr));
 
 		let mut tor = tor_process::TorProcess::new();
 		let tor_dir = format!(
