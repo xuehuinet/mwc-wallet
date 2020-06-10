@@ -167,7 +167,7 @@ impl HttpSlateSender {
 		Ok(res)
 	}
 
-	pub fn start_socks(&mut self, proxy_addr: &str) -> Result<(), Error> {
+	pub fn start_socks(&mut self, proxy_addr: &str) -> Result<tor_process::TorProcess, Error> {
 		self.socks_running = true;
 
 		let addr = proxy_addr.parse().map_err(|e| {
@@ -198,14 +198,14 @@ impl HttpSlateSender {
 		let tor_cmd = format!("{}/torrc", &tor_dir);
 		tor.torrc_path(&tor_cmd)
 			.working_dir(&tor_dir)
-			.timeout(20)
+			.timeout(200)
 			.completion_percent(100)
 			.launch()
 			.map_err(|e| {
 				ErrorKind::TorProcess(format!("Unable to start tor process {}, {:?}", tor_cmd, e))
 			})?;
 
-		Ok(())
+		Ok(tor)
 	}
 }
 
