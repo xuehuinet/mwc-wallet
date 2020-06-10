@@ -80,25 +80,53 @@ impl HttpSlateSender {
 
 	/// Check version of the listening wallet
 	fn check_other_version(&self, url: &str) -> Result<SlateVersion, Error> {
-		let req = json!({
-			"jsonrpc": "2.0",
-			"method": "check_version",
-			"id": 1,
-			"params": []
-		});
+		let res_str: String;
+		let start_time = std::time::Instant::now();
+		trace!("starting now check version");
 
-		let res_str: String = self.post(url, self.apisecret.clone(), req).map_err(|e| {
-			let mut report = format!("Performing version check (is recipient listening?): {}", e);
-			let err_string = format!("{}", e);
-			if err_string.contains("404") {
-				// Report that the other version of the wallet is out of date
-				report = "Other wallet is incompatible and requires an upgrade. \
-				          Please urge the other wallet owner to upgrade and try the transaction again."
-					.to_string();
+		loop {
+			let req = json!({
+				"jsonrpc": "2.0",
+				"method": "check_version",
+				"id": 1,
+				"params": []
+			});
+
+			let res = self.post(url, self.apisecret.clone(), req);
+
+			let diff_time = start_time.elapsed().as_millis();
+			trace!("elapsed time check version = {}", diff_time);
+			// we try until it's taken more than 30 seconds.
+			if res.is_err() && diff_time <= 30_000 {
+				let res_err_str = format!("{:?}", res);
+				trace!(
+					"Got error (version_check), but continuing: {}, time elapsed = {}ms",
+					res_err_str, diff_time
+				);
+				// the api seems to have "GeneralFailures"
+				// on some platforms. retry is fast and can be
+				// done again.
+				// keep trying for 30 seconds.
+				continue;
+			} else if !res.is_err() {
+				res_str = res.unwrap();
+				break;
 			}
-			error!("{}", report);
-			ErrorKind::ClientCallback(report)
-		})?;
+
+			res.map_err(|e| {
+				let mut report =
+					format!("Performing version check (is recipient listening?): {}", e);
+				let err_string = format!("{}", e);
+				if err_string.contains("404") {
+					// Report that the other version of the wallet is out of date
+					report = "Other wallet is incompatible and requires an upgrade. \
+				          	Please urge the other wallet owner to upgrade and try the transaction again."
+						.to_string();
+				}
+				error!("{}", report);
+				ErrorKind::ClientCallback(report)
+			})?;
+		}
 
 		let res: Value = serde_json::from_str(&res_str).map_err(|e| {
 			ErrorKind::GenericError(format!("Unable to parse respond {}, {}", res_str, e))
@@ -268,26 +296,51 @@ impl SlateSender for HttpSlateSender {
 				VersionedSlate::into_version(slate, SlateVersion::V2)
 			}
 		};
-		// Note: not using easy-jsonrpc as don't want the dependencies in this crate
-		let req = json!({
-			"jsonrpc": "2.0",
-			"method": "receive_tx",
-			"id": 1,
-			"params": [
-						slate_send,
-						null,
-						null
-					]
-		});
-		trace!("Sending receive_tx request: {}", req);
 
-		let res_str: String = self
-			.post(&url_str, self.apisecret.clone(), req)
-			.map_err(|e| {
+		let res_str: String;
+		let start_time = std::time::Instant::now();
+		loop {
+			// Note: not using easy-jsonrpc as don't want the dependencies in this crate
+			let req = json!({
+				"jsonrpc": "2.0",
+				"method": "receive_tx",
+				"id": 1,
+				"params": [
+							slate_send,
+							null,
+							null
+						]
+			});
+			trace!("Sending receive_tx request: {}", req);
+
+			let res = self.post(&url_str, self.apisecret.clone(), req);
+
+			let diff_time = start_time.elapsed().as_millis();
+			trace!("diff time slate send = {}", diff_time);
+                        // we try until it's taken more than 30 seconds.
+                        if res.is_err() && diff_time <= 30_000 {
+                                let res_err_str = format!("{:?}", res);
+                                trace!(
+                                        "Got error (send_slate), but continuing: {}, time elapsed = {}ms",
+                                        res_err_str, diff_time
+                                );
+
+				// the api seems to have "GeneralFailures"
+				// on some platforms. retry is fast and can be
+				// done again.
+				// we continue to try for up to 30 seconds
+				continue;
+			} else if !res.is_err() {
+				res_str = res.unwrap();
+				break;
+			}
+
+			res.map_err(|e| {
 				let report = format!("Posting transaction slate (is recipient listening?): {}", e);
 				error!("{}", report);
 				ErrorKind::ClientCallback(report)
 			})?;
+		}
 
 		let res: Value = serde_json::from_str(&res_str).map_err(|e| {
 			ErrorKind::GenericError(format!("Unable to parse respond {}, {}", res_str, e))
