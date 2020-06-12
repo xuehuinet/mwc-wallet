@@ -179,7 +179,7 @@ impl HttpSlateSender {
 		Err(ErrorKind::ClientCallback(report).into())
 	}
 
-	fn post<IN>(
+	pub fn post<IN>(
 		&self,
 		url: &str,
 		api_secret: Option<String>,
