@@ -32,7 +32,7 @@ const TOR_CONFIG_PATH: &str = "tor/sender";
 pub struct HttpSlateSender {
 	base_url: String,
 	apisecret: Option<String>,
-	use_socks: bool,
+	pub use_socks: bool,
 	socks_proxy_addr: Option<SocketAddr>,
 	tor_config_dir: String,
 	socks_running: bool,
@@ -79,7 +79,7 @@ impl HttpSlateSender {
 	}
 
 	/// Check version of the listening wallet
-	fn check_other_version(&self, url: &str) -> Result<SlateVersion, Error> {
+	pub fn check_other_version(&self, url: &str) -> Result<SlateVersion, Error> {
 		let res_str: String;
 		let start_time = std::time::Instant::now();
 		trace!("starting now check version");
@@ -180,7 +180,7 @@ impl HttpSlateSender {
 		Err(ErrorKind::ClientCallback(report).into())
 	}
 
-	pub fn post<IN>(
+	fn post<IN>(
 		&self,
 		url: &str,
 		api_secret: Option<String>,
