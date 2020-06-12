@@ -101,7 +101,8 @@ impl HttpSlateSender {
 				let res_err_str = format!("{:?}", res);
 				trace!(
 					"Got error (version_check), but continuing: {}, time elapsed = {}ms",
-					res_err_str, diff_time
+					res_err_str,
+					diff_time
 				);
 				// the api seems to have "GeneralFailures"
 				// on some platforms. retry is fast and can be
@@ -317,13 +318,14 @@ impl SlateSender for HttpSlateSender {
 
 			let diff_time = start_time.elapsed().as_millis();
 			trace!("diff time slate send = {}", diff_time);
-                        // we try until it's taken more than 30 seconds.
-                        if res.is_err() && diff_time <= 30_000 {
-                                let res_err_str = format!("{:?}", res);
-                                trace!(
-                                        "Got error (send_slate), but continuing: {}, time elapsed = {}ms",
-                                        res_err_str, diff_time
-                                );
+			// we try until it's taken more than 30 seconds.
+			if res.is_err() && diff_time <= 30_000 {
+				let res_err_str = format!("{:?}", res);
+				trace!(
+					"Got error (send_slate), but continuing: {}, time elapsed = {}ms",
+					res_err_str,
+					diff_time
+				);
 
 				// the api seems to have "GeneralFailures"
 				// on some platforms. retry is fast and can be
