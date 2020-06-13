@@ -79,7 +79,11 @@ impl HttpSlateSender {
 	}
 
 	/// Check version of the listening wallet
-	pub fn check_other_version(&self, url: &str, timeout: Option<u128>) -> Result<SlateVersion, Error> {
+	pub fn check_other_version(
+		&self,
+		url: &str,
+		timeout: Option<u128>,
+	) -> Result<SlateVersion, Error> {
 		let res_str: String;
 		let start_time = std::time::Instant::now();
 		trace!("starting now check version");
