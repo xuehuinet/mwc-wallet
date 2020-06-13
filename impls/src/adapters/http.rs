@@ -79,7 +79,7 @@ impl HttpSlateSender {
 	}
 
 	/// Check version of the listening wallet
-	pub fn check_other_version(&self, url: &str) -> Result<SlateVersion, Error> {
+	pub fn check_other_version(&self, url: &str, timeout: Option<u128>) -> Result<SlateVersion, Error> {
 		let res_str: String;
 		let start_time = std::time::Instant::now();
 		trace!("starting now check version");
@@ -97,7 +97,7 @@ impl HttpSlateSender {
 			let diff_time = start_time.elapsed().as_millis();
 			trace!("elapsed time check version = {}", diff_time);
 			// we try until it's taken more than 30 seconds.
-			if res.is_err() && diff_time <= 30_000 {
+			if res.is_err() && diff_time <= timeout.unwrap_or(30_000) {
 				let res_err_str = format!("{:?}", res);
 				trace!(
 					"Got error (version_check), but continuing: {}, time elapsed = {}ms",
@@ -282,7 +282,7 @@ impl SlateSender for HttpSlateSender {
 				})?;
 		}
 
-		let slate_send = match self.check_other_version(&url_str)? {
+		let slate_send = match self.check_other_version(&url_str, None)? {
 			SlateVersion::V3 => VersionedSlate::into_version(slate.clone(), SlateVersion::V3),
 			SlateVersion::V2 => {
 				let mut slate = slate.clone();
