@@ -117,11 +117,11 @@ fn real_main() -> i32 {
 		Ok(c) => c,
 		Err(e) => match e {
 			ConfigError::PathNotFoundError(m) => {
-				println!("Wallet configuration not found at {}. (Run `grin-wallet init` to create a new wallet)", m);
+				println!("Wallet configuration not found at {}. (Run `mwc-wallet init` to create a new wallet)", m);
 				return 0;
 			}
 			m => {
-				println!("Unable to load wallet configuration: {} (Run `grin-wallet init` to create a new wallet)", m);
+				println!("Unable to load wallet configuration: {} (Run `mwc-wallet init` to create a new wallet)", m);
 				return 0;
 			}
 		},
