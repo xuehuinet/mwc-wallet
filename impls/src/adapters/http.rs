@@ -251,8 +251,8 @@ impl SlateSender for HttpSlateSender {
 		let url_str = format!("{}{}v2/foreign", self.base_url, trailing);
 
 		// set up tor send process if needed
+		let mut tor = tor_process::TorProcess::new();
 		if self.use_socks && !self.socks_running {
-			let mut tor = tor_process::TorProcess::new();
 			let tor_dir = format!(
 				"{}{}{}",
 				&self.tor_config_dir, MAIN_SEPARATOR, TOR_CONFIG_PATH
