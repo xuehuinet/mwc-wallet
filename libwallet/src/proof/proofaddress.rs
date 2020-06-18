@@ -14,7 +14,7 @@
 
 use super::base58::Base58;
 use crate::address;
-use crate::error::{Error, ErrorKind};
+use crate::error::Error;
 use crate::grin_util::secp::key::PublicKey;
 use crate::proof::crypto;
 use grin_core::global;
@@ -93,6 +93,7 @@ where
 	Ok(ProvableAddress::from_pub_key(&sender_address_pub_key))
 }
 
+///
 pub fn payment_proof_address_pubkey<K>(
 	keychain: &K,
 	parent_key_id: &Identifier,
@@ -136,7 +137,6 @@ pub fn as_string<S>(address: &ProvableAddress, serializer: S) -> Result<S::Ok, S
 where
 	S: Serializer,
 {
-	println!("I am here to serizlize as a string!!");
 	serializer.serialize_str(&address.public_key)
 }
 

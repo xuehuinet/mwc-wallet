@@ -33,8 +33,11 @@ use crate::libwallet::{
 use crate::util::logger::LoggingConfig;
 use crate::util::secp::key::SecretKey;
 use crate::util::{from_hex, static_secp_instance, Mutex, ZeroingString};
+<<<<<<< HEAD
 
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
+=======
+>>>>>>>  support the proof verify in mwc713
 use grin_wallet_util::grin_util::secp::key::PublicKey;
 
 use grin_wallet_util::OnionV3Address;
@@ -760,24 +763,34 @@ where
 				// Restore back ttl, because it can be gone
 				slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
 				// Checking is sender didn't do any harm to slate
-				Slate::compare_slates_send( &original_slate, &slate)?;
+				Slate::compare_slates_send(&original_slate, &slate)?;
 
-				self.verify_slate_messages(keychain_mask, &slate).map_err(|e| {
-					error!("Unable to validate participant messages at slate {}: {}", slate.id,  e);
-					e
-				})?;
+				self.verify_slate_messages(keychain_mask, &slate)
+					.map_err(|e| {
+						error!(
+							"Unable to validate participant messages at slate {}: {}",
+							slate.id, e
+						);
+						e
+					})?;
 
 				self.tx_lock_outputs(keychain_mask, &slate, address, 0)?;
 				slate = match sa.finalize {
-						true => self.finalize_tx(keychain_mask, &slate)?,
-						false => slate,
+					true => self.finalize_tx(keychain_mask, &slate)?,
+					false => slate,
 				};
-				println!("slate [{}] finalized successfully in owner_api",slate.id.to_string());
+				println!(
+					"slate [{}] finalized successfully in owner_api",
+					slate.id.to_string()
+				);
 
 				if sa.post_tx {
 					self.post_tx(keychain_mask, &slate.tx, sa.fluff)?;
 				}
-				println!("slate [{}] posted successfully in owner_api",slate.id.to_string());
+				println!(
+					"slate [{}] posted successfully in owner_api",
+					slate.id.to_string()
+				);
 				Ok(slate)
 			}
 			None => Ok(slate),
@@ -1043,6 +1056,8 @@ where
 		let mut w_lock = self.wallet_inst.lock();
 		let w = w_lock.lc_provider()?.wallet_inst()?;
 		let (slate_res, _context) = owner::finalize_tx(&mut **w, keychain_mask, &slate)?;
+
+		//generate proof and save it here.
 
 		Ok(slate_res)
 	}

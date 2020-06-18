@@ -14,7 +14,6 @@
 
 //! Transaction building functions
 
-use byteorder::{BigEndian, WriteBytesExt};
 use uuid::Uuid;
 
 use crate::grin_core::consensus::valid_header_version;
@@ -27,9 +26,9 @@ use crate::grin_util::Mutex;
 use crate::internal::{selection, updater};
 use crate::proof::crypto;
 use crate::proof::crypto::Hex;
-use crate::proof::message::EncryptedMessage;
 use crate::proof::proofaddress;
 use crate::proof::proofaddress::ProvableAddress;
+use crate::proof::tx_proof::{push_proof_for_slate, TxProof};
 use crate::slate::Slate;
 use crate::types::{Context, NodeClient, StoredProofInfo, TxLogEntryType, WalletBackend};
 use crate::{address, Error, ErrorKind};
@@ -492,7 +491,6 @@ pub fn payment_proof_message(
 	amount: u64,
 	kernel_commitment: &pedersen::Commitment,
 	sender_address_publickey: String,
-
 ) -> Result<String, Error> {
 	//	let mut msg = Vec::new();
 	//	msg.write_u64::<BigEndian>(amount)?;
@@ -506,6 +504,7 @@ pub fn payment_proof_message(
 }
 
 /// decode proof message
+/// we are not using it right now
 //pub fn _decode_payment_proof_message(
 //	msg: &[u8],
 //) -> Result<(u64, pedersen::Commitment, PublicKey), Error> {
@@ -554,26 +553,9 @@ pub fn create_payment_proof_signature(
 
 	let mut challenge = String::new();
 	//todo check if this is the correct way.
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 	//challenge.push_str(std::str::from_utf8(&message_ser).unwrap());
 	challenge.push_str(&message_ser);
-=======
-	challenge.push_str(std::str::from_utf8(&message_ser).unwrap());
->>>>>>> proof first checkin
-=======
-	//challenge.push_str(std::str::from_utf8(&message_ser).unwrap());
-	challenge.push_str(&message_ser);
->>>>>>> proof checkin
-=======
-	challenge.push_str(&message_ser);
 
-<<<<<<< HEAD
->>>>>>> proof first checkin
-=======
-
->>>>>>> proof checkin
 	let signature = crypto::sign_challenge(&challenge, &sec_key)?;
 	let signature = signature.to_hex();
 	Ok(signature)
@@ -612,14 +594,12 @@ where
 
 	let orig_proof_info = tx_vec[0].clone().payment_proof;
 
-	println!("if proof is there in the two parties");
 	if orig_proof_info.is_some() && slate.payment_proof.is_none() {
 		return Err(ErrorKind::PaymentProof(
 			"Expected Payment Proof for this Transaction is not present".to_owned(),
 		)
 		.into());
 	}
-	println!("proof is there in the two parties");
 
 	if let Some(ref p) = slate.payment_proof {
 		let orig_proof_info = match orig_proof_info {
@@ -632,7 +612,6 @@ where
 			}
 		};
 
-		println!("got into proof block");
 		let keychain = wallet.keychain(keychain_mask)?;
 		let index = match context.payment_proof_derivation_index {
 			Some(i) => i,
@@ -663,7 +642,7 @@ where
 		let msg = payment_proof_message(
 			slate.amount,
 			&slate.calc_excess(&keychain)?,
-			orig_sender_a.public_key,
+			orig_sender_a.public_key.clone(),
 		)?;
 		let sig = match p.clone().receiver_signature {
 			Some(s) => s,
@@ -674,14 +653,8 @@ where
 				.into());
 			}
 		};
-		//verify the receiver signature.
-		//
-		//		if let Err(e) = p.receiver_address.verify(&msg, &sig) {
-		//			return Err(ErrorKind::PaymentProof(format!(
-		//				"Invalid proof signature, {}",
-		//				e
-		//			)))?;
-		//		};
+
+		//verify the signature
 		let secp = Secp256k1::new();
 		let signature_hex = p.receiver_signature.clone().unwrap();
 		let signature_ser = util::from_hex(&signature_hex).map_err(|e| {
@@ -693,7 +666,9 @@ where
 		let signature = Signature::from_der(&secp, &signature_ser).map_err(|e| {
 			ErrorKind::TxProofGenericError(format!("Unable to build signature, {}", e))
 		})?;
+
 		let receiver_pubkey = orig_proof_info.receiver_address.public_key().unwrap();
+<<<<<<< HEAD
 		crypto::verify_signature(
 <<<<<<< HEAD
 
@@ -707,7 +682,27 @@ where
 			&receiver_pubkey,
 		)
 		.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+=======
+		crypto::verify_signature(&msg, &signature, &receiver_pubkey).map_err(|e| {
+			ErrorKind::TxProofVerifySignature(format!("Failed to verify proof signature, {}", e))
+		})?;
+
+		////add an extra step of generating and save proof.
+		//generate the sender secret key
+		let sender_address_secret_key =
+			address::address_from_derivation_path(&keychain, &parent_key_id, index)?;
+		let tx_proof = TxProof::from_slate(msg, slate, &sender_address_secret_key, &orig_sender_a)
+			.map_err(|e| {
+				ErrorKind::TxProofVerifySignature(format!(
+					"Cannot create tx_proof using slate, {}",
+					e
+				))
+			})?;
+		println!("tx_proof = {:?}", tx_proof);
+		push_proof_for_slate(&slate.id, tx_proof);
+>>>>>>>  support the proof verify in mwc713
 	}
+
 	Ok(())
 }
 

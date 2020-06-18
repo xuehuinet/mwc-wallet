@@ -30,7 +30,6 @@ use crate::util::Mutex;
 use crate::{Owner, OwnerRpcS};
 use easy_jsonrpc_mw;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 /// Public definition used to generate Owner jsonrpc api.

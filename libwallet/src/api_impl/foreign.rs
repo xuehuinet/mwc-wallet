@@ -20,8 +20,6 @@ use crate::api_impl::owner::check_ttl;
 use crate::grin_keychain::Keychain;
 use crate::grin_util::secp::key::SecretKey;
 use crate::internal::{tx, updater};
-use crate::proof::crypto;
-use crate::proof::message::EncryptedMessage;
 use crate::slate_versions::SlateVersion;
 use crate::{
 	address, BlockFees, CbData, Error, ErrorKind, NodeClient, Slate, TxLogEntryType, VersionInfo,
@@ -100,7 +98,8 @@ where
 	let slate_message = &slate.participant_data[0].message;
 	let mut address_for_logging = address.clone();
 
-	if address.is_none() { // that means it's not mqs so need to print it
+	if address.is_none() {
+		// that means it's not mqs so need to print it
 		if slate_message.is_some() {
 			println!(
 				"{}",
@@ -131,7 +130,7 @@ where
 		address_for_logging = Some("http".to_string());
 	}
 
-	println!("foreign just received_tx just got slate = {:?}", slate);
+	debug!("foreign just received_tx just got slate = {:?}", slate);
 	let mut ret_slate = slate.clone();
 	check_ttl(w, &ret_slate)?;
 

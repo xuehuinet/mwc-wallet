@@ -29,7 +29,6 @@ use crate::grin_util::secp::{self, pedersen, Secp256k1};
 use crate::grin_util::ZeroingString;
 use crate::proof::proofaddress::ProvableAddress;
 use crate::slate::ParticipantMessages;
-use crate::slate_versions::ser as dalek_ser;
 use chrono::prelude::*;
 use serde;
 use serde_json;

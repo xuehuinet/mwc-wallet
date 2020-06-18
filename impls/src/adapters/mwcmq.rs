@@ -25,6 +25,13 @@ use grin_wallet_libwallet::proof::message::EncryptedMessage;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
+<<<<<<< HEAD
+=======
+use grin_wallet_libwallet::{Slate, VersionedSlate};
+
+
+use grin_wallet_libwallet::proof::tx_proof::TxProof;
+>>>>>>>  support the proof verify in mwc713
 use grin_wallet_libwallet::{Slate, VersionedSlate};
 
 use grin_wallet_util::grin_util::secp::key::SecretKey;
@@ -306,6 +313,7 @@ impl MWCMQSBroker {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
 
+
 		let serde_json = serde_json::to_string(&VersionedSlate::into_version(
 			slate.clone(),
 			slate.lowest_version(),
@@ -354,6 +362,7 @@ impl MWCMQSBroker {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
 
+<<<<<<< HEAD
 
 
 
@@ -370,17 +379,23 @@ impl MWCMQSBroker {
 		let slate = VersionedSlate::into_version(slate.clone(), version);
 
 		debug!(
+=======
+		let version = slate.lowest_version();
+		let slate = VersionedSlate::into_version(slate.clone(), version);
+		self.do_log_info(format!("Info: the slate before post is {:?}", slate));
+		self.do_log_info(format!(
+>>>>>>>  support the proof verify in mwc713
 			"VERSIONED the slate message before post is {}",
 			serde_json::to_string(&slate).unwrap()
-		);
+		));
 
 		let message = EncryptedMessage::new(
 			serde_json::to_string(&slate).map_err(|e| {
 				ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
 			})?,
-			&to.address,
-			&pkey,
-			&skey,
+			&to.address, //this is the sender address when receiver wallet sends the slate back
+			&pkey,       //this is sender public key when receiver wallet sends the slate back
+			&skey,       //this is receiver secret key when receiver wallet sends the slate back
 		)
 			.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
 
@@ -902,7 +917,7 @@ impl MWCMQSBroker {
 									from.unwrap()
 								};
 
-								let (mut slate, tx_proof) = match TxProof::from_response(
+								let (mut slate, _tx_proof) = match TxProof::from_response(
 									&from.address,
 									r5.clone(),
 									"".to_string(),
@@ -916,8 +931,6 @@ impl MWCMQSBroker {
 										continue;
 									}
 								};
-
-								push_proof_for_slate(&slate.id, tx_proof);
 
 								self.handler.lock().on_slate(&from, &mut slate);
 								break;

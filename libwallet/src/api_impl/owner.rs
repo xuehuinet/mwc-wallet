@@ -20,7 +20,6 @@ use crate::grin_core::core::hash::Hashed;
 use crate::grin_core::core::Transaction;
 use crate::grin_util::secp::key::SecretKey;
 use crate::grin_util::Mutex;
-use crate::util::OnionV3Address;
 
 use crate::api_impl::owner_updater::StatusMessage;
 use crate::grin_keychain::{Identifier, Keychain};
@@ -29,19 +28,17 @@ use crate::internal::{keys, scan, selection, tx, updater};
 use crate::slate::{PaymentInfo, Slate};
 use crate::types::{AcctPathMapping, Context, NodeClient, TxLogEntry, WalletBackend, WalletInfo};
 use crate::{
-	address, wallet_lock, InitTxArgs, IssueInvoiceTxArgs, NodeHeightResult, OutputCommitMapping,
+	wallet_lock, InitTxArgs, IssueInvoiceTxArgs, NodeHeightResult, OutputCommitMapping,
 	PaymentProof, ScannedBlockInfo, TxLogEntryType, WalletInst, WalletLCProvider,
 };
 use crate::{Error, ErrorKind};
-use ed25519_dalek::PublicKey as DalekPublicKey;
-use ed25519_dalek::SecretKey as DalekSecretKey;
 
+use crate::proof::tx_proof::pop_proof_for_slate;
 use std::cmp;
 use std::fs::File;
 use std::io::Write;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use crate::proof::tx_proof::pop_proof_for_slate;
 
 const USER_MESSAGE_MAX_LEN: usize = 256;
 use crate::proof::crypto;
@@ -411,7 +408,6 @@ where
 	let deriv_path = 0u32;
 
 	if let Some(a) = args.payment_proof_recipient_address {
-		println!("surprise, I got payment proof recipicent address");
 		let k = w.keychain(keychain_mask)?;
 
 		let sender_a = proofaddress::payment_proof_address(&k, &parent_key_id, deriv_path)?;
@@ -424,7 +420,7 @@ where
 
 		context.payment_proof_derivation_index = Some(deriv_path);
 	} else {
-		println!("I don't have payment proof recipient address");
+		debug!("There is no payment proof recipient address");
 	}
 
 	// mwc713 payment proof support.
@@ -446,7 +442,6 @@ where
 	if let Some(v) = args.target_slate_version {
 		slate.version_info.orig_version = v;
 	}
-	println!("owner init_send_Tx slate = {:?}", slate);
 	Ok(slate)
 }
 
@@ -638,7 +633,9 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
+
 	debug!("owner finalize slate got slate = {:?}", slate);
+
 
 	let mut sl = slate.clone();
 	check_ttl(w, &sl)?;
@@ -653,7 +650,6 @@ where
 		batch.delete_private_context(sl.id.as_bytes(), 0)?;
 		batch.commit()?;
 	}
-<<<<<<< HEAD
 
 	// If Proof available, we can store it at that point
 	if let Some(mut proof) = pop_proof_for_slate(&slate.id) {
@@ -665,15 +661,23 @@ where
 		for output in &context.output_commits {
 			proof.outputs.push(output.clone());
 		}
+		debug!(
+			"tx_proof after updating the amount, fee, input, ouput  = {:?}",
+			proof
+		);
 
 		proof.store_tx_proof(w.get_data_file_dir(), &slate.id.to_string())?;
 	};
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 	println!("owner finalize slate returned slate = {:?}", slate);
 >>>>>>> proof checkin
+=======
+	debug!("owner finalize slate returned slate = {:?}", slate);
+>>>>>>>  support the proof verify in mwc713
 	Ok((sl, context))
 }
 
