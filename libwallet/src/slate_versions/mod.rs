@@ -72,7 +72,9 @@ impl VersionedSlate {
 			// the release of a new slate
 			SlateVersion::V2 => {
 				let s = SlateV3::from(slate);
-				let s = SlateV2::from(&s);
+				let mut s = SlateV2::from(&s);
+				s.version_info.version = 2;
+				s.version_info.orig_version = 2;
 				VersionedSlate::V2(s)
 			}
 		}
