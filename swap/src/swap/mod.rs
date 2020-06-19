@@ -401,528 +401,528 @@ mod tests {
 
 	#[test]
 	fn test_btc_swap() {
-/*
-		set_test_mode(true);
-		let write_json = false;
+		/*
+				set_test_mode(true);
+				let write_json = false;
 
-		let kc_sell = keychain(1);
-		let ctx_sell = context_sell(&kc_sell);
-		let secondary_redeem_address = btc_address(&kc_sell);
+				let kc_sell = keychain(1);
+				let ctx_sell = context_sell(&kc_sell);
+				let secondary_redeem_address = btc_address(&kc_sell);
 
-		let nc = TestNodeClient::new(300_000);
-		let btc_nc = TestBtcNodeClient::new(500_000);
+				let nc = TestNodeClient::new(300_000);
+				let btc_nc = TestBtcNodeClient::new(500_000);
 
-		let amount = 100 * GRIN_UNIT;
-		let btc_amount_1 = 2_000_000;
-		let btc_amount_2 = 1_000_000;
-		let btc_amount = btc_amount_1 + btc_amount_2;
+				let amount = 100 * GRIN_UNIT;
+				let btc_amount_1 = 2_000_000;
+				let btc_amount_2 = 1_000_000;
+				let btc_amount = btc_amount_1 + btc_amount_2;
 
-		// Seller: create swap offer
-		let mut api_sell = BtcSwapApi::new(nc.clone(), btc_nc.clone());
-		let (mut swap_sell, action) = api_sell
-			.create_swap_offer(
-				&kc_sell,
-				&ctx_sell,
-				None,
-				amount,
-				btc_amount,
-				Currency::Btc,
-				secondary_redeem_address,
-			)
-			.unwrap();
-		assert_eq!(action, Action::SendMessage(1));
-		assert_eq!(swap_sell.status, Status::Created);
-		let message_1 = api_sell.message(&kc_sell, &swap_sell).unwrap();
-		let action = api_sell
-			.message_sent(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
-		assert_eq!(action, Action::ReceiveMessage);
-		assert_eq!(swap_sell.status, Status::Offered);
+				// Seller: create swap offer
+				let mut api_sell = BtcSwapApi::new(nc.clone(), btc_nc.clone());
+				let (mut swap_sell, action) = api_sell
+					.create_swap_offer(
+						&kc_sell,
+						&ctx_sell,
+						None,
+						amount,
+						btc_amount,
+						Currency::Btc,
+						secondary_redeem_address,
+					)
+					.unwrap();
+				assert_eq!(action, Action::SendMessage(1));
+				assert_eq!(swap_sell.status, Status::Created);
+				let message_1 = api_sell.message(&kc_sell, &swap_sell).unwrap();
+				let action = api_sell
+					.message_sent(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
+				assert_eq!(action, Action::ReceiveMessage);
+				assert_eq!(swap_sell.status, Status::Offered);
 
-		if write_json {
-			write(
-				"test/swap_sell_10001.json",
-				serde_json::to_string_pretty(&swap_sell).unwrap(),
-			)
-			.unwrap();
+				if write_json {
+					write(
+						"test/swap_sell_10001.json",
+						serde_json::to_string_pretty(&swap_sell).unwrap(),
+					)
+					.unwrap();
 
-			write(
-				"test/message_10001.json",
-				serde_json::to_string_pretty(&message_1).unwrap(),
-			)
-			.unwrap();
-			write(
-				"test/context_sell0001.json",
-				serde_json::to_string_pretty(&ctx_sell).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_sell_1.json").unwrap(),
-				serde_json::to_string_pretty(&swap_sell).unwrap()
-			);
-			assert_eq!(
-				read_to_string("test/message_1.json").unwrap(),
-				serde_json::to_string_pretty(&message_1).unwrap()
-			);
-			assert_eq!(
-				read_to_string("test/context_sell.json").unwrap(),
-				serde_json::to_string_pretty(&ctx_sell).unwrap()
-			);
-		}
-
-		// Add inputs to utxo set
-		nc.mine_blocks(2);
-		for input in swap_sell.lock_slate.tx.inputs() {
-			nc.push_output(input.commit.clone());
-		}
-
-		let kc_buy = keychain(2);
-		let ctx_buy = context_buy(&kc_buy);
-
-		// Buyer: accept swap offer
-		let mut api_buy = BtcSwapApi::new(nc.clone(), btc_nc.clone());
-		let (mut swap_buy, action) = api_buy
-			.accept_swap_offer(&kc_buy, &ctx_buy, None, message_1)
-			.unwrap();
-		assert_eq!(swap_buy.status, Status::Offered);
-		assert_eq!(action, Action::SendMessage(1));
-		let message_2 = api_buy.message(&kc_buy, &swap_buy).unwrap();
-		let action = api_buy
-			.message_sent(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap();
-
-		// Buyer: should deposit bitcoin
-		let address = match action {
-			Action::DepositSecondary {
-				currency: _,
-				amount,
-				address,
-			} => {
-				assert_eq!(amount, btc_amount);
-				address
-			}
-			_ => panic!("Invalid action"),
-		};
-		assert_eq!(swap_buy.status, Status::Accepted);
-		let address = Address::from_str(&address).unwrap();
-
-		// Buyer: first deposit
-		let tx_1 = BtcTransaction {
-			version: 2,
-			lock_time: 0,
-			input: vec![],
-			output: vec![TxOut {
-				value: btc_amount_1,
-				script_pubkey: address.script_pubkey(),
-			}],
-		};
-		let txid_1 = tx_1.txid();
-		btc_nc.push_transaction(&tx_1);
-
-		match api_buy
-			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap()
-		{
-			Action::DepositSecondary {
-				currency: _,
-				amount,
-				address: _,
-			} => assert_eq!(amount, btc_amount_2),
-			_ => panic!("Invalid action"),
-		};
-
-		// Buyer: second deposit
-		btc_nc.mine_blocks(2);
-		let tx_2 = BtcTransaction {
-			version: 2,
-			lock_time: 0,
-			input: vec![],
-			output: vec![TxOut {
-				value: btc_amount_2,
-				script_pubkey: address.script_pubkey(),
-			}],
-		};
-		let txid_2 = tx_2.txid();
-		btc_nc.push_transaction(&tx_2);
-		match api_buy
-			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap()
-		{
-			Action::ConfirmationsSecondary {
-				currency: _,
-				required: _,
-				actual,
-			} => assert_eq!(actual, 1),
-			_ => panic!("Invalid action"),
-		};
-		btc_nc.mine_blocks(5);
-
-		// Buyer: wait for Grin confirmations
-		match api_buy
-			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap()
-		{
-			Action::Confirmations {
-				required: _,
-				actual,
-			} => assert_eq!(actual, 0),
-			_ => panic!("Invalid action"),
-		};
-
-		// Check if buyer has correct confirmed outputs
-		{
-			let btc_data = swap_buy.secondary_data.unwrap_btc().unwrap();
-			assert_eq!(btc_data.confirmed_outputs.len(), 2);
-			let mut match_1 = 0;
-			let mut match_2 = 0;
-			for output in &btc_data.confirmed_outputs {
-				if output.out_point.txid == txid_1 {
-					match_1 += 1;
+					write(
+						"test/message_10001.json",
+						serde_json::to_string_pretty(&message_1).unwrap(),
+					)
+					.unwrap();
+					write(
+						"test/context_sell0001.json",
+						serde_json::to_string_pretty(&ctx_sell).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_sell_1.json").unwrap(),
+						serde_json::to_string_pretty(&swap_sell).unwrap()
+					);
+					assert_eq!(
+						read_to_string("test/message_1.json").unwrap(),
+						serde_json::to_string_pretty(&message_1).unwrap()
+					);
+					assert_eq!(
+						read_to_string("test/context_sell.json").unwrap(),
+						serde_json::to_string_pretty(&ctx_sell).unwrap()
+					);
 				}
-				if output.out_point.txid == txid_2 {
-					match_2 += 1;
+
+				// Add inputs to utxo set
+				nc.mine_blocks(2);
+				for input in swap_sell.lock_slate.tx.inputs() {
+					nc.push_output(input.commit.clone());
 				}
-			}
-			assert_eq!(match_1, 1);
-			assert_eq!(match_2, 1);
-		}
 
-		if write_json {
-			write(
-				"test/swap_buy_1.json",
-				serde_json::to_string_pretty(&swap_buy).unwrap(),
-			)
-			.unwrap();
-			write(
-				"test/message_2.json",
-				serde_json::to_string_pretty(&message_2).unwrap(),
-			)
-			.unwrap();
-			write(
-				"test/context_buy.json",
-				serde_json::to_string_pretty(&ctx_buy).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_buy_1.json").unwrap(),
-				serde_json::to_string_pretty(&swap_buy).unwrap()
-			);
-			assert_eq!(
-				read_to_string("test/message_2.json").unwrap(),
-				serde_json::to_string_pretty(&message_2).unwrap()
-			);
-			assert_eq!(
-				read_to_string("test/context_buy.json").unwrap(),
-				serde_json::to_string_pretty(&ctx_buy).unwrap()
-			);
-		}
+				let kc_buy = keychain(2);
+				let ctx_buy = context_buy(&kc_buy);
 
-		// Seller: receive accepted offer
-		let action = api_sell
-			.receive_message(&kc_sell, &mut swap_sell, &ctx_sell, message_2)
-			.unwrap();
-		assert_eq!(action, Action::PublishTx);
-		assert_eq!(swap_sell.status, Status::Accepted);
-		let action = api_sell
-			.publish_transaction(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
-		match action {
-			Action::Confirmations {
-				required: _,
-				actual,
-			} => assert_eq!(actual, 0),
-			_ => panic!("Invalid action"),
-		}
+				// Buyer: accept swap offer
+				let mut api_buy = BtcSwapApi::new(nc.clone(), btc_nc.clone());
+				let (mut swap_buy, action) = api_buy
+					.accept_swap_offer(&kc_buy, &ctx_buy, None, message_1)
+					.unwrap();
+				assert_eq!(swap_buy.status, Status::Offered);
+				assert_eq!(action, Action::SendMessage(1));
+				let message_2 = api_buy.message(&kc_buy, &swap_buy).unwrap();
+				let action = api_buy
+					.message_sent(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap();
 
-		if write_json {
-			write(
-				"test/swap_sell_2.json",
-				serde_json::to_string_pretty(&swap_sell).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_sell_2.json").unwrap(),
-				serde_json::to_string_pretty(&swap_sell).unwrap()
-			);
-		}
+				// Buyer: should deposit bitcoin
+				let address = match action {
+					Action::DepositSecondary {
+						currency: _,
+						amount,
+						address,
+					} => {
+						assert_eq!(amount, btc_amount);
+						address
+					}
+					_ => panic!("Invalid action"),
+				};
+				assert_eq!(swap_buy.status, Status::Accepted);
+				let address = Address::from_str(&address).unwrap();
 
-		// Seller: wait for Grin confirmations
-		nc.mine_blocks(10);
-		match api_sell
-			.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap()
-		{
-			Action::Confirmations {
-				required: _,
-				actual,
-			} => assert_eq!(actual, 10),
-			_ => panic!("Invalid action"),
-		}
+				// Buyer: first deposit
+				let tx_1 = BtcTransaction {
+					version: 2,
+					lock_time: 0,
+					input: vec![],
+					output: vec![TxOut {
+						value: btc_amount_1,
+						script_pubkey: address.script_pubkey(),
+					}],
+				};
+				let txid_1 = tx_1.txid();
+				btc_nc.push_transaction(&tx_1);
 
-		// Buyer: wait for less Grin confirmations
-		match api_buy
-			.required_action(&kc_sell, &mut swap_buy, &ctx_buy)
-			.unwrap()
-		{
-			Action::Confirmations {
-				required: _,
-				actual,
-			} => assert_eq!(actual, 10),
-			_ => panic!("Invalid action"),
-		}
+				match api_buy
+					.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap()
+				{
+					Action::DepositSecondary {
+						currency: _,
+						amount,
+						address: _,
+					} => assert_eq!(amount, btc_amount_2),
+					_ => panic!("Invalid action"),
+				};
 
-		// Undo a BTC block to test seller
-		{
-			let mut state = btc_nc.state.lock();
-			state.height -= 1;
-		}
+				// Buyer: second deposit
+				btc_nc.mine_blocks(2);
+				let tx_2 = BtcTransaction {
+					version: 2,
+					lock_time: 0,
+					input: vec![],
+					output: vec![TxOut {
+						value: btc_amount_2,
+						script_pubkey: address.script_pubkey(),
+					}],
+				};
+				let txid_2 = tx_2.txid();
+				btc_nc.push_transaction(&tx_2);
+				match api_buy
+					.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap()
+				{
+					Action::ConfirmationsSecondary {
+						currency: _,
+						required: _,
+						actual,
+					} => assert_eq!(actual, 1),
+					_ => panic!("Invalid action"),
+				};
+				btc_nc.mine_blocks(5);
 
-		// Seller: wait BTC confirmations
-		nc.mine_blocks(20);
-		match api_sell
-			.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap()
-		{
-			Action::ConfirmationsSecondary {
-				currency: _,
-				required: _,
-				actual,
-			} => assert_eq!(actual, 5),
-			_ => panic!("Invalid action"),
-		}
-		btc_nc.mine_block();
+				// Buyer: wait for Grin confirmations
+				match api_buy
+					.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap()
+				{
+					Action::Confirmations {
+						required: _,
+						actual,
+					} => assert_eq!(actual, 0),
+					_ => panic!("Invalid action"),
+				};
 
-		if write_json {
-			write(
-				"test/swap_sell_3.json",
-				serde_json::to_string_pretty(&swap_sell).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_sell_3.json").unwrap(),
-				serde_json::to_string_pretty(&swap_sell).unwrap()
-			);
-		}
+				// Check if buyer has correct confirmed outputs
+				{
+					let btc_data = swap_buy.secondary_data.unwrap_btc().unwrap();
+					assert_eq!(btc_data.confirmed_outputs.len(), 2);
+					let mut match_1 = 0;
+					let mut match_2 = 0;
+					for output in &btc_data.confirmed_outputs {
+						if output.out_point.txid == txid_1 {
+							match_1 += 1;
+						}
+						if output.out_point.txid == txid_2 {
+							match_2 += 1;
+						}
+					}
+					assert_eq!(match_1, 1);
+					assert_eq!(match_2, 1);
+				}
 
-		// Buyer: start redeem
-		let action = api_buy
-			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap();
-		assert_eq!(action, Action::SendMessage(2));
-		assert_eq!(swap_buy.status, Status::Locked);
-		let message_3 = api_buy.message(&kc_buy, &swap_buy).unwrap();
-		api_buy
-			.message_sent(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap();
+				if write_json {
+					write(
+						"test/swap_buy_1.json",
+						serde_json::to_string_pretty(&swap_buy).unwrap(),
+					)
+					.unwrap();
+					write(
+						"test/message_2.json",
+						serde_json::to_string_pretty(&message_2).unwrap(),
+					)
+					.unwrap();
+					write(
+						"test/context_buy.json",
+						serde_json::to_string_pretty(&ctx_buy).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_buy_1.json").unwrap(),
+						serde_json::to_string_pretty(&swap_buy).unwrap()
+					);
+					assert_eq!(
+						read_to_string("test/message_2.json").unwrap(),
+						serde_json::to_string_pretty(&message_2).unwrap()
+					);
+					assert_eq!(
+						read_to_string("test/context_buy.json").unwrap(),
+						serde_json::to_string_pretty(&ctx_buy).unwrap()
+					);
+				}
 
-		if write_json {
-			write(
-				"test/swap_buy_2.json",
-				serde_json::to_string_pretty(&swap_buy).unwrap(),
-			)
-			.unwrap();
-			write(
-				"test/message_3.json",
-				serde_json::to_string_pretty(&message_3).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_buy_2.json").unwrap(),
-				serde_json::to_string_pretty(&swap_buy).unwrap()
-			);
-			assert_eq!(
-				read_to_string("test/message_3.json").unwrap(),
-				serde_json::to_string_pretty(&message_3).unwrap()
-			);
-		}
+				// Seller: receive accepted offer
+				let action = api_sell
+					.receive_message(&kc_sell, &mut swap_sell, &ctx_sell, message_2)
+					.unwrap();
+				assert_eq!(action, Action::PublishTx);
+				assert_eq!(swap_sell.status, Status::Accepted);
+				let action = api_sell
+					.publish_transaction(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
+				match action {
+					Action::Confirmations {
+						required: _,
+						actual,
+					} => assert_eq!(actual, 0),
+					_ => panic!("Invalid action"),
+				}
 
-		// Seller: sign redeem
-		let action = api_sell
-			.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
-		assert_eq!(action, Action::ReceiveMessage);
-		assert_eq!(swap_sell.status, Status::Locked);
-		let action = api_sell
-			.receive_message(&kc_sell, &mut swap_sell, &ctx_sell, message_3)
-			.unwrap();
-		assert_eq!(action, Action::SendMessage(2));
-		assert_eq!(swap_sell.status, Status::InitRedeem);
-		let message_4 = api_sell.message(&kc_sell, &swap_sell).unwrap();
-		let action = api_sell
-			.message_sent(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
+				if write_json {
+					write(
+						"test/swap_sell_2.json",
+						serde_json::to_string_pretty(&swap_sell).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_sell_2.json").unwrap(),
+						serde_json::to_string_pretty(&swap_sell).unwrap()
+					);
+				}
 
-		// Seller: wait for buyer's on-chain redeem tx
-		assert_eq!(action, Action::ConfirmationRedeem);
-		assert_eq!(swap_sell.status, Status::Redeem);
+				// Seller: wait for Grin confirmations
+				nc.mine_blocks(10);
+				match api_sell
+					.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap()
+				{
+					Action::Confirmations {
+						required: _,
+						actual,
+					} => assert_eq!(actual, 10),
+					_ => panic!("Invalid action"),
+				}
 
-		if write_json {
-			write(
-				"test/swap_sell_4.json",
-				serde_json::to_string_pretty(&swap_sell).unwrap(),
-			)
-			.unwrap();
-			write(
-				"test/message_4.json",
-				serde_json::to_string_pretty(&message_4).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_sell_4.json").unwrap(),
-				serde_json::to_string_pretty(&swap_sell).unwrap()
-			);
-			assert_eq!(
-				read_to_string("test/message_4.json").unwrap(),
-				serde_json::to_string_pretty(&message_4).unwrap()
-			);
-		}
+				// Buyer: wait for less Grin confirmations
+				match api_buy
+					.required_action(&kc_sell, &mut swap_buy, &ctx_buy)
+					.unwrap()
+				{
+					Action::Confirmations {
+						required: _,
+						actual,
+					} => assert_eq!(actual, 10),
+					_ => panic!("Invalid action"),
+				}
 
-		// Buyer: redeem
-		let action = api_buy
-			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap();
-		assert_eq!(action, Action::ReceiveMessage);
-		assert_eq!(swap_buy.status, Status::InitRedeem);
-		let action = api_buy
-			.receive_message(&kc_buy, &mut swap_buy, &ctx_buy, message_4)
-			.unwrap();
-		assert_eq!(action, Action::PublishTx);
-		assert_eq!(swap_buy.status, Status::Redeem);
-		let action = api_buy
-			.publish_transaction(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap();
-		assert_eq!(action, Action::ConfirmationRedeem);
+				// Undo a BTC block to test seller
+				{
+					let mut state = btc_nc.state.lock();
+					state.height -= 1;
+				}
 
-		// Buyer: complete!
-		nc.mine_block();
-		let action = api_buy
-			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
-			.unwrap();
-		assert_eq!(action, Action::Complete);
-		// At this point, buyer would add Grin to their outputs
-		let action = api_buy.completed(&kc_buy, &mut swap_buy, &ctx_buy).unwrap();
-		assert_eq!(action, Action::None);
-		assert_eq!(swap_buy.status, Status::Completed);
+				// Seller: wait BTC confirmations
+				nc.mine_blocks(20);
+				match api_sell
+					.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap()
+				{
+					Action::ConfirmationsSecondary {
+						currency: _,
+						required: _,
+						actual,
+					} => assert_eq!(actual, 5),
+					_ => panic!("Invalid action"),
+				}
+				btc_nc.mine_block();
 
-		if write_json {
-			write(
-				"test/swap_buy_3.json",
-				serde_json::to_string_pretty(&swap_buy).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_buy_3.json").unwrap(),
-				serde_json::to_string_pretty(&swap_buy).unwrap()
-			);
-		}
+				if write_json {
+					write(
+						"test/swap_sell_3.json",
+						serde_json::to_string_pretty(&swap_sell).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_sell_3.json").unwrap(),
+						serde_json::to_string_pretty(&swap_sell).unwrap()
+					);
+				}
 
-		// Seller: publish BTC tx
-		let action = api_sell
-			.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
-		assert_eq!(action, Action::PublishTxSecondary(Currency::Btc));
-		assert_eq!(swap_sell.status, Status::RedeemSecondary);
+				// Buyer: start redeem
+				let action = api_buy
+					.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap();
+				assert_eq!(action, Action::SendMessage(2));
+				assert_eq!(swap_buy.status, Status::Locked);
+				let message_3 = api_buy.message(&kc_buy, &swap_buy).unwrap();
+				api_buy
+					.message_sent(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap();
 
-		if write_json {
-			write(
-				"test/swap_sell_5.json",
-				serde_json::to_string_pretty(&swap_sell).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_sell_5.json").unwrap(),
-				serde_json::to_string_pretty(&swap_sell).unwrap()
-			);
-		}
+				if write_json {
+					write(
+						"test/swap_buy_2.json",
+						serde_json::to_string_pretty(&swap_buy).unwrap(),
+					)
+					.unwrap();
+					write(
+						"test/message_3.json",
+						serde_json::to_string_pretty(&message_3).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_buy_2.json").unwrap(),
+						serde_json::to_string_pretty(&swap_buy).unwrap()
+					);
+					assert_eq!(
+						read_to_string("test/message_3.json").unwrap(),
+						serde_json::to_string_pretty(&message_3).unwrap()
+					);
+				}
 
-		// Seller: wait for BTC confirmations
-		let action = api_sell
-			.publish_secondary_transaction(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
-		match action {
-			Action::ConfirmationRedeemSecondary(_, _) => {}
-			_ => panic!("Invalid action"),
-		};
+				// Seller: sign redeem
+				let action = api_sell
+					.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
+				assert_eq!(action, Action::ReceiveMessage);
+				assert_eq!(swap_sell.status, Status::Locked);
+				let action = api_sell
+					.receive_message(&kc_sell, &mut swap_sell, &ctx_sell, message_3)
+					.unwrap();
+				assert_eq!(action, Action::SendMessage(2));
+				assert_eq!(swap_sell.status, Status::InitRedeem);
+				let message_4 = api_sell.message(&kc_sell, &swap_sell).unwrap();
+				let action = api_sell
+					.message_sent(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
 
-		// Seller: complete!
-		btc_nc.mine_block();
-		let action = api_sell
-			.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
-		assert_eq!(action, Action::Complete);
-		let action = api_sell
-			.completed(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap();
-		assert_eq!(action, Action::None);
-		assert_eq!(swap_sell.status, Status::Completed);
+				// Seller: wait for buyer's on-chain redeem tx
+				assert_eq!(action, Action::ConfirmationRedeem);
+				assert_eq!(swap_sell.status, Status::Redeem);
 
-		if write_json {
-			write(
-				"test/swap_sell_6.json",
-				serde_json::to_string_pretty(&swap_sell).unwrap(),
-			)
-			.unwrap();
-		} else {
-			assert_eq!(
-				read_to_string("test/swap_sell_6.json").unwrap(),
-				serde_json::to_string_pretty(&swap_sell).unwrap()
-			);
-		}
+				if write_json {
+					write(
+						"test/swap_sell_4.json",
+						serde_json::to_string_pretty(&swap_sell).unwrap(),
+					)
+					.unwrap();
+					write(
+						"test/message_4.json",
+						serde_json::to_string_pretty(&message_4).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_sell_4.json").unwrap(),
+						serde_json::to_string_pretty(&swap_sell).unwrap()
+					);
+					assert_eq!(
+						read_to_string("test/message_4.json").unwrap(),
+						serde_json::to_string_pretty(&message_4).unwrap()
+					);
+				}
 
-		assert!(!write_json, "json files written");
-*/
+				// Buyer: redeem
+				let action = api_buy
+					.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap();
+				assert_eq!(action, Action::ReceiveMessage);
+				assert_eq!(swap_buy.status, Status::InitRedeem);
+				let action = api_buy
+					.receive_message(&kc_buy, &mut swap_buy, &ctx_buy, message_4)
+					.unwrap();
+				assert_eq!(action, Action::PublishTx);
+				assert_eq!(swap_buy.status, Status::Redeem);
+				let action = api_buy
+					.publish_transaction(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap();
+				assert_eq!(action, Action::ConfirmationRedeem);
+
+				// Buyer: complete!
+				nc.mine_block();
+				let action = api_buy
+					.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
+					.unwrap();
+				assert_eq!(action, Action::Complete);
+				// At this point, buyer would add Grin to their outputs
+				let action = api_buy.completed(&kc_buy, &mut swap_buy, &ctx_buy).unwrap();
+				assert_eq!(action, Action::None);
+				assert_eq!(swap_buy.status, Status::Completed);
+
+				if write_json {
+					write(
+						"test/swap_buy_3.json",
+						serde_json::to_string_pretty(&swap_buy).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_buy_3.json").unwrap(),
+						serde_json::to_string_pretty(&swap_buy).unwrap()
+					);
+				}
+
+				// Seller: publish BTC tx
+				let action = api_sell
+					.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
+				assert_eq!(action, Action::PublishTxSecondary(Currency::Btc));
+				assert_eq!(swap_sell.status, Status::RedeemSecondary);
+
+				if write_json {
+					write(
+						"test/swap_sell_5.json",
+						serde_json::to_string_pretty(&swap_sell).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_sell_5.json").unwrap(),
+						serde_json::to_string_pretty(&swap_sell).unwrap()
+					);
+				}
+
+				// Seller: wait for BTC confirmations
+				let action = api_sell
+					.publish_secondary_transaction(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
+				match action {
+					Action::ConfirmationRedeemSecondary(_, _) => {}
+					_ => panic!("Invalid action"),
+				};
+
+				// Seller: complete!
+				btc_nc.mine_block();
+				let action = api_sell
+					.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
+				assert_eq!(action, Action::Complete);
+				let action = api_sell
+					.completed(&kc_sell, &mut swap_sell, &ctx_sell)
+					.unwrap();
+				assert_eq!(action, Action::None);
+				assert_eq!(swap_sell.status, Status::Completed);
+
+				if write_json {
+					write(
+						"test/swap_sell_6.json",
+						serde_json::to_string_pretty(&swap_sell).unwrap(),
+					)
+					.unwrap();
+				} else {
+					assert_eq!(
+						read_to_string("test/swap_sell_6.json").unwrap(),
+						serde_json::to_string_pretty(&swap_sell).unwrap()
+					);
+				}
+
+				assert!(!write_json, "json files written");
+		*/
 	}
 
 	#[test]
 	fn test_swap_serde() {
-/*
-		// Seller context
-		let ctx_sell_str = read_to_string("test/context_sell.json").unwrap();
-		let ctx_sell: Context = serde_json::from_str(&ctx_sell_str).unwrap();
-		assert_eq!(
-			serde_json::to_string_pretty(&ctx_sell).unwrap(),
-			ctx_sell_str
-		);
+		/*
+				// Seller context
+				let ctx_sell_str = read_to_string("test/context_sell.json").unwrap();
+				let ctx_sell: Context = serde_json::from_str(&ctx_sell_str).unwrap();
+				assert_eq!(
+					serde_json::to_string_pretty(&ctx_sell).unwrap(),
+					ctx_sell_str
+				);
 
-		// Buyer context
-		let ctx_buy_str = read_to_string("test/context_buy.json").unwrap();
-		let ctx_buy: Context = serde_json::from_str(&ctx_buy_str).unwrap();
-		assert_eq!(serde_json::to_string_pretty(&ctx_buy).unwrap(), ctx_buy_str);
+				// Buyer context
+				let ctx_buy_str = read_to_string("test/context_buy.json").unwrap();
+				let ctx_buy: Context = serde_json::from_str(&ctx_buy_str).unwrap();
+				assert_eq!(serde_json::to_string_pretty(&ctx_buy).unwrap(), ctx_buy_str);
 
-		// Seller's swap state in different stages
-		for i in 0..6 {
-			println!("TRY SELL {}", i);
-			let swap_str = read_to_string(format!("test/swap_sell_{}.json", i + 1)).unwrap();
-			let swap: Swap = serde_json::from_str(&swap_str).unwrap();
-			assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
-			println!("OK SELL {}", i);
-		}
+				// Seller's swap state in different stages
+				for i in 0..6 {
+					println!("TRY SELL {}", i);
+					let swap_str = read_to_string(format!("test/swap_sell_{}.json", i + 1)).unwrap();
+					let swap: Swap = serde_json::from_str(&swap_str).unwrap();
+					assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
+					println!("OK SELL {}", i);
+				}
 
-		// Buyer's swap state in different stages
-		for i in 0..3 {
-			println!("TRY BUY {}", i);
-			let swap_str = read_to_string(format!("test/swap_buy_{}.json", i + 1)).unwrap();
-			let swap: Swap = serde_json::from_str(&swap_str).unwrap();
-			assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
-			println!("OK BUY {}", i);
-		}
+				// Buyer's swap state in different stages
+				for i in 0..3 {
+					println!("TRY BUY {}", i);
+					let swap_str = read_to_string(format!("test/swap_buy_{}.json", i + 1)).unwrap();
+					let swap: Swap = serde_json::from_str(&swap_str).unwrap();
+					assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
+					println!("OK BUY {}", i);
+				}
 
-		// Messages
-		for i in 0..4 {
-			println!("TRY MSG {}", i);
-			let message_str = read_to_string(format!("test/message_{}.json", i + 1)).unwrap();
-			let message: Message = serde_json::from_str(&message_str).unwrap();
-			assert_eq!(serde_json::to_string_pretty(&message).unwrap(), message_str);
-			println!("OK MSG {}", i);
-		}
-*/
+				// Messages
+				for i in 0..4 {
+					println!("TRY MSG {}", i);
+					let message_str = read_to_string(format!("test/message_{}.json", i + 1)).unwrap();
+					let message: Message = serde_json::from_str(&message_str).unwrap();
+					assert_eq!(serde_json::to_string_pretty(&message).unwrap(), message_str);
+					println!("OK MSG {}", i);
+				}
+		*/
 	}
 }
