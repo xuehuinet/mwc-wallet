@@ -1,6 +1,6 @@
 [package]
 name = "grinswap"
-version = "3.2.1"
+version = "3.2.2"
 authors = ["vault713 <hello@713.mw>"]
 description = "Grin cross-chain atomic swaps"
 keywords = [ "grin", "mimblewimble", "rust", "crypto", "cryptocurrency", "atomic swap", "scriptless scripts" ]
@@ -26,13 +26,13 @@ serde_json = "1"
 sha2 = "0.8"
 uuid = { version = "0.7", features = ["serde", "v4"] }
 
-grin_wallet_libwallet = { path = "../libwallet", version = "3.2.1" }
+grin_wallet_libwallet = { path = "../libwallet", version = "3.2.2" }
 
 # for release
-#grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
-#grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
-#grin_store = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
-#grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
+#grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+#grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+#grin_store = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+#grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
 #grin_wallet_libwallet = { git = "https://github.com/mwcproject/mwc-wallet", branch = "master" }
 
 # For bleeding edge
@@ -45,11 +45,11 @@ grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
 
 
 # For local testing
-#grin_core = { path = "../../mwc-node/core", version= "3.2.1"}
-#grin_keychain = { path = "../../mwc-node/keychain", version= "3.2.1"}
-#grin_util = { path = "../../mwc-node/util", version= "3.2.1"}
-#grin_store = { path = "../../mwc-node/store", version= "3.2.1"}
-#grin_p2p = { path = "../../mwc-node/p2p", version= "3.2.1"}
-#grin_api = { path = "../../mwc-node/api", version= "3.2.1"}
+#grin_core = { path = "../../mwc-node/core", version= "3.2.2"}
+#grin_keychain = { path = "../../mwc-node/keychain", version= "3.2.2"}
+#grin_util = { path = "../../mwc-node/util", version= "3.2.2"}
+#grin_store = { path = "../../mwc-node/store", version= "3.2.2"}
+#grin_p2p = { path = "../../mwc-node/p2p", version= "3.2.2"}
+#grin_api = { path = "../../mwc-node/api", version= "3.2.2"}
 
 
