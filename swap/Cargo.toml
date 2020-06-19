@@ -26,13 +26,15 @@ serde_json = "1"
 sha2 = "0.8"
 uuid = { version = "0.7", features = ["serde", "v4"] }
 
+grin_wallet_libwallet = { path = "../libwallet", version = "3.2.2" }
 
 # for release
 grin_core = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
 grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
 grin_store = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
 grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
-grin_wallet_libwallet = { path = "../libwallet", version = "3.2.2" }
+grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
 
 # For bleeding edge
 #grin_core = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
