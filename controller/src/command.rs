@@ -19,9 +19,7 @@ use crate::apiwallet::Owner;
 use crate::config::{MQSConfig, TorConfig, WalletConfig, WALLET_CONFIG_FILE_NAME};
 use crate::core::{core, global};
 use crate::error::{Error, ErrorKind};
-use crate::impls::{
-	create_sender, SlateGetter as _,
-};
+use crate::impls::{create_sender, SlateGetter as _};
 use crate::impls::{PathToSlate, SlatePutter};
 use crate::keychain;
 use crate::libwallet::{
@@ -30,8 +28,8 @@ use crate::libwallet::{
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
 use crate::{controller, display};
-use grin_wallet_libwallet::{TxLogEntry, Slate};
-use grin_wallet_util::OnionV3Address;
+use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
+use grin_wallet_libwallet::{Slate, TxLogEntry};
 use serde_json as json;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -318,7 +316,7 @@ pub struct SendArgs {
 	pub fluff: bool,
 	pub max_outputs: usize,
 	pub target_slate_version: Option<u16>,
-	pub payment_proof_address: Option<OnionV3Address>,
+	pub payment_proof_address: Option<ProvableAddress>,
 	pub ttl_blocks: Option<u64>,
 	pub exclude_change_outputs: bool,
 	pub minimum_confirmations_change_outputs: u64,
@@ -474,13 +472,12 @@ where
 
 				method => {
 					let original_slate = slate.clone();
-					let sender =
-						create_sender(method, &args.dest, &args.apisecret, tor_config)?;
+					let sender = create_sender(method, &args.dest, &args.apisecret, tor_config)?;
 					slate = sender.send_tx(&slate)?;
 					// Restore back ttl, because it can be gone
 					slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
 					// Checking is sender didn't do any harm to slate
-					Slate::compare_slates_send( &original_slate, &slate)?;
+					Slate::compare_slates_send(&original_slate, &slate)?;
 					api.verify_slate_messages(m, &slate).map_err(|e| {
 						error!("Error validating participant messages: {}", e);
 						e
@@ -494,8 +491,8 @@ where
 			let result = api.post_tx(m, &slate.tx, args.fluff);
 			match result {
 				Ok(_) => {
-					info!("slate [{}] finalized successfully",slate.id.to_string());
-					println!("slate [{}] finalized successfully",slate.id.to_string());
+					info!("slate [{}] finalized successfully", slate.id.to_string());
+					println!("slate [{}] finalized successfully", slate.id.to_string());
 					return Ok(());
 				}
 				Err(e) => {
@@ -1112,7 +1109,7 @@ where
 	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, m| {
 		// Just address at derivation index 0 for now
 		let pub_key = api.get_public_proof_address(m, 0)?;
-		let addr = OnionV3Address::from_bytes(pub_key.to_bytes());
+		let addr = ProvableAddress::from_pub_key(&pub_key);
 		println!();
 		println!("Address for account - {}", g_args.account);
 		println!("-------------------------------------");

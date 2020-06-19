@@ -28,7 +28,7 @@ use crate::util::secp::pedersen;
 use crate::util::Mutex;
 use crate::{Owner, OwnerRpcS};
 use easy_jsonrpc_mw;
-use grin_wallet_util::OnionV3Address;
+use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -1699,8 +1699,8 @@ pub fn run_doctest_owner(
 		let w = w_lock.lc_provider().unwrap().wallet_inst().unwrap();
 		let proof_address = match payment_proof {
 			true => {
-				let address = "fc558d4eaaffb62875553e2f5fe549b9713601db84e70ab85e2c900b3b8ac990";
-				Some(OnionV3Address::try_from(address).unwrap())
+				let address = "xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2";
+				Some(ProvableAddress::from_str(address).unwrap())
 			}
 			false => None,
 		};
