@@ -93,7 +93,6 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-
 	let display_from = "http listener";
 	let slate_message = &slate.participant_data[0].message;
 	let mut address_for_logging = address.clone();
@@ -210,11 +209,8 @@ where
 
 		p.receiver_signature = Some(sig);
 	}
-<<<<<<< HEAD
+
 	debug!("foreign just received_tx returned slate = {:?}", ret_slate);
-=======
-	println!("foreign just received_tx returned slate = {:?}", ret_slate);
->>>>>>> proof checkin
 
 	Ok(ret_slate)
 }

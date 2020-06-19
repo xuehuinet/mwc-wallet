@@ -22,7 +22,6 @@ use grin_wallet_util::grin_keychain::{Identifier, Keychain};
 
 use serde::{Deserialize, Deserializer, Serializer};
 
-
 use std::fmt::{self, Display};
 
 /// Address prefixes for mainnet

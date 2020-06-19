@@ -504,6 +504,7 @@ pub fn payment_proof_message(
 }
 
 /// decode proof message
+///
 /// we are not using it right now
 //pub fn _decode_payment_proof_message(
 //	msg: &[u8],
@@ -668,21 +669,7 @@ where
 		})?;
 
 		let receiver_pubkey = orig_proof_info.receiver_address.public_key().unwrap();
-<<<<<<< HEAD
-		crypto::verify_signature(
-<<<<<<< HEAD
 
-			&msg,
-
-=======
-			//	std::str::from_utf8(&msg).unwrap(),
-			&msg,
->>>>>>> proof checkin
-			&signature,
-			&receiver_pubkey,
-		)
-		.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
-=======
 		crypto::verify_signature(&msg, &signature, &receiver_pubkey).map_err(|e| {
 			ErrorKind::TxProofVerifySignature(format!("Failed to verify proof signature, {}", e))
 		})?;
@@ -700,7 +687,6 @@ where
 			})?;
 		println!("tx_proof = {:?}", tx_proof);
 		push_proof_for_slate(&slate.id, tx_proof);
->>>>>>>  support the proof verify in mwc713
 	}
 
 	Ok(())
@@ -749,11 +735,6 @@ mod test {
 	fn payment_proof_construction() {
 		let secp_inst = static_secp_instance();
 		let secp = secp_inst.lock();
-		//	let mut test_rng = StepRng::new(1_234_567_890_u64, 1);
-		//		let sec_key = secp::key::SecretKey::new(&secp, &mut test_rng);
-		//		let d_skey = DalekSecretKey::from_bytes(&sec_key.0).unwrap();
-		//
-		//		let address: DalekPublicKey = (&d_skey).into();
 		let identifier = ExtKeychainPath::new(1, 1, 0, 0, 0).to_identifier();
 		let keychain = ExtKeychain::from_random_seed(true).unwrap();
 		let sender_address_secret_key =
@@ -790,21 +771,10 @@ mod test {
 		//		assert_eq!(decoded.0, amount);
 		//		assert_eq!(decoded.1, kernel_excess);
 		//		assert_eq!(decoded.2, address);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> proof checkin
-=======
 
->>>>>>> proof first checkin
-=======
 		let provable_address =
 			proofaddress::payment_proof_address(&keychain, &identifier, 0).unwrap();
 
-<<<<<<< HEAD
->>>>>>> proof checkin
 		let provable_address =
 			proofaddress::payment_proof_address(&keychain, &identifier, 0).unwrap();
 
@@ -815,16 +785,11 @@ mod test {
 			sender_address_secret_key,
 		)
 		.unwrap();
-<<<<<<< HEAD
-=======
->>>>>>> proof first checkin
+
 
 		//assert!(address.verify(&msg, &sig).is_ok());
 
-=======
 
-
-=======
 		let sig = create_payment_proof_signature(
 			amount,
 			&kernel_excess,
@@ -833,10 +798,6 @@ mod test {
 		)
 		.unwrap();
 
->>>>>>> proof checkin
-		//assert!(address.verify(&msg, &sig).is_ok());
-
->>>>>>> proof checkin
 		let secp = Secp256k1::new();
 		let signature = util::from_hex(&sig).unwrap();
 		let signature = Signature::from_der(&secp, &signature).unwrap();

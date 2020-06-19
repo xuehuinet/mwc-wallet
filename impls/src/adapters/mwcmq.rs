@@ -25,13 +25,12 @@ use grin_wallet_libwallet::proof::message::EncryptedMessage;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
-<<<<<<< HEAD
-=======
+
 use grin_wallet_libwallet::{Slate, VersionedSlate};
 
 
+
 use grin_wallet_libwallet::proof::tx_proof::TxProof;
->>>>>>>  support the proof verify in mwc713
 use grin_wallet_libwallet::{Slate, VersionedSlate};
 
 use grin_wallet_util::grin_util::secp::key::SecretKey;
@@ -313,13 +312,15 @@ impl MWCMQSBroker {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
 
+		//		let serde_json = serde_json::to_string(&VersionedSlate::into_version(
+		//			slate.clone(),
+		//			slate.lowest_version(),
+		//		))
+		//		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e)))?;
 
-		let serde_json = serde_json::to_string(&VersionedSlate::into_version(
-			slate.clone(),
-			slate.lowest_version(),
-		))
-		.map_err(|e| ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e)))?;
-
+		let serde_json = serde_json::to_string(&slate).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
+		})?;
 
 		let message = EncryptedMessage::new(serde_json, &to.address, &pkey, &skey)
 			.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
@@ -362,29 +363,12 @@ impl MWCMQSBroker {
 		let pkey = to.address.public_key()?;
 		let skey = secret_key.clone();
 
-<<<<<<< HEAD
 
 
-
-		let version = slate.lowest_version();
-		let slate = VersionedSlate::into_version(slate.clone(), version);
-
-		debug!(
-			"VERSIONED the slate message before post is {}",
-			serde_json::to_string(&slate).unwrap()
-		);
-
-
-		let version = slate.lowest_version();
-		let slate = VersionedSlate::into_version(slate.clone(), version);
-
-		debug!(
-=======
 		let version = slate.lowest_version();
 		let slate = VersionedSlate::into_version(slate.clone(), version);
 		self.do_log_info(format!("Info: the slate before post is {:?}", slate));
 		self.do_log_info(format!(
->>>>>>>  support the proof verify in mwc713
 			"VERSIONED the slate message before post is {}",
 			serde_json::to_string(&slate).unwrap()
 		));

@@ -95,8 +95,6 @@ where
 	let parent_key_id = w.parent_key_id();
 	let k = w.keychain(keychain_mask)?;
 
-	//	let sec_addr_key = address::address_from_derivation_path(&k, &parent_key_id, index)?;
-	//	let addr = OnionV3Address::from_private(&sec_addr_key.0)?;
 	let pub_key = proofaddress::payment_proof_address_pubkey(&k, &parent_key_id, index)?;
 	Ok(pub_key)
 }
@@ -633,9 +631,7 @@ where
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
-
 	debug!("owner finalize slate got slate = {:?}", slate);
-
 
 	let mut sl = slate.clone();
 	check_ttl(w, &sl)?;
@@ -669,15 +665,7 @@ where
 		proof.store_tx_proof(w.get_data_file_dir(), &slate.id.to_string())?;
 	};
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
-	println!("owner finalize slate returned slate = {:?}", slate);
->>>>>>> proof checkin
-=======
 	debug!("owner finalize slate returned slate = {:?}", slate);
->>>>>>>  support the proof verify in mwc713
 	Ok((sl, context))
 }
 
@@ -1188,6 +1176,7 @@ where
 	// Check Sigs
 	let recipient_pubkey = proof.recipient_address.public_key()?;
 	//check receiver signature
+<<<<<<< HEAD
 	//todo figure out a way to verify receiver and sender signature
 	//	if recipient_pubkey.verify(&msg, &proof.recipient_sig).is_err() {
 	//		return Err(ErrorKind::PaymentProof("Invalid recipient signature".to_owned()).into());
@@ -1204,6 +1193,9 @@ where
 =======
 >>>>>>> proof checkin
 >>>>>>> proof checkin
+=======
+
+>>>>>>>  clear compile warnings and remove printing to console
 	crypto::verify_signature(
 		//	std::str::from_utf8(&msg).unwrap(),
 		&msg,
@@ -1211,6 +1203,7 @@ where
 		&recipient_pubkey,
 	)
 	.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1244,6 +1237,11 @@ where
 =======
 >>>>>>> proof checkin
 >>>>>>> proof checkin
+=======
+
+	let sender_pubkey = proof.sender_address.public_key()?;
+
+>>>>>>>  clear compile warnings and remove printing to console
 	crypto::verify_signature(
 		&msg,
 		&crypto::signature_from_string(&proof.sender_sig).unwrap(),
@@ -1253,6 +1251,7 @@ where
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> proof first checkin
 =======
@@ -1265,6 +1264,8 @@ where
 >>>>>>> proof first checkin
 =======
 >>>>>>> proof checkin
+=======
+>>>>>>>  clear compile warnings and remove printing to console
 
 	// for now, simple test as to whether one of the addresses belongs to this wallet
 	//yang todo we need the index from args.
