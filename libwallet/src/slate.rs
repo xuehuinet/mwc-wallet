@@ -30,9 +30,6 @@ use crate::grin_util::secp::key::{PublicKey, SecretKey};
 use crate::grin_util::secp::pedersen::Commitment;
 use crate::grin_util::secp::Signature;
 use crate::grin_util::{self, secp, RwLock};
-use crate::slate_versions::ser as dalek_ser;
-use ed25519_dalek::PublicKey as DalekPublicKey;
-use ed25519_dalek::Signature as DalekSignature;
 use rand::rngs::mock::StepRng;
 use rand::thread_rng;
 use serde::ser::{Serialize, Serializer};
@@ -47,17 +44,24 @@ use crate::slate_versions::v3::{
 	TransactionV3, TxKernelV3, VersionCompatInfoV3,
 };
 // use crate::slate_versions::{CURRENT_SLATE_VERSION, GRIN_BLOCK_HEADER_VERSION};
+use crate::proof::proofaddress;
+use crate::proof::proofaddress::ProvableAddress;
 use crate::types::CbData;
-use crate::SlateVersion;
+use crate::{SlateVersion, CURRENT_SLATE_VERSION};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentInfo {
-	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
-	pub sender_address: DalekPublicKey,
-	#[serde(with = "dalek_ser::dalek_pubkey_serde")]
-	pub receiver_address: DalekPublicKey,
-	#[serde(with = "dalek_ser::option_dalek_sig_serde")]
-	pub receiver_signature: Option<DalekSignature>,
+	#[serde(
+		serialize_with = "proofaddress::as_string",
+		deserialize_with = "proofaddress::proof_address_from_string"
+	)]
+	pub sender_address: ProvableAddress,
+	#[serde(
+		serialize_with = "proofaddress::as_string",
+		deserialize_with = "proofaddress::proof_address_from_string"
+	)]
+	pub receiver_address: ProvableAddress,
+	pub receiver_signature: Option<String>,
 }
 
 /// Public data for each participant in the slate
@@ -269,8 +273,8 @@ impl Slate {
 			ttl_cutoff_height: None,
 			participant_data: vec![],
 			version_info: VersionCompatInfo {
-				version: 2,              // CURRENT_SLATE_VERSION,
-				orig_version: 2,         // CURRENT_SLATE_VERSION,
+				version: CURRENT_SLATE_VERSION,
+				orig_version: CURRENT_SLATE_VERSION,
 				block_header_version: 1, // GRIN_BLOCK_HEADER_VERSION,
 			},
 			payment_proof: None,
@@ -278,7 +282,7 @@ impl Slate {
 	}
 
 	/// Compare two slates for send: sended and responded. Just want to check if sender didn't mess with slate
-	pub fn compare_slates_send( send_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+	pub fn compare_slates_send(send_slate: &Self, respond_slate: &Self) -> Result<(), Error> {
 		if send_slate.id != respond_slate.id {
 			return Err(ErrorKind::SlateValidation("uuid mismatch".to_string()).into());
 		}
@@ -294,16 +298,16 @@ impl Slate {
 		if send_slate.height != respond_slate.height {
 			return Err(ErrorKind::SlateValidation("heigh mismatch".to_string()).into());
 		}
-		if send_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height  {
+		if send_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height {
 			return Err(ErrorKind::SlateValidation("ttl_cutoff mismatch".to_string()).into());
 		}
 		// Checking transaction...
 		// Inputs must match excatly
-		if send_slate.tx.body.inputs != respond_slate.tx.body.inputs  {
+		if send_slate.tx.body.inputs != respond_slate.tx.body.inputs {
 			return Err(ErrorKind::SlateValidation("inputs mismatch".to_string()).into());
 		}
 		// Kernels must match excatly
-		if send_slate.tx.body.kernels != respond_slate.tx.body.kernels  {
+		if send_slate.tx.body.kernels != respond_slate.tx.body.kernels {
 			return Err(ErrorKind::SlateValidation("kernels mismatch".to_string()).into());
 		}
 		// Respond outputs must include send_slate's. Expected that some was added
@@ -315,7 +319,9 @@ impl Slate {
 		// Checking if participant data match each other
 		for pat_data in &send_slate.participant_data {
 			if !respond_slate.participant_data.contains(&pat_data) {
-				return Err(ErrorKind::SlateValidation("participant data mismatch".to_string()).into());
+				return Err(
+					ErrorKind::SlateValidation("participant data mismatch".to_string()).into(),
+				);
 			}
 		}
 
@@ -323,7 +329,7 @@ impl Slate {
 	}
 
 	/// Compare two slates for invoice: sended and responded. Just want to check if sender didn't mess with slate
-	pub fn compare_slates_invoice( invoice_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+	pub fn compare_slates_invoice(invoice_slate: &Self, respond_slate: &Self) -> Result<(), Error> {
 		if invoice_slate.id != respond_slate.id {
 			return Err(ErrorKind::SlateValidation("uuid mismatch".to_string()).into());
 		}
@@ -333,7 +339,7 @@ impl Slate {
 		if invoice_slate.height != respond_slate.height {
 			return Err(ErrorKind::SlateValidation("heigh mismatch".to_string()).into());
 		}
-		if invoice_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height  {
+		if invoice_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height {
 			return Err(ErrorKind::SlateValidation("ttl_cutoff mismatch".to_string()).into());
 		}
 		assert!(invoice_slate.tx.body.inputs.is_empty());
@@ -346,7 +352,9 @@ impl Slate {
 		// Checking if participant data match each other
 		for pat_data in &invoice_slate.participant_data {
 			if !respond_slate.participant_data.contains(&pat_data) {
-				return Err(ErrorKind::SlateValidation("participant data mismatch".to_string()).into());
+				return Err(
+					ErrorKind::SlateValidation("participant data mismatch".to_string()).into(),
+				);
 			}
 		}
 
@@ -737,7 +745,7 @@ impl Slate {
 	///
 	/// Signature S
 	/// pubkey xR * G+xS * G
-	/// fee (= M)
+	/// fee (= M)PaymentInfoV3
 	///
 	/// Returns completed transaction ready for posting to the chain
 
@@ -1011,9 +1019,9 @@ impl From<&PaymentInfo> for PaymentInfoV3 {
 			receiver_address,
 			receiver_signature,
 		} = data;
-		let sender_address = *sender_address;
-		let receiver_address = *receiver_address;
-		let receiver_signature = *receiver_signature;
+		let sender_address = sender_address.clone();
+		let receiver_address = receiver_address.clone();
+		let receiver_signature = receiver_signature.clone();
 		PaymentInfoV3 {
 			sender_address,
 			receiver_address,
@@ -1190,9 +1198,9 @@ impl From<&PaymentInfoV3> for PaymentInfo {
 			receiver_address,
 			receiver_signature,
 		} = data;
-		let sender_address = *sender_address;
-		let receiver_address = *receiver_address;
-		let receiver_signature = *receiver_signature;
+		let sender_address = sender_address.clone();
+		let receiver_address = receiver_address.clone();
+		let receiver_signature = receiver_signature.clone();
 		PaymentInfo {
 			sender_address,
 			receiver_address,

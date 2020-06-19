@@ -24,6 +24,7 @@ use crate::util::Mutex;
 use grin_core::core::amount_to_hr_string;
 use grin_util::RwLock;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
+use grin_wallet_libwallet::VersionedSlate;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashSet;
@@ -78,6 +79,9 @@ impl KeybaseChannel {
 		let des_address = KeybaseAddress::from_str(self.des_address.as_ref()).map_err(|e| {
 			ErrorKind::KeybaseGenericError(format!("Invalid destination address, {}", e))
 		})?;
+		//		let version = slate.lowest_version();
+		//		let slate = VersionedSlate::into_version(slate,version);
+
 		keybase_publisher
 			.post_slate(&slate, &des_address)
 			.map_err(|e| {

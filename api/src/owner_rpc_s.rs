@@ -33,6 +33,7 @@ use crate::util::secp::pedersen;
 use crate::util::{static_secp_instance, ZeroingString};
 use crate::{ECDHPubkey, Owner, PubAddress, Token};
 use easy_jsonrpc_mw;
+use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use rand::thread_rng;
 use std::time::Duration;
 
@@ -426,7 +427,7 @@ pub trait OwnerRpcS {
 				}
 			  ],
 			  "payment_proof": {
-				"receiver_address": "d03c09e9c19bb74aa9ea44e0fe5ae237a9bf40bddf0941064a80913a4459c8bb",
+				"receiver_address": ""xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2"",
 				"receiver_signature": null,
 				"sender_address": "294b08ba7422c0e1d9215d98829b7eba4834db80c86d5292ecbb199907d7ae42"
 			  },
@@ -1985,7 +1986,7 @@ pub trait OwnerRpcS {
 		&self,
 		token: Token,
 		derivation_index: u32,
-	) -> Result<PubAddress, ErrorKind>;
+	) -> Result<ProvableAddress, ErrorKind>;
 
 	/**
 	Networked version of [Owner::proof_address_from_onion_v3](struct.Owner.html#method.proof_address_from_onion_v3).
@@ -2515,14 +2516,16 @@ where
 		&self,
 		token: Token,
 		derivation_index: u32,
-	) -> Result<PubAddress, ErrorKind> {
+	) -> Result<ProvableAddress, ErrorKind> {
 		let address = Owner::get_public_proof_address(
 			self,
 			(&token.keychain_mask).as_ref(),
 			derivation_index,
 		)
 		.map_err(|e| e.kind())?;
-		Ok(PubAddress { address })
+		let public_proof_address = ProvableAddress::from_pub_key(&address);
+		println!("public_proof address {}", public_proof_address.public_key);
+		Ok(public_proof_address)
 	}
 
 	fn retrieve_payment_proof(
