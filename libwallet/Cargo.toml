@@ -1,6 +1,6 @@
 [package]
 name = "grin_wallet_libwallet"
-version = "3.2.1"
+version = "3.2.2"
 authors = ["Grin Developers <mimblewimble@lists.launchpad.net>"]
 description = "Simple, private and scalable cryptocurrency implementation based on the MimbleWimble chain format."
 license = "Apache-2.0"
@@ -35,15 +35,15 @@ digest = "0.7"
 hmac = "0.6"
 ripemd160 = "0.7"
 
-grin_wallet_util = { path = "../util", version = "3.2.1" }
-grin_wallet_config = { path = "../config", version = "3.2.1" }
+grin_wallet_util = { path = "../util", version = "3.2.2" }
+grin_wallet_config = { path = "../config", version = "3.2.2" }
 
 # Release
-#grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
-#grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
-#grin_core= { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
-#grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
-#grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.1" }
+#grin_api = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+#grin_p2p = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+#grin_core= { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+#grin_keychain = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
+#grin_util = { git = "https://github.com/mwcproject/mwc-node", tag = "3.2.2" }
 
 # For bleeding edge
 grin_api = { git = "https://github.com/mwcproject/mwc-node", branch = "master" }
