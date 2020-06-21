@@ -189,8 +189,8 @@
   },
   "redeem_slate": {
     "version_info": {
-      "version": 2,
-      "orig_version": 2,
+      "version": 3,
+      "orig_version": 3,
       "block_header_version": 1
     },
     "num_participants": 2,
@@ -226,6 +226,7 @@
     "fee": "4000000",
     "height": "0",
     "lock_height": "0",
+    "ttl_cutoff_height": null,
     "participant_data": [
       {
         "id": "0",
@@ -243,7 +244,8 @@
         "message": null,
         "message_sig": null
       }
-    ]
+    ],
+    "payment_proof": null
   },
   "redeem_confirmations": 1,
   "adaptor_signature": "c243a5a05254a9e99cc69e80851f8566653ae806b8986595fedd057ae2a6b6dd20cea0957af2f764ab045d1177d4fa0a353428dcb8f572a9ca4b3007bcac9a0a"
