@@ -280,7 +280,7 @@ mod tests {
 				Weighting::AsTransaction,
 				Arc::new(RwLock::new(LruVerifierCache::new())),
 			)
-			.map_err(|e| crate::ErrorKind::Node(format!("Node failure, {}", e)))?;
+				.map_err(|e| crate::ErrorKind::Node(format!("Node failure, {}", e)))?;
 
 			let mut state = self.state.lock();
 			for input in tx.inputs() {
@@ -461,18 +461,18 @@ mod tests {
 				"swap_test/swap_sell_1.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 
 			write(
 				"swap_test/message_1.json",
 				serde_json::to_string_pretty(&message_1).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 			write(
 				"swap_test/context_sell.json",
 				serde_json::to_string_pretty(&ctx_sell).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_sell_1.json").unwrap(),
@@ -557,14 +557,14 @@ mod tests {
 		match api_buy
 			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
 			.unwrap()
-		{
-			Action::DepositSecondary {
-				currency: _,
-				amount,
-				address: _,
-			} => assert_eq!(amount, btc_amount_2),
-			_ => panic!("Invalid action"),
-		};
+			{
+				Action::DepositSecondary {
+					currency: _,
+					amount,
+					address: _,
+				} => assert_eq!(amount, btc_amount_2),
+				_ => panic!("Invalid action"),
+			};
 
 		// Buyer: second deposit
 		btc_nc.mine_blocks(2);
@@ -582,27 +582,27 @@ mod tests {
 		match api_buy
 			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
 			.unwrap()
-		{
-			Action::ConfirmationsSecondary {
-				currency: _,
-				required: _,
-				actual,
-			} => assert_eq!(actual, 1),
-			_ => panic!("Invalid action"),
-		};
+			{
+				Action::ConfirmationsSecondary {
+					currency: _,
+					required: _,
+					actual,
+				} => assert_eq!(actual, 1),
+				_ => panic!("Invalid action"),
+			};
 		btc_nc.mine_blocks(5);
 
 		// Buyer: wait for Grin confirmations
 		match api_buy
 			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
 			.unwrap()
-		{
-			Action::Confirmations {
-				required: _,
-				actual,
-			} => assert_eq!(actual, 0),
-			_ => panic!("Invalid action"),
-		};
+			{
+				Action::Confirmations {
+					required: _,
+					actual,
+				} => assert_eq!(actual, 0),
+				_ => panic!("Invalid action"),
+			};
 
 		// Check if buyer has correct confirmed outputs
 		{
@@ -627,17 +627,17 @@ mod tests {
 				"swap_test/swap_buy_1.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 			write(
 				"swap_test/message_2.json",
 				serde_json::to_string_pretty(&message_2).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 			write(
 				"swap_test/context_buy.json",
 				serde_json::to_string_pretty(&ctx_buy).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_buy_1.json").unwrap(),
@@ -675,7 +675,7 @@ mod tests {
 				"swap_test/swap_sell_2.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_sell_2.json").unwrap(),
@@ -700,13 +700,13 @@ mod tests {
 		match api_buy
 			.required_action(&kc_sell, &mut swap_buy, &ctx_buy)
 			.unwrap()
-		{
-			Action::Confirmations {
-				required: _,
-				actual,
-			} => assert_eq!(actual, 10),
-			_ => panic!("Invalid action"),
-		}
+			{
+				Action::Confirmations {
+					required: _,
+					actual,
+				} => assert_eq!(actual, 10),
+				_ => panic!("Invalid action"),
+			}
 
 		// Undo a BTC block to test seller
 		{
@@ -734,7 +734,7 @@ mod tests {
 				"swap_test/swap_sell_3.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_sell_3.json").unwrap(),
@@ -758,12 +758,12 @@ mod tests {
 				"swap_test/swap_buy_2.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 			write(
 				"swap_test/message_3.json",
 				serde_json::to_string_pretty(&message_3).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_buy_2.json").unwrap(),
@@ -800,12 +800,12 @@ mod tests {
 				"swap_test/swap_sell_4.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 			write(
 				"swap_test/message_4.json",
 				serde_json::to_string_pretty(&message_4).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_sell_4.json").unwrap(),
@@ -849,7 +849,7 @@ mod tests {
 				"swap_test/swap_buy_3.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_buy_3.json").unwrap(),
@@ -869,7 +869,7 @@ mod tests {
 				"swap_test/swap_sell_5.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_sell_5.json").unwrap(),
@@ -903,7 +903,7 @@ mod tests {
 				"swap_test/swap_sell_6.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
-			.unwrap();
+				.unwrap();
 		} else {
 			assert_eq!(
 				read_to_string("swap_test/swap_sell_6.json").unwrap(),
