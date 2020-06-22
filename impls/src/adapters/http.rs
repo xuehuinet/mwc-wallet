@@ -28,6 +28,19 @@ use crate::tor::process as tor_process;
 
 const TOR_CONFIG_PATH: &str = "tor/sender";
 
+lazy_static! {
+	static ref TOR_STATUS: std::sync::Mutex<u8> = std::sync::Mutex::new(0);
+}
+
+pub fn get_tor_status() -> Result<u8, Error> {
+	Ok(*TOR_STATUS.lock().unwrap())
+}
+
+pub fn set_tor_status(val: u8) {
+	let mut data = TOR_STATUS.lock().unwrap();
+	*data = val;
+}
+
 #[derive(Clone)]
 pub struct HttpSlateSender {
 	base_url: String,
@@ -101,7 +114,8 @@ impl HttpSlateSender {
 			let diff_time = start_time.elapsed().as_millis();
 			trace!("elapsed time check version = {}", diff_time);
 			// we try until it's taken more than 30 seconds.
-			if res.is_err() && diff_time <= timeout.unwrap_or(30_000) {
+			let status = get_tor_status().unwrap(); // check for 3 stopping
+			if res.is_err() && diff_time <= timeout.unwrap_or(30_000) && status != 3 {
 				let res_err_str = format!("{:?}", res);
 				trace!(
 					"Got error (version_check), but continuing: {}, time elapsed = {}ms",
@@ -323,7 +337,8 @@ impl SlateSender for HttpSlateSender {
 			let diff_time = start_time.elapsed().as_millis();
 			trace!("diff time slate send = {}", diff_time);
 			// we try until it's taken more than 30 seconds.
-			if res.is_err() && diff_time <= 30_000 {
+			let status = get_tor_status().unwrap(); // check for 3 stopping
+			if res.is_err() && diff_time <= 30_000 && status != 3 {
 				let res_err_str = format!("{:?}", res);
 				trace!(
 					"Got error (send_slate), but continuing: {}, time elapsed = {}ms",
