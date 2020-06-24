@@ -42,6 +42,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::slate_versions::v2::SlateV2;
+use crate::slate_versions::v2::SlateV2ParseTTL;
+
 use crate::slate_versions::v3::{
 	CoinbaseV3, InputV3, OutputV3, ParticipantDataV3, PaymentInfoV3, SlateV3, TransactionBodyV3,
 	TransactionV3, TxKernelV3, VersionCompatInfoV3,
@@ -235,6 +237,18 @@ impl Slate {
 	/// Recieve a slate, upgrade it to the latest version internally
 	pub fn deserialize_upgrade(slate_json: &str) -> Result<Slate, Error> {
 		let version = Slate::parse_slate_version(slate_json)?;
+                let ttl_cutoff_height = if version == 2 {
+			let parse_slate: Result<SlateV2ParseTTL, serde_json::error::Error> = serde_json::from_str(slate_json);
+                        if parse_slate.is_ok() {
+				parse_slate.unwrap().ttl_cutoff_height
+			} else {
+				None
+			}
+			
+		} else {
+			None
+		};
+
 		let v3: SlateV3 = match version {
 			3 => serde_json::from_str(slate_json).map_err(|e| {
 				ErrorKind::SlateDeser(format!(
@@ -249,7 +263,9 @@ impl Slate {
 						slate_json, e
 					))
 				})?;
-				SlateV3::from(v2)
+				let mut ret = SlateV3::from(v2);
+				ret.ttl_cutoff_height = ttl_cutoff_height;
+				ret
 			}
 			_ => return Err(ErrorKind::SlateVersion(version).into()),
 		};
