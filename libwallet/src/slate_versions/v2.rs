@@ -49,36 +49,36 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SlateV2ParseTTL {
-        /// Versioning info
-        pub version_info: VersionCompatInfoV2,
-        /// The number of participants intended to take part in this transaction
-        pub num_participants: usize,
-        /// Unique transaction ID, selected by sender
-        pub id: Uuid,
-        /// The core transaction data:
-        /// inputs, outputs, kernels, kernel offset
-        pub tx: TransactionV2,
-        /// base amount (excluding fee)
-        #[serde(with = "secp_ser::string_or_u64")]
-        pub amount: u64,
-        /// fee amount
-        #[serde(with = "secp_ser::string_or_u64")]
-        pub fee: u64,
-        /// Block height for the transaction
-        #[serde(with = "secp_ser::string_or_u64")]
-        pub height: u64,
-        /// Lock height
-        #[serde(with = "secp_ser::string_or_u64")]
-        pub lock_height: u64,
-        /// Participant data, each participant in the transaction will
-        /// insert their public data here. For now, 0 is sender and 1
-        /// is receiver, though this will change for multi-party
-        #[serde(with = "secp_ser::opt_string_or_u64")]
-        pub ttl_cutoff_height: Option<u64>,
-        /// Participant data, each participant in the transaction will
-        /// insert their public data here. For now, 0 is sender and 1
-        /// is receiver, though this will change for multi-party
-        pub participant_data: Vec<ParticipantDataV2>,
+	/// Versioning info
+	pub version_info: VersionCompatInfoV2,
+	/// The number of participants intended to take part in this transaction
+	pub num_participants: usize,
+	/// Unique transaction ID, selected by sender
+	pub id: Uuid,
+	/// The core transaction data:
+	/// inputs, outputs, kernels, kernel offset
+	pub tx: TransactionV2,
+	/// base amount (excluding fee)
+	#[serde(with = "secp_ser::string_or_u64")]
+	pub amount: u64,
+	/// fee amount
+	#[serde(with = "secp_ser::string_or_u64")]
+	pub fee: u64,
+	/// Block height for the transaction
+	#[serde(with = "secp_ser::string_or_u64")]
+	pub height: u64,
+	/// Lock height
+	#[serde(with = "secp_ser::string_or_u64")]
+	pub lock_height: u64,
+	/// Participant data, each participant in the transaction will
+	/// insert their public data here. For now, 0 is sender and 1
+	/// is receiver, though this will change for multi-party
+	#[serde(with = "secp_ser::opt_string_or_u64")]
+	pub ttl_cutoff_height: Option<u64>,
+	/// Participant data, each participant in the transaction will
+	/// insert their public data here. For now, 0 is sender and 1
+	/// is receiver, though this will change for multi-party
+	pub participant_data: Vec<ParticipantDataV2>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
