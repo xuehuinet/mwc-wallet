@@ -237,14 +237,14 @@ impl Slate {
 	/// Recieve a slate, upgrade it to the latest version internally
 	pub fn deserialize_upgrade(slate_json: &str) -> Result<Slate, Error> {
 		let version = Slate::parse_slate_version(slate_json)?;
-                let ttl_cutoff_height = if version == 2 {
-			let parse_slate: Result<SlateV2ParseTTL, serde_json::error::Error> = serde_json::from_str(slate_json);
-                        if parse_slate.is_ok() {
+		let ttl_cutoff_height = if version == 2 {
+			let parse_slate: Result<SlateV2ParseTTL, serde_json::error::Error> =
+				serde_json::from_str(slate_json);
+			if parse_slate.is_ok() {
 				parse_slate.unwrap().ttl_cutoff_height
 			} else {
 				None
 			}
-			
 		} else {
 			None
 		};
@@ -294,7 +294,7 @@ impl Slate {
 	}
 
 	/// Compare two slates for send: sended and responded. Just want to check if sender didn't mess with slate
-	pub fn compare_slates_send( send_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+	pub fn compare_slates_send(send_slate: &Self, respond_slate: &Self) -> Result<(), Error> {
 		if send_slate.id != respond_slate.id {
 			return Err(ErrorKind::SlateValidation("uuid mismatch".to_string()).into());
 		}
@@ -310,16 +310,16 @@ impl Slate {
 		if send_slate.height != respond_slate.height {
 			return Err(ErrorKind::SlateValidation("heigh mismatch".to_string()).into());
 		}
-		if send_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height  {
+		if send_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height {
 			return Err(ErrorKind::SlateValidation("ttl_cutoff mismatch".to_string()).into());
 		}
 		// Checking transaction...
 		// Inputs must match excatly
-		if send_slate.tx.body.inputs != respond_slate.tx.body.inputs  {
+		if send_slate.tx.body.inputs != respond_slate.tx.body.inputs {
 			return Err(ErrorKind::SlateValidation("inputs mismatch".to_string()).into());
 		}
 		// Kernels must match excatly
-		if send_slate.tx.body.kernels != respond_slate.tx.body.kernels  {
+		if send_slate.tx.body.kernels != respond_slate.tx.body.kernels {
 			return Err(ErrorKind::SlateValidation("kernels mismatch".to_string()).into());
 		}
 		// Respond outputs must include send_slate's. Expected that some was added
@@ -331,7 +331,9 @@ impl Slate {
 		// Checking if participant data match each other
 		for pat_data in &send_slate.participant_data {
 			if !respond_slate.participant_data.contains(&pat_data) {
-				return Err(ErrorKind::SlateValidation("participant data mismatch".to_string()).into());
+				return Err(
+					ErrorKind::SlateValidation("participant data mismatch".to_string()).into(),
+				);
 			}
 		}
 
@@ -339,7 +341,7 @@ impl Slate {
 	}
 
 	/// Compare two slates for invoice: sended and responded. Just want to check if sender didn't mess with slate
-	pub fn compare_slates_invoice( invoice_slate : &Self, respond_slate: &Self ) -> Result<(), Error> {
+	pub fn compare_slates_invoice(invoice_slate: &Self, respond_slate: &Self) -> Result<(), Error> {
 		if invoice_slate.id != respond_slate.id {
 			return Err(ErrorKind::SlateValidation("uuid mismatch".to_string()).into());
 		}
@@ -349,7 +351,7 @@ impl Slate {
 		if invoice_slate.height != respond_slate.height {
 			return Err(ErrorKind::SlateValidation("heigh mismatch".to_string()).into());
 		}
-		if invoice_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height  {
+		if invoice_slate.ttl_cutoff_height != respond_slate.ttl_cutoff_height {
 			return Err(ErrorKind::SlateValidation("ttl_cutoff mismatch".to_string()).into());
 		}
 		assert!(invoice_slate.tx.body.inputs.is_empty());
@@ -362,7 +364,9 @@ impl Slate {
 		// Checking if participant data match each other
 		for pat_data in &invoice_slate.participant_data {
 			if !respond_slate.participant_data.contains(&pat_data) {
-				return Err(ErrorKind::SlateValidation("participant data mismatch".to_string()).into());
+				return Err(
+					ErrorKind::SlateValidation("participant data mismatch".to_string()).into(),
+				);
 			}
 		}
 
