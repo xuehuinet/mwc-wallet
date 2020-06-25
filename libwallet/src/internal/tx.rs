@@ -482,9 +482,9 @@ pub fn payment_proof_message(
 	let mut message = String::new();
 	debug!("the kernel excess is {:?}", kernel_commitment.0.to_vec());
 	debug!("the sender public key is {}", &sender_address_publickey);
-    message.push_str(&util::to_hex(kernel_commitment.0.to_vec()));
-    message.push_str(&sender_address_publickey);
-    message.push_str(&amount.to_string());
+	message.push_str(&util::to_hex(kernel_commitment.0.to_vec()));
+	message.push_str(&sender_address_publickey);
+	message.push_str(&amount.to_string());
 	Ok(message)
 }
 
