@@ -17,6 +17,7 @@
 use crate::grin_core::libtx::secp_ser;
 use crate::grin_keychain::Identifier;
 use crate::grin_util::secp::pedersen;
+use crate::proof::proofaddress;
 use crate::proof::proofaddress::ProvableAddress;
 use crate::slate_versions::SlateVersion;
 use crate::types::OutputData;
@@ -100,6 +101,10 @@ pub struct InitTxArgs {
 	#[serde(default)]
 	pub ttl_blocks: Option<u64>,
 	/// If set, require a payment proof for the particular recipient
+	#[serde(
+		serialize_with = "proofaddress::option_as_string",
+		deserialize_with = "proofaddress::option_proof_address_from_string"
+	)]
 	#[serde(default)]
 	pub payment_proof_recipient_address: Option<ProvableAddress>,
 	/// address of another party to store in tx history.
