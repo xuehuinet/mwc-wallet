@@ -374,7 +374,6 @@ pub trait OwnerRpcS {
 
 	/**
 		Networked version of [Owner::init_send_tx](struct.Owner.html#method.init_send_tx).
-
 	```
 		# // Full data request
 		# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
@@ -393,7 +392,7 @@ pub trait OwnerRpcS {
 					"selection_strategy_is_use_all": true,
 					"message": "my message",
 					"target_slate_version": null,
-					"payment_proof_recipient_address": "d03c09e9c19bb74aa9ea44e0fe5ae237a9bf40bddf0941064a80913a4459c8bb",
+					"payment_proof_recipient_address": "xmgJ11o4rR7jEhUTz2GDrScYoGXtSGB462REcn1egiK7D5Wucgqn",
 					"ttl_blocks": null,
 					"address": null,
 					"estimate_only": false,
@@ -427,9 +426,9 @@ pub trait OwnerRpcS {
 				}
 			  ],
 			  "payment_proof": {
-				"receiver_address": ""xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2"",
+				"receiver_address": "xmgJ11o4rR7jEhUTz2GDrScYoGXtSGB462REcn1egiK7D5Wucgqn",
 				"receiver_signature": null,
-				"sender_address": "294b08ba7422c0e1d9215d98829b7eba4834db80c86d5292ecbb199907d7ae42"
+				"sender_address": "xmgwbyjMEMBojnVadEkwVi1GyL1WPiVE5dziQf3TLedHdrVBPGw5"
 			  },
 			  "ttl_cutoff_height": null,
 			  "tx": {
@@ -470,7 +469,7 @@ pub trait OwnerRpcS {
 		# "#
 		# ,true, 4, false, false, false, false);
 		#
-		# // Short request. minimum_confirmations is ptional but we put it, otherwise there will be not enough funds for default value 10
+		# // Short request. minimum_confirmations is optional but we put it, otherwise there will be not enough funds for default value 10
 		# grin_wallet_api::doctest_helper_json_rpc_owner_assert_response!(
 		# r#"
 		{
@@ -1974,7 +1973,7 @@ pub trait OwnerRpcS {
 		"id": 1,
 		"jsonrpc": "2.0",
 		"result": {
-			"Ok": "294b08ba7422c0e1d9215d98829b7eba4834db80c86d5292ecbb199907d7ae42"
+			"Ok": "xmgwbyjMEMBojnVadEkwVi1GyL1WPiVE5dziQf3TLedHdrVBPGw5"
 		}
 	}
 	# "#
