@@ -35,12 +35,12 @@ use crate::{Error, ErrorKind};
 use ed25519_dalek::PublicKey as DalekPublicKey;
 use ed25519_dalek::SecretKey as DalekSecretKey;
 
+use crate::proof::tx_proof::pop_proof_for_slate;
 use std::cmp;
 use std::fs::File;
 use std::io::Write;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use crate::proof::tx_proof::pop_proof_for_slate;
 
 const USER_MESSAGE_MAX_LEN: usize = 256;
 
