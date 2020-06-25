@@ -411,7 +411,7 @@ pub trait OwnerRpc: Sync + Send {
 						"selection_strategy_is_use_all": false,
 						"message": "my message",
 						"target_slate_version": 3,
-						"payment_proof_recipient_address": "d03c09e9c19bb74aa9ea44e0fe5ae237a9bf40bddf0941064a80913a4459c8bb",
+						"payment_proof_recipient_address": "xmgJ11o4rR7jEhUTz2GDrScYoGXtSGB462REcn1egiK7D5Wucgqn",
 						"ttl_blocks": 3,
 						"send_args": null
 					}
@@ -443,9 +443,9 @@ pub trait OwnerRpc: Sync + Send {
 					}
 				  ],
 				  "payment_proof": {
-					"receiver_address": "d03c09e9c19bb74aa9ea44e0fe5ae237a9bf40bddf0941064a80913a4459c8bb",
+					"receiver_address": "xmgJ11o4rR7jEhUTz2GDrScYoGXtSGB462REcn1egiK7D5Wucgqn",
 					"receiver_signature": null,
-					"sender_address": "294b08ba7422c0e1d9215d98829b7eba4834db80c86d5292ecbb199907d7ae42"
+					"sender_address": "xmgwbyjMEMBojnVadEkwVi1GyL1WPiVE5dziQf3TLedHdrVBPGw5"
 				  },
 				  "ttl_cutoff_height": "7",
 				  "tx": {
@@ -483,7 +483,7 @@ pub trait OwnerRpc: Sync + Send {
 				  "version_info": {
 					"block_header_version": 1,
 					"orig_version": 3,
-					"version": 2
+					"version": 3
 				  }
 				}
 			  }
