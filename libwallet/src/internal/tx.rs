@@ -479,14 +479,12 @@ pub fn payment_proof_message(
 	kernel_commitment: &pedersen::Commitment,
 	sender_address_publickey: String,
 ) -> Result<String, Error> {
-	//	let mut msg = Vec::new();
-	//	msg.write_u64::<BigEndian>(amount)?;
-	//	msg.append(&mut kernel_commitment.0.to_vec());
-	//	msg.append(&mut sender_address_publickey.as_bytes().to_vec());
-	//	println!("{:?}", msg);
 	let mut message = String::new();
-	message.push_str("test");
-	message.push_str(&amount.to_string());
+	debug!("the kernel excess is {:?}", kernel_commitment.0.to_vec());
+	debug!("the sender public key is {}", &sender_address_publickey);
+    message.push_str(&util::to_hex(kernel_commitment.0.to_vec()));
+    message.push_str(&sender_address_publickey);
+    message.push_str(&amount.to_string());
 	Ok(message)
 }
 
@@ -632,7 +630,9 @@ where
 		let signature = Signature::from_der(&secp, &signature_ser).map_err(|e| {
 			ErrorKind::TxProofGenericError(format!("Unable to build signature, {}", e))
 		})?;
-		let receiver_pubkey = orig_proof_info.receiver_address.public_key().unwrap();
+		let receiver_pubkey = orig_proof_info.receiver_address.public_key().map_err(|e| {
+			ErrorKind::TxProofGenericError(format!("Unable to get receiver address, {}", e))
+		})?;
 		crypto::verify_signature(&msg, &signature, &receiver_pubkey)
 			.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
 
@@ -724,7 +724,8 @@ mod test {
 		};
 
 		let amount = 1_234_567_890_u64;
-		let msg = payment_proof_message(amount, &kernel_excess, public_key.to_hex()).unwrap();
+		let sender_address_string = ProvableAddress::from_pub_key(&public_key).public_key;
+		let msg = payment_proof_message(amount, &kernel_excess, sender_address_string).unwrap();
 		println!("payment proof message is (len {}): {:?}", msg.len(), msg);
 
 		//todo don't know know to get PublicKey from bytes same as DalekPublicKey
