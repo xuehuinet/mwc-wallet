@@ -775,7 +775,12 @@ where
 				println!("slate [{}] posted successfully in owner_api",slate.id.to_string());
 				Ok(slate)
 			}
-			None => Ok(slate),
+			None => {
+				// if send args is none, we still lock the outputs
+                                // with sendargs null it likely means this is going to be used for file based transfer.
+				self.tx_lock_outputs(keychain_mask, &slate, address, 0)?;
+				Ok(slate)
+			},
 		}
 	}
 
