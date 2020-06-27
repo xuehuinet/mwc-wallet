@@ -755,24 +755,34 @@ where
 				// Restore back ttl, because it can be gone
 				slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
 				// Checking is sender didn't do any harm to slate
-				Slate::compare_slates_send( &original_slate, &slate)?;
+				Slate::compare_slates_send(&original_slate, &slate)?;
 
-				self.verify_slate_messages(keychain_mask, &slate).map_err(|e| {
-					error!("Unable to validate participant messages at slate {}: {}", slate.id,  e);
-					e
-				})?;
+				self.verify_slate_messages(keychain_mask, &slate)
+					.map_err(|e| {
+						error!(
+							"Unable to validate participant messages at slate {}: {}",
+							slate.id, e
+						);
+						e
+					})?;
 
 				self.tx_lock_outputs(keychain_mask, &slate, address, 0)?;
 				slate = match sa.finalize {
-						true => self.finalize_tx(keychain_mask, &slate)?,
-						false => slate,
+					true => self.finalize_tx(keychain_mask, &slate)?,
+					false => slate,
 				};
-				println!("slate [{}] finalized successfully in owner_api",slate.id.to_string());
+				println!(
+					"slate [{}] finalized successfully in owner_api",
+					slate.id.to_string()
+				);
 
 				if sa.post_tx {
 					self.post_tx(keychain_mask, &slate.tx, sa.fluff)?;
 				}
-				println!("slate [{}] posted successfully in owner_api",slate.id.to_string());
+				println!(
+					"slate [{}] posted successfully in owner_api",
+					slate.id.to_string()
+				);
 				Ok(slate)
 			}
 			None => Ok(slate),
@@ -897,7 +907,14 @@ where
 		}
 		let mut w_lock = self.wallet_inst.lock();
 		let w = w_lock.lc_provider()?.wallet_inst()?;
-		owner::process_invoice_tx(&mut **w, keychain_mask, slate, args, self.doctest_mode, true)
+		owner::process_invoice_tx(
+			&mut **w,
+			keychain_mask,
+			slate,
+			args,
+			self.doctest_mode,
+			true,
+		)
 	}
 
 	/// Locks the outputs associated with the inputs to the transaction in the given
@@ -2330,7 +2347,8 @@ macro_rules! doctest_helper_setup_doc_env {
 		wallet_config.data_file_dir = dir.to_owned();
 		let pw = ZeroingString::from("");
 
-		let node_client = HTTPNodeClient::new(&wallet_config.check_node_api_http_addr, None).unwrap();
+		let node_client =
+			HTTPNodeClient::new(&wallet_config.check_node_api_http_addr, None).unwrap();
 		let mut wallet = Box::new(
 			DefaultWalletImpl::<'static, HTTPNodeClient>::new(node_client.clone()).unwrap(),
 			)

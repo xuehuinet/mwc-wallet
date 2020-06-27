@@ -515,7 +515,7 @@ pub fn process_invoice_tx<'a, T: ?Sized, C, K>(
 	slate: &Slate,
 	args: InitTxArgs,
 	use_test_rng: bool,
-        refresh_from_node: bool,
+	refresh_from_node: bool,
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -1108,7 +1108,11 @@ where
 }
 
 /// Check TTL
-pub fn check_ttl<'a, T: ?Sized, C, K>(w: &mut T, slate: &Slate, refresh_from_node: bool) -> Result<(), Error>
+pub fn check_ttl<'a, T: ?Sized, C, K>(
+	w: &mut T,
+	slate: &Slate,
+	refresh_from_node: bool,
+) -> Result<(), Error>
 where
 	T: WalletBackend<'a, C, K>,
 	C: NodeClient + 'a,

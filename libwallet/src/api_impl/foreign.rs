@@ -84,7 +84,7 @@ pub fn receive_tx<'a, T: ?Sized, C, K>(
 	dest_acct_name: Option<&str>,
 	message: Option<String>,
 	use_test_rng: bool,
-        refresh_from_node: bool,
+	refresh_from_node: bool,
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -95,7 +95,8 @@ where
 	let slate_message = &slate.participant_data[0].message;
 	let mut address_for_logging = address.clone();
 
-	if address.is_none() { // that means it's not mqs so need to print it
+	if address.is_none() {
+		// that means it's not mqs so need to print it
 		if slate_message.is_some() {
 			println!(
 				"{}",
@@ -214,7 +215,7 @@ pub fn finalize_invoice_tx<'a, T: ?Sized, C, K>(
 	w: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
-        refresh_from_node: bool,
+	refresh_from_node: bool,
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
