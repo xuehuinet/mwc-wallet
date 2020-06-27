@@ -84,6 +84,7 @@ pub fn receive_tx<'a, T: ?Sized, C, K>(
 	dest_acct_name: Option<&str>,
 	message: Option<String>,
 	use_test_rng: bool,
+        refresh_from_node: bool,
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -126,7 +127,7 @@ where
 	}
 
 	let mut ret_slate = slate.clone();
-	check_ttl(w, &ret_slate)?;
+	check_ttl(w, &ret_slate, refresh_from_node)?;
 
 	let mut dest_acct_name = dest_acct_name.map(|s| s.to_string());
 	if dest_acct_name.is_none() {
@@ -213,6 +214,7 @@ pub fn finalize_invoice_tx<'a, T: ?Sized, C, K>(
 	w: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
+        refresh_from_node: bool,
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -220,7 +222,7 @@ where
 	K: Keychain + 'a,
 {
 	let mut sl = slate.clone();
-	check_ttl(w, &sl)?;
+	check_ttl(w, &sl, refresh_from_node)?;
 	// Participant id 0 for mwc713 compatibility
 	let context = w.get_private_context(keychain_mask, sl.id.as_bytes(), 0)?;
 	// Participant id 0 for mwc713 compatibility

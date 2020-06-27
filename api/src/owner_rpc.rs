@@ -13,6 +13,8 @@
 // limitations under the License.
 
 //! JSON-RPC Stub generation for the Owner API
+// allow for json_rpc
+#![allow(deprecated)]
 use uuid::Uuid;
 
 use crate::core::core::Transaction;
@@ -1733,6 +1735,7 @@ pub fn run_doctest_owner(
 				None,
 				None,
 				true,
+				false,
 			)
 			.unwrap();
 			w2.close().unwrap();
@@ -1751,7 +1754,7 @@ pub fn run_doctest_owner(
 		println!("RECEIPIENT SLATE");
 		println!("{}", serde_json::to_string_pretty(&slate).unwrap());
 		if finalize_tx {
-			slate = api_impl::owner::finalize_tx(&mut **w, (&mask2).as_ref(), &slate)
+			slate = api_impl::owner::finalize_tx(&mut **w, (&mask2).as_ref(), &slate, true)
 				.unwrap()
 				.0;
 			error!("FINALIZED TX SLATE");

@@ -515,6 +515,7 @@ pub fn process_invoice_tx<'a, T: ?Sized, C, K>(
 	slate: &Slate,
 	args: InitTxArgs,
 	use_test_rng: bool,
+        refresh_from_node: bool,
 ) -> Result<Slate, Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -522,7 +523,7 @@ where
 	K: Keychain + 'a,
 {
 	let mut ret_slate = slate.clone();
-	check_ttl(w, &ret_slate)?;
+	check_ttl(w, &ret_slate, refresh_from_node)?;
 	let parent_key_id = match args.src_acct_name {
 		Some(d) => {
 			let pm = w.get_acct_path(d)?;
@@ -624,6 +625,7 @@ pub fn finalize_tx<'a, T: ?Sized, C, K>(
 	w: &mut T,
 	keychain_mask: Option<&SecretKey>,
 	slate: &Slate,
+	refresh_from_node: bool,
 ) -> Result<(Slate, Context), Error>
 where
 	T: WalletBackend<'a, C, K>,
@@ -631,7 +633,7 @@ where
 	K: Keychain + 'a,
 {
 	let mut sl = slate.clone();
-	check_ttl(w, &sl)?;
+	check_ttl(w, &sl, refresh_from_node)?;
 	let context = w.get_private_context(keychain_mask, sl.id.as_bytes(), 0)?;
 	let parent_key_id = w.parent_key_id();
 	tx::complete_tx(&mut *w, keychain_mask, &mut sl, 0, &context)?;
@@ -1106,14 +1108,19 @@ where
 }
 
 /// Check TTL
-pub fn check_ttl<'a, T: ?Sized, C, K>(w: &mut T, slate: &Slate) -> Result<(), Error>
+pub fn check_ttl<'a, T: ?Sized, C, K>(w: &mut T, slate: &Slate, refresh_from_node: bool) -> Result<(), Error>
 where
 	T: WalletBackend<'a, C, K>,
 	C: NodeClient + 'a,
 	K: Keychain + 'a,
 {
 	// Refuse if TTL is expired
-	let last_confirmed_height = w.last_confirmed_height()?;
+	let last_confirmed_height = if refresh_from_node {
+		w.w2n_client().get_chain_tip()?.0
+	} else {
+		w.last_confirmed_height()?
+	};
+
 	if let Some(e) = slate.ttl_cutoff_height {
 		if last_confirmed_height >= e {
 			return Err(ErrorKind::TransactionExpired.into());
