@@ -897,7 +897,7 @@ where
 		}
 		let mut w_lock = self.wallet_inst.lock();
 		let w = w_lock.lc_provider()?.wallet_inst()?;
-		owner::process_invoice_tx(&mut **w, keychain_mask, slate, args, self.doctest_mode)
+		owner::process_invoice_tx(&mut **w, keychain_mask, slate, args, self.doctest_mode, true)
 	}
 
 	/// Locks the outputs associated with the inputs to the transaction in the given
@@ -1037,7 +1037,7 @@ where
 	) -> Result<Slate, Error> {
 		let mut w_lock = self.wallet_inst.lock();
 		let w = w_lock.lc_provider()?.wallet_inst()?;
-		let (slate_res, _context) = owner::finalize_tx(&mut **w, keychain_mask, &slate)?;
+		let (slate_res, _context) = owner::finalize_tx(&mut **w, keychain_mask, &slate, true)?;
 
 		Ok(slate_res)
 	}

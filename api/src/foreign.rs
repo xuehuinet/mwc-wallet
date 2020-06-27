@@ -401,6 +401,7 @@ where
 			dest_acct_name,
 			message,
 			self.doctest_mode,
+			true,
 		)
 	}
 
@@ -461,7 +462,7 @@ where
 				Some(slate),
 			)?;
 		}
-		foreign::finalize_invoice_tx(&mut **w, (&self.keychain_mask).as_ref(), slate)
+		foreign::finalize_invoice_tx(&mut **w, (&self.keychain_mask).as_ref(), slate, true)
 	}
 }
 
