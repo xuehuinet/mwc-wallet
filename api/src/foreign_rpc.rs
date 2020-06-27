@@ -745,8 +745,15 @@ pub fn run_doctest_foreign(
 				selection_strategy_is_use_all: true,
 				..Default::default()
 			};
-			api_impl::owner::process_invoice_tx(&mut **w, (&mask1).as_ref(), &slate, args, true, true)
-				.unwrap()
+			api_impl::owner::process_invoice_tx(
+				&mut **w,
+				(&mask1).as_ref(),
+				&slate,
+				args,
+				true,
+				true,
+			)
+			.unwrap()
 		};
 		println!("INIT INVOICE SLATE");
 		// Spit out slate for input to finalize_invoice_tx
