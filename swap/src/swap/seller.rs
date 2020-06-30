@@ -28,6 +28,8 @@ use rand::thread_rng;
 use std::mem;
 use uuid::Uuid;
 
+/// Seller API. Bunch of methods that cover seller action for MWC swap
+/// This party is Selling MWC and buying BTC
 pub struct SellApi {}
 
 impl SellApi {
@@ -140,6 +142,7 @@ impl SellApi {
 		Ok(swap)
 	}
 
+	/// Process 'accepted offer' message from the buyer
 	pub fn accepted_offer<K: Keychain>(
 		keychain: &K,
 		swap: &mut Swap,
@@ -176,6 +179,11 @@ impl SellApi {
 		Ok(())
 	}
 
+	/// Seller initializing the redeem slate. At that moment Both BTC and MWC are expected to be at
+	/// the locked slated published and get enough confirmations.
+	/// Result:
+	/// 	swap.redeem_slate
+	// 	 	swap.adaptor_signature
 	pub fn init_redeem<K: Keychain>(
 		keychain: &K,
 		swap: &mut Swap,
@@ -190,7 +198,7 @@ impl SellApi {
 
 		// This function should only be called once
 		if swap.adaptor_signature.is_some() {
-			return Err(ErrorKind::OneShot.into());
+			return Err(ErrorKind::OneShot("Seller Fn init_redeem() multisig is empty".to_string()).into());
 		}
 
 		let mut redeem_slate: Slate = init_redeem.redeem_slate.into();
@@ -208,7 +216,7 @@ impl SellApi {
 			Some(&pub_nonce_sum),
 			&redeem_slate.participant_data[swap.other_participant_id()].public_blind_excess,
 			Some(&pub_blind_sum),
-			Some(&swap.redeem_public.ok_or(ErrorKind::UnexpectedAction)?),
+			Some(&swap.redeem_public.ok_or(ErrorKind::UnexpectedAction("Seller Fn init_redeem() redeem pub key is empty".to_string()))?),
 			true,
 		) {
 			return Err(ErrorKind::InvalidAdaptorSignature);
@@ -227,6 +235,8 @@ impl SellApi {
 		Ok(())
 	}
 
+	/// Calculating the secret that allow to redeem BTC.
+	/// At this point Buyer already get his MWC, so now Seller should get a revealed secret and get BTCs
 	pub fn calculate_redeem_secret<K: Keychain>(
 		keychain: &K,
 		swap: &Swap,
@@ -235,7 +245,7 @@ impl SellApi {
 
 		let adaptor_signature = signature_as_secret(
 			secp,
-			&swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction)?,
+			&swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction("Seller Fn calculate_redeem_secret() multisig is empty".to_string()))?,
 		)?;
 		let signature = signature_as_secret(
 			secp,
@@ -244,7 +254,7 @@ impl SellApi {
 				.tx
 				.kernels()
 				.get(0)
-				.ok_or(ErrorKind::UnexpectedAction)?
+				.ok_or(ErrorKind::UnexpectedAction("Seller Fn calculate_redeem_secret() redeem slate is not initialized, no kernels found".to_string()))?
 				.excess_sig,
 		)?;
 		let seller_signature = signature_as_secret(
@@ -253,14 +263,15 @@ impl SellApi {
 				.redeem_slate
 				.participant_data
 				.get(swap.participant_id)
-				.ok_or(ErrorKind::UnexpectedAction)?
+				.ok_or(ErrorKind::UnexpectedAction("Seller Fn calculate_redeem_secret() redeem slate is not initialized, participant not found".to_string()))?
 				.part_sig
-				.ok_or(ErrorKind::UnexpectedAction)?,
+				.ok_or(ErrorKind::UnexpectedAction("Seller Fn calculate_redeem_secret() redeem slate is not initialized, participant signature not found".to_string()))?,
 		)?;
 
 		let redeem = secp.blind_sum(vec![adaptor_signature, seller_signature], vec![signature])?;
 		let redeem_pub = PublicKey::from_secret_key(keychain.secp(), &redeem)?;
 		if swap.redeem_public != Some(redeem_pub) {
+			// If this happens - mean that swap is broken, somewhere there is a security flaw. Probably didn't check something.
 			return Err(ErrorKind::Generic(
 				"Redeem secret doesn't match - this should never happen".into(),
 			));
@@ -269,11 +280,12 @@ impl SellApi {
 		Ok(redeem)
 	}
 
+	/// Generate a message for Buyer
 	pub fn message(swap: &Swap) -> Result<Message, ErrorKind> {
 		match swap.status {
 			Status::Created => Self::offer_message(swap),
 			Status::InitRedeem => Self::redeem_message(swap),
-			_ => Err(ErrorKind::UnexpectedAction),
+			_ => Err(ErrorKind::UnexpectedAction(format!("Seller Fn message() unexpected status {:?}",swap.status))),
 		}
 	}
 
@@ -282,12 +294,13 @@ impl SellApi {
 		match swap.status {
 			Status::Created => swap.status = Status::Offered,
 			Status::InitRedeem => swap.status = Status::Redeem,
-			_ => return Err(ErrorKind::UnexpectedAction),
+			_ => return Err(ErrorKind::UnexpectedAction(format!("Seller Fn message_sent() unexpected status {:?}",swap.status))),
 		};
 
 		Ok(())
 	}
 
+	/// Publish lock slate to the Node
 	pub fn publish_transaction<C: NodeClient>(
 		node_client: &C,
 		swap: &mut Swap,
@@ -296,13 +309,13 @@ impl SellApi {
 			Status::Accepted => {
 				if swap.lock_confirmations.is_some() {
 					// Tx already published
-					return Err(ErrorKind::UnexpectedAction);
+					return Err(ErrorKind::UnexpectedAction("Seller Fn publish_transaction() lock is not initialized".to_string()));
 				}
 				publish_transaction(node_client, &swap.lock_slate.tx, false)?;
 				swap.lock_confirmations = Some(0);
 				Ok(())
 			}
-			_ => Err(ErrorKind::UnexpectedAction),
+			_ => Err(ErrorKind::UnexpectedAction(format!("Seller Fn publish_transaction() unexpected status {:?}", swap.status))),
 		}
 	}
 
@@ -338,7 +351,7 @@ impl SellApi {
 									.tx
 									.kernels_mut()
 									.get_mut(0)
-									.ok_or(ErrorKind::UnexpectedAction)?,
+									.ok_or(ErrorKind::UnexpectedAction("Seller Fn required_action() redeem slate not initialized, kernels are empty".to_string()))?,
 								kernel,
 							);
 
@@ -357,6 +370,7 @@ impl SellApi {
 		Ok(action)
 	}
 
+	/// Generate Offer message
 	pub fn offer_message(swap: &Swap) -> Result<Message, ErrorKind> {
 		swap.expect_seller()?;
 		swap.expect(Status::Created)?;
@@ -379,6 +393,7 @@ impl SellApi {
 		}))
 	}
 
+	/// Generate redeem message
 	pub fn redeem_message(swap: &Swap) -> Result<Message, ErrorKind> {
 		swap.expect_seller()?;
 		swap.expect(Status::InitRedeem)?;
@@ -465,7 +480,7 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.lock_slate;
 		if slate.participant_data.len() > 0 {
-			return Err(ErrorKind::OneShot.into());
+			return Err(ErrorKind::OneShot("Seller Fn build_lock_slate() lock slate is already initialized".to_string()).into());
 		}
 
 		// Build lock slate
@@ -514,7 +529,7 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.lock_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot.into());
+			return Err(ErrorKind::OneShot("Seller Fn finalize_lock_slate() lock slate is already initialized".to_string()).into());
 		}
 
 		// Add participant to slate
@@ -561,7 +576,7 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.refund_slate;
 		if slate.participant_data.len() > 0 {
-			return Err(ErrorKind::OneShot);
+			return Err(ErrorKind::OneShot("Seller Fn build_refund_slate() refund slate is already initialized".to_string()));
 		}
 
 		// Build refund slate
@@ -608,7 +623,7 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.refund_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot.into());
+			return Err(ErrorKind::OneShot("Seller Fn finalize_refund_slate() refund slate is already initialized".to_string()).into());
 		}
 
 		// Add participant to slate
@@ -654,7 +669,7 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.redeem_slate;
 		if slate.participant_data.len() > 0 {
-			return Err(ErrorKind::OneShot);
+			return Err(ErrorKind::OneShot("Seller Fn build_redeem_participant() redeem slate is already initialized".to_string()));
 		}
 
 		// Build participant
@@ -691,7 +706,7 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.redeem_slate;
 		if slate.participant_data[id].is_complete() {
-			return Err(ErrorKind::OneShot);
+			return Err(ErrorKind::OneShot("Seller Fn sign_redeem_slate() redeem slate participant data is already initilaized".to_string()));
 		}
 
 		// Sign slate

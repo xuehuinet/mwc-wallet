@@ -37,8 +37,10 @@ use grinswap::swap::message::{Message, Update};
 use grinswap::{Action, Context, Currency, Status, Swap, SwapApi};
 use std::str::FromStr;
 
+/// Lacation of the swaps states
 pub const SWAP_DEAL_SAVE_DIR: &'static str = "saved_swap_deal";
 
+// TODO  - use wallet macro
 /// Helper for taking a lock on the wallet instance
 #[macro_export]
 macro_rules! wallet_lock {
@@ -50,6 +52,8 @@ macro_rules! wallet_lock {
 	};
 }
 
+// TODO - remove it
+/// Test keychain
 fn _keychain(idx: u8) -> ExtKeychain {
 	let seed_sell: String = format!("fixed0rng0for0testing0purposes0{}", idx % 10);
 	let seed_sell = blake2b(32, &[], seed_sell.as_bytes());
@@ -64,6 +68,8 @@ fn init_swap_backend(data_file_dir: &str) -> Result<(), Error> {
 	Ok(())
 }
 
+// TODO - move swap storage to separate file. It is bigger problem, the data need to be encrypted because
+// Swap data contain bunch of secrets
 // Get swap deal from the storage
 fn get_swap_deal(data_file_dir: &str, swap_id: &str) -> Result<Swap, Error> {
 	let filename = format!("{}.swap", swap_id);
@@ -93,6 +99,8 @@ fn get_swap_deal(data_file_dir: &str, swap_id: &str) -> Result<Swap, Error> {
 	}))?)
 }
 
+// TODO - move swap storage to separate file. It is bigger problem, the data need to be encrypted because
+// Swap data contain bunch of secrets
 // Store swap deal to a file
 fn store_swap_deal(swap: &Swap, data_file_dir: &str, swap_id: &str) -> Result<(), Error> {
 	let filename = format!("{}.swap", swap_id);
@@ -121,9 +129,11 @@ fn store_swap_deal(swap: &Swap, data_file_dir: &str, swap_id: &str) -> Result<()
 	Ok(())
 }
 
+/// TODO - del me or refactor a lot
 pub struct SwapDealer {}
 
 impl SwapDealer {
+	/// TODO - del me or refactor a lot
 	pub fn new() -> SwapDealer {
 		Self {}
 	}
@@ -190,6 +200,7 @@ impl SwapDealer {
 			.unwrap()
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn make_buy_mwc<'a, T: ?Sized, C, K>(
 		&self,
 		_wallet: &mut T,
@@ -208,6 +219,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn take_sell_mwc<'a, T: ?Sized, C, K>(
 		&self,
 		wallet: &mut T,
@@ -273,6 +285,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn make_sell_mwc<'a, T: ?Sized, C, K>(
 		&self,
 		_wallet: &mut T,
@@ -292,6 +305,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn take_buy_mwc<'a, T: ?Sized, C, K>(
 		&self,
 		wallet: &mut T,
@@ -341,6 +355,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - to check
 	pub fn swap<'a, L, C, K>(
 		&self,
 		wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
@@ -426,6 +441,7 @@ impl SwapDealer {
 		return _res;
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn process_redeem<'a, T: ?Sized, C, K>(
 		&self,
 		wallet: &mut T,
@@ -520,6 +536,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn process_init_redeem<'a, T: ?Sized, C, K>(
 		&self,
 		wallet: &mut T,
@@ -618,6 +635,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn process_accept_offer<'a, T: ?Sized, C, K>(
 		&self,
 		wallet: &mut T,
@@ -675,6 +693,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - del me or refactor a lot
 	pub fn process_offer<'a, T: ?Sized, C, K>(
 		&self,
 		wallet: &mut T,
@@ -770,6 +789,7 @@ impl SwapDealer {
 		Ok(())
 	}
 
+	/// TODO - to check
 	pub fn process_swap_message<'a, L, C, K>(
 		&self,
 		wallet: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,

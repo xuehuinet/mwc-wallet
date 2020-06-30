@@ -28,9 +28,12 @@ use rand::thread_rng;
 use std::mem;
 use uuid::Uuid;
 
+/// Buyer API. Bunch of methods that cover buyer action for MWC swap
+/// This party is Buying MWC and selling BTC
 pub struct BuyApi {}
 
 impl BuyApi {
+	/// Accepting Seller offer and create Swap instance
 	pub fn accept_swap_offer<K: Keychain>(
 		keychain: &K,
 		context: &Context,
@@ -41,7 +44,7 @@ impl BuyApi {
 	) -> Result<Swap, ErrorKind> {
 		let test_mode = is_test_mode();
 		if offer.version != CURRENT_VERSION {
-			return Err(ErrorKind::IncompatibleVersion);
+			return Err(ErrorKind::IncompatibleVersion(offer.version, CURRENT_VERSION));
 		}
 
 		context.unwrap_buyer()?;
@@ -116,6 +119,7 @@ impl BuyApi {
 		Ok(swap)
 	}
 
+	/// Buyer builds swap.redeem_slate
 	pub fn init_redeem<K: Keychain>(
 		keychain: &K,
 		swap: &mut Swap,
@@ -130,6 +134,7 @@ impl BuyApi {
 		Ok(())
 	}
 
+	/// Finalize redeem slate with a data form RedeemUpdate
 	pub fn redeem<K: Keychain>(
 		keychain: &K,
 		swap: &mut Swap,
@@ -145,6 +150,7 @@ impl BuyApi {
 		Ok(())
 	}
 
+	/// Check the redeem confirmations and move to Complete state
 	pub fn completed(swap: &mut Swap) -> Result<(), ErrorKind> {
 		swap.expect_buyer()?;
 		swap.expect(Status::Redeem)?;
@@ -153,15 +159,16 @@ impl BuyApi {
 				swap.status = Status::Completed;
 				Ok(())
 			}
-			_ => Err(ErrorKind::UnexpectedAction),
+			_ => Err(ErrorKind::UnexpectedAction("Buyer Fn complete(), redeem_confirmations is not defined".to_string())),
 		}
 	}
 
+	/// Generate a message to another party
 	pub fn message(swap: &Swap) -> Result<Message, ErrorKind> {
 		match swap.status {
 			Status::Offered => Self::accept_offer_message(swap),
 			Status::Locked => Self::init_redeem_message(swap),
-			_ => Err(ErrorKind::UnexpectedAction),
+			_ => Err(ErrorKind::UnexpectedAction(format!("Buyer Fn message(), unexpected status {:?}", swap.status))),
 		}
 	}
 
@@ -170,12 +177,13 @@ impl BuyApi {
 		match swap.status {
 			Status::Offered => swap.status = Status::Accepted,
 			Status::Locked => swap.status = Status::InitRedeem,
-			_ => return Err(ErrorKind::UnexpectedAction),
+			_ => return Err(ErrorKind::UnexpectedAction(format!("Buyer Fn message_sent(), unexpected status {:?}", swap.status))),
 		};
 
 		Ok(())
 	}
 
+	/// Publish MWC transaction to the node
 	pub fn publish_transaction<C: NodeClient>(
 		node_client: &C,
 		swap: &mut Swap,
@@ -184,13 +192,13 @@ impl BuyApi {
 			Status::Redeem => {
 				if swap.redeem_confirmations.is_some() {
 					// Tx already published
-					return Err(ErrorKind::UnexpectedAction);
+					return Err(ErrorKind::UnexpectedAction("Buyer Fn publish_transaction(), redeem_confirmations already defined".to_string()));
 				}
 				publish_transaction(node_client, &swap.redeem_slate.tx, false)?;
 				swap.redeem_confirmations = Some(0);
 				Ok(())
 			}
-			_ => Err(ErrorKind::UnexpectedAction),
+			_ => Err(ErrorKind::UnexpectedAction(format!("Buyer Fn publish_transaction(), unexpected status {:?}", swap.status ))),
 		}
 	}
 
@@ -224,6 +232,7 @@ impl BuyApi {
 		Ok(action)
 	}
 
+	/// Generate 'Accept offer' massage
 	pub fn accept_offer_message(swap: &Swap) -> Result<Message, ErrorKind> {
 		swap.expect(Status::Offered)?;
 
@@ -236,6 +245,7 @@ impl BuyApi {
 		}))
 	}
 
+	/// Generate 'InitRedeem' slate message
 	pub fn init_redeem_message(swap: &Swap) -> Result<Message, ErrorKind> {
 		swap.expect(Status::Locked)?;
 
@@ -244,7 +254,7 @@ impl BuyApi {
 				swap.redeem_slate.clone(),
 				CURRENT_SLATE_VERSION,
 			),
-			adaptor_signature: swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction)?,
+			adaptor_signature: swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction("Buyer Fn init_redeem_message(), multisig is empty".to_string()))?,
 		}))
 	}
 
@@ -308,12 +318,12 @@ impl BuyApi {
 		// This function should only be called once
 		let slate = &mut swap.lock_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot.into());
+			return Err(ErrorKind::OneShot("Buyer Fn sign_lock_slate(), lock slate participant data is already initialized".to_string()).into());
 		}
 
 		// Add multisig output to slate (with invalid proof)
 		let mut proof = RangeProof::zero();
-		proof.plen = 675;
+		proof.plen = grin_util::secp::constants::MAX_PROOF_SIZE;
 
 		tx_add_output(slate, swap.multisig.commit(keychain.secp())?, proof);
 
@@ -357,7 +367,7 @@ impl BuyApi {
 		// This function should only be called once
 		let slate = &mut swap.refund_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot.into());
+			return Err(ErrorKind::OneShot("Buyer Fn sign_refund_slate(), refund slate participant data is already initialized".to_string()).into());
 		}
 
 		// Add multisig input to slate
@@ -412,7 +422,7 @@ impl BuyApi {
 		// This function should only be called once
 		let slate = &mut swap.redeem_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot);
+			return Err(ErrorKind::OneShot("Buyer Fn build_redeem_slate(), redeem slate participant data is not empty".to_string()));
 		}
 
 		// Build slate
@@ -466,10 +476,10 @@ impl BuyApi {
 		if slate
 			.participant_data
 			.get(id)
-			.ok_or(ErrorKind::UnexpectedAction)?
+			.ok_or(ErrorKind::UnexpectedAction("Buyer Fn finalize_redeem_slate() redeem slate participant data is not initialized for this party".to_string()))?
 			.is_complete()
 		{
-			return Err(ErrorKind::OneShot.into());
+			return Err(ErrorKind::OneShot("Buyer Fn finalize_redeem_slate() redeem slate is already initialized".to_string()).into());
 		}
 
 		// Replace participant
@@ -477,7 +487,7 @@ impl BuyApi {
 			slate
 				.participant_data
 				.get_mut(other_id)
-				.ok_or(ErrorKind::UnexpectedAction)?,
+				.ok_or(ErrorKind::UnexpectedAction("Buyer Fn finalize_redeem_slate() redeem slate participant data is not initialized for other party".to_string()))?,
 			part,
 		);
 
@@ -500,7 +510,7 @@ impl BuyApi {
 	) -> Result<(), ErrorKind> {
 		// This function should only be called once
 		if swap.adaptor_signature.is_some() {
-			return Err(ErrorKind::OneShot);
+			return Err(ErrorKind::OneShot("Buyer calculate_adaptor_signature(), miltisig is already initialized".to_string()));
 		}
 
 		let sec_key = Self::redeem_tx_secret(keychain, swap, context)?;

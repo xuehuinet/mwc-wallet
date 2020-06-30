@@ -32,6 +32,7 @@ use std::io::Cursor;
 use std::ops::Deref;
 use std::time::Duration;
 
+/// BTC transaction ready to post. Here it is a redeem tx
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcRedeemTx {
 	pub txid: sha256d::Hash,
@@ -39,10 +40,12 @@ pub struct BtcRedeemTx {
 	pub tx: Vec<u8>,
 }
 
+/// BTC operations context
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcData {
+	/// BTC Lock time in seconds. Expected 24 hours
 	pub lock_time: u32,
-	/// Key owned by seller
+	/// Key owned by seller. Private key: keychain + BtcSellerContext::cosign
 	#[serde(serialize_with = "pubkey_to_hex", deserialize_with = "pubkey_from_hex")]
 	pub cosign: PublicKey,
 	/// Key owned by buyer
@@ -51,19 +54,26 @@ pub struct BtcData {
 		deserialize_with = "option_pubkey_from_hex"
 	)]
 	pub refund: Option<PublicKey>,
+	/// BTC outputs that Buyer useing for the swap
 	pub confirmed_outputs: Vec<Output>,
+	/// Will be True if BTC coins are have enough confirmations are locked at that account.
 	pub locked: bool,
+	/// BTX redeem transaction, ready to be posted
 	pub redeem_tx: Option<BtcRedeemTx>,
+	/// Number of confirmations that redeem transaction already get.
 	pub redeem_confirmations: Option<u64>,
+	/// Script for redeem confirmation. Lock is used Used for Pay 2 Script Hash.
+	/// I think Seller suppose to redeem BTS by this address
 	#[serde(skip)]
 	pub script: Option<Script>,
 }
 
 impl BtcData {
+	/// Create seller BTC data (party that receive BTC).
 	pub(crate) fn new<K>(
-		keychain: &K,
-		context: &BtcSellerContext,
-		duration: Duration,
+		keychain: &K,    // Private key
+		context: &BtcSellerContext, // Derivarive index
+		duration: Duration, // BTC locking duration
 	) -> Result<Self, ErrorKind>
 	where
 		K: Keychain,
@@ -92,6 +102,7 @@ impl BtcData {
 		})
 	}
 
+	/// Create buyer BTC data (party that sell BTC)
 	pub(crate) fn from_offer<K>(
 		keychain: &K,
 		offer: BtcOfferUpdate,
@@ -114,6 +125,7 @@ impl BtcData {
 		})
 	}
 
+	/// Seller applies accepted offer message from the buyer
 	pub(crate) fn accepted_offer(
 		&mut self,
 		accepted_offer: BtcAcceptOfferUpdate,
@@ -121,7 +133,7 @@ impl BtcData {
 		self.refund = Some(accepted_offer.refund);
 		Ok(())
 	}
-
+	/// Return BTC related data
 	pub(crate) fn wrap(self) -> SecondaryData {
 		SecondaryData::Btc(self)
 	}
@@ -171,6 +183,8 @@ impl BtcData {
 		Ok(address)
 	}
 
+	/// Build BTC redeem transactions
+	/// Update self.redeem_tx  with result
 	pub(crate) fn redeem_tx(
 		&mut self,
 		secp: &Secp256k1,
@@ -275,69 +289,87 @@ impl BtcData {
 		Ok(script_sig)
 	}
 
+	/// Seller init BTC offer for buyer
 	pub(crate) fn offer_update(&self) -> BtcUpdate {
 		BtcUpdate::Offer(BtcOfferUpdate {
-			lock_time: self.lock_time,
-			cosign: self.cosign.clone(),
+			lock_time: self.lock_time,  // Offered lock time for BTC coins
+			cosign: self.cosign.clone(), // Buyer part of Schnorr multisig.
 		})
 	}
 
+	/// Seller apply respond for the Buyer.
 	pub(crate) fn accept_offer_update(&self) -> Result<BtcUpdate, ErrorKind> {
 		Ok(BtcUpdate::AcceptOffer(BtcAcceptOfferUpdate {
-			refund: self.refund.ok_or(ErrorKind::UnexpectedMessageType)?.clone(),
+			refund: self.refund.ok_or(ErrorKind::UnexpectedMessageType("BTC refund pubkey is not defined at BtcAcceptOfferUpdate payload".to_string()))?.clone(),
 		}))
 	}
 }
 
+/// Context for the Seller (party that receive BTC)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcSellerContext {
+	/// Seller, cosign index for derivative key.
 	pub cosign: Identifier,
 }
 
+/// Context for the Buyer (party that sell BTC)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcBuyerContext {
+	/// Buyer refund index for derivative key
 	pub refund: Identifier,
 }
 
+/// Messages regarding BTC part of the deal
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BtcUpdate {
+	/// Seller send offer to Buyer. Here is details about BTC deal
 	Offer(BtcOfferUpdate),
+	/// Buyer message back to Seller. Offer is accepted
 	AcceptOffer(BtcAcceptOfferUpdate),
 }
 
 impl BtcUpdate {
+	/// Unwrap BtcOfferUpdate  with data type verification
 	pub fn unwrap_offer(self) -> Result<BtcOfferUpdate, ErrorKind> {
 		match self {
 			BtcUpdate::Offer(u) => Ok(u),
-			_ => Err(ErrorKind::UnexpectedMessageType),
+			_ => Err(ErrorKind::UnexpectedMessageType("Fn unwrap_offer() expecting BtcUpdate::Offer".to_string())),
 		}
 	}
 
+	/// Unwrap BtcAcceptOfferUpdate  with data type verification
 	pub fn unwrap_accept_offer(self) -> Result<BtcAcceptOfferUpdate, ErrorKind> {
 		match self {
 			BtcUpdate::AcceptOffer(u) => Ok(u),
-			_ => Err(ErrorKind::UnexpectedMessageType),
+			_ => Err(ErrorKind::UnexpectedMessageType("Fn unwrap_accept_offer() expecting BtcUpdate::AcceptOffer".to_string())),
 		}
 	}
 
+	/// Wrap thos BTC object into SecondaryUpdate message.
 	pub fn wrap(self) -> SecondaryUpdate {
 		SecondaryUpdate::BTC(self)
 	}
 }
 
+/// Seller send offer to Buyer. Here is details about BTC deal
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcOfferUpdate {
+	/// BTC lock time in seconds. Expected 24 hours value.
 	pub lock_time: u32,
+	/// Public key to do cosign with Schnorr signature.
 	#[serde(serialize_with = "pubkey_to_hex", deserialize_with = "pubkey_from_hex")]
 	pub cosign: PublicKey,
 }
 
+/// Buyer message back to Seller. Offer is accepted
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcAcceptOfferUpdate {
+	/// Buyer public key for refund
 	#[serde(serialize_with = "pubkey_to_hex", deserialize_with = "pubkey_from_hex")]
 	pub refund: PublicKey,
 }
 
+/// Map MWC network to matched BTC network
 fn btc_network(network: Network) -> BtcNetwork {
 	match network {
 		Network::Floonet => BtcNetwork::Testnet,

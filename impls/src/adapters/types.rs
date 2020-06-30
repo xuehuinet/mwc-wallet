@@ -48,6 +48,7 @@ pub trait SubscriptionHandler: Send {
 	fn on_close(&self, result: CloseReason);
 	fn on_dropped(&self);
 	fn on_reestablished(&self);
+	// TODO  name should be about swap
 	fn on_message(&self, from: &dyn Address, swap: Message);
 
 	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>);

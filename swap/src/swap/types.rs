@@ -22,21 +22,25 @@ use grin_util::secp::key::SecretKey;
 use std::convert::TryFrom;
 use std::fmt;
 
+/// MWC Network where SWAP happens.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Network {
+	/// Floonet (testnet)
 	Floonet,
+	/// Mainnet (production)
 	Mainnet,
 }
 
 impl Network {
+	/// Constructor from mwc-node ChainTypes
 	pub fn from_chain_type(chain_type: ChainTypes) -> Result<Self, ErrorKind> {
 		match chain_type {
 			ChainTypes::Floonet => Ok(Network::Floonet),
 			ChainTypes::Mainnet => Ok(Network::Mainnet),
-			_ => Err(ErrorKind::UnexpectedNetwork),
+			_ => Err(ErrorKind::UnexpectedNetwork(format!("{:?}", chain_type))),
 		}
 	}
-
+	/// To mwc-node ChainType
 	pub fn to_chain_type(&self) -> ChainTypes {
 		match self {
 			Network::Floonet => ChainTypes::Floonet,
@@ -57,23 +61,37 @@ impl PartialEq<Network> for ChainTypes {
 	}
 }
 
+/// Roles of MWC swap participants
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Role {
+	/// Seller - sell MWC for BTC. Params: (<BTC redeem address>, <change amount>)
 	Seller(String, u64),
+	/// Buyer  - buy MWC for BTC
 	Buyer,
 }
 
+/// Status of the MWC swap session
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Status {
+	/// Swap instance Created by Seller
 	Created,
+	/// Offered to Buyer
 	Offered,
+	/// Offer accepted by Seller
 	Accepted,
+	/// MWC & BTC funds are locked
 	Locked,
+	/// Init Redeem transaction
 	InitRedeem,
+	/// Buyer redeem MWC transaction
 	Redeem,
+	/// Seller redeem BTC Transaction
 	RedeemSecondary,
+	/// Done
 	Completed,
+	/// Failure scenario for Seller: MWC refund transaction was posted, get a refund
 	Refunded,
+	/// Failure scenario for Buyer: Session is cancelled, nothing need to be done
 	Cancelled,
 }
 
@@ -95,18 +113,22 @@ impl fmt::Display for Status {
 	}
 }
 
+/// Secondary currency that swap support
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Currency {
+	/// Bitcoin Segwit
 	Btc,
 }
 
 impl Currency {
+	/// Satoshi to 1 conversion
 	pub fn exponent(&self) -> usize {
 		match self {
 			Currency::Btc => 8,
 		}
 	}
 
+	/// Print amount in nano coins normally
 	pub fn amount_to_hr_string(&self, amount: u64, truncate: bool) -> String {
 		let exp = self.exponent();
 		let a = format!("{}", amount);
@@ -128,9 +150,10 @@ impl Currency {
 		format!("{}.{}{}", characteristic, mantissa_prefix, mantissa)
 	}
 
+	/// Convert string amount to Satoshi amount
 	pub fn amount_from_hr_string(&self, hr: &str) -> Result<u64, ErrorKind> {
 		if hr.find(",").is_some() {
-			return Err(ErrorKind::InvalidAmountString);
+			return Err(ErrorKind::InvalidAmountString(hr.to_string()));
 		}
 
 		let exp = self.exponent();
@@ -145,7 +168,7 @@ impl Currency {
 
 		let amount = characteristic * 10u64.pow(exp as u32) + mantissa;
 		if amount == 0 {
-			return Err(ErrorKind::InvalidAmountString);
+			return Err(ErrorKind::InvalidAmountString("zero amoount".to_string()));
 		}
 
 		Ok(amount)
@@ -167,7 +190,7 @@ impl TryFrom<&str> for Currency {
 	fn try_from(value: &str) -> Result<Self, Self::Error> {
 		match value.to_lowercase().as_str() {
 			"btc" => Ok(Currency::Btc),
-			_ => Err(ErrorKind::InvalidCurrency),
+			_ => Err(ErrorKind::InvalidCurrency(value.to_string())),
 		}
 	}
 }
@@ -179,7 +202,7 @@ fn parse_characteristic(characteristic: &str) -> Result<u64, ErrorKind> {
 
 	characteristic
 		.parse()
-		.map_err(|_| ErrorKind::InvalidAmountString)
+		.map_err(|_| ErrorKind::InvalidAmountString(characteristic.to_string()))
 }
 
 fn parse_mantissa(mantissa: &str, exp: usize) -> Result<u64, ErrorKind> {
@@ -190,24 +213,27 @@ fn parse_mantissa(mantissa: &str, exp: usize) -> Result<u64, ErrorKind> {
 	if m.len() == 0 {
 		return Ok(0);
 	}
-
-	m.parse().map_err(|_| ErrorKind::InvalidAmountString)
+	m.parse().map_err(|_| ErrorKind::InvalidAmountString(m.to_string()))
 }
 
+/// Secondary currency related data
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SecondaryData {
+	/// None
 	Empty,
+	/// Bitcoin data
 	Btc(BtcData),
 }
 
 impl SecondaryData {
+	/// To BTC data
 	pub fn unwrap_btc(&self) -> Result<&BtcData, ErrorKind> {
 		match self {
 			SecondaryData::Btc(d) => Ok(d),
 			_ => Err(ErrorKind::UnexpectedCoinType),
 		}
 	}
-
+	/// To BTC data
 	pub fn unwrap_btc_mut(&mut self) -> Result<&mut BtcData, ErrorKind> {
 		match self {
 			SecondaryData::Btc(d) => Ok(d),
@@ -216,31 +242,40 @@ impl SecondaryData {
 	}
 }
 
+/// Buyer/Seller single deal context
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Context {
+	/// Multisig key. Both Buyer and Seller using it
 	pub multisig_key: Identifier,
+	/// Multisig nonce. Both Buyer and Seller using it
 	#[serde(serialize_with = "seckey_to_hex", deserialize_with = "seckey_from_hex")]
 	pub multisig_nonce: SecretKey,
+	/// Nonce that is requred to build a lock slate. Both sides need it.
 	#[serde(serialize_with = "seckey_to_hex", deserialize_with = "seckey_from_hex")]
 	pub lock_nonce: SecretKey,
+	/// Nonce that is requred to build a refund slate. Both sides need it.
 	#[serde(serialize_with = "seckey_to_hex", deserialize_with = "seckey_from_hex")]
 	pub refund_nonce: SecretKey,
+	/// Nonce that is requred to build a redeem slate. Both sides need it.
 	#[serde(serialize_with = "seckey_to_hex", deserialize_with = "seckey_from_hex")]
 	pub redeem_nonce: SecretKey,
+	/// Specific Buyer or Seller context
 	pub role_context: RoleContext,
 }
 
 impl Context {
+	/// To Seller Context
 	pub fn unwrap_seller(&self) -> Result<&SellerContext, ErrorKind> {
 		match &self.role_context {
 			RoleContext::Seller(c) => Ok(c),
-			RoleContext::Buyer(_) => Err(ErrorKind::UnexpectedRole),
+			RoleContext::Buyer(_) => Err(ErrorKind::UnexpectedRole("Context Fn unwrap_seller()".to_string())),
 		}
 	}
 
+	/// To Buyer Context
 	pub fn unwrap_buyer(&self) -> Result<&BuyerContext, ErrorKind> {
 		match &self.role_context {
-			RoleContext::Seller(_) => Err(ErrorKind::UnexpectedRole),
+			RoleContext::Seller(_) => Err(ErrorKind::UnexpectedRole( "Context Fn unwrap_seller()".to_string()) ),
 			RoleContext::Buyer(c) => Ok(c),
 		}
 	}
@@ -263,21 +298,30 @@ impl ser::Readable for Context {
 	}
 }
 
+/// Context specfic to the swap party role
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RoleContext {
+	/// Seller role
 	Seller(SellerContext),
+	/// Buyer role
 	Buyer(BuyerContext),
 }
 
+/// Context for the seller party
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SellerContext {
+	/// MWC Inputs that we are agree to sell
 	pub inputs: Vec<(Identifier, u64)>,
+	/// MWC Change outputs from the lock slate (Derivative ID)
 	pub change_output: Identifier,
+	/// MWC refund output  (Derivative ID)
 	pub refund_output: Identifier,
+	/// Secondary currency (BTC) related context
 	pub secondary_context: SecondarySellerContext,
 }
 
 impl SellerContext {
+	/// Retreive BTC data
 	pub fn unwrap_btc(&self) -> Result<&BtcSellerContext, ErrorKind> {
 		match &self.secondary_context {
 			SecondarySellerContext::Btc(c) => Ok(c),
@@ -286,14 +330,19 @@ impl SellerContext {
 	}
 }
 
+/// Context for the Bayer party
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BuyerContext {
+	/// Derivative ID for lock slate output. Buyer part of multisig
 	pub output: Identifier,
+	/// Secret that unlocks the funds on both chains (Derivative ID)
 	pub redeem: Identifier,
+	/// Secondary currency (BTC) related context
 	pub secondary_context: SecondaryBuyerContext,
 }
 
 impl BuyerContext {
+	/// To BTC context
 	pub fn unwrap_btc(&self) -> Result<&BtcBuyerContext, ErrorKind> {
 		match &self.secondary_context {
 			SecondaryBuyerContext::Btc(c) => Ok(c),
@@ -302,16 +351,21 @@ impl BuyerContext {
 	}
 }
 
+/// Seller Secondary currency spepicif context
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SecondarySellerContext {
+	/// BTC context
 	Btc(BtcSellerContext),
 }
 
+/// Buyer secondary currency context
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SecondaryBuyerContext {
+	/// BTC context
 	Btc(BtcBuyerContext),
 }
 
+/// Action or step of the swap process
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Action {
 	/// No further action required
@@ -326,16 +380,27 @@ pub enum Action {
 	PublishTxSecondary(Currency),
 	/// Deposit secondary currency
 	DepositSecondary {
+		/// Type of currency (BTC)
 		currency: Currency,
+		/// Amount
 		amount: u64,
+		/// Address to deposit
 		address: String,
 	},
-	/// Wait for sufficient confirmations
-	Confirmations { required: u64, actual: u64 },
+	/// Wait for sufficient confirmations. Lock transaction on MWC network
+	Confirmations {
+		/// Required number of confirmations
+		required: u64,
+		/// Actual number of confirmations
+		actual: u64
+	},
 	/// Wait for sufficient confirmations on the secondary currency
 	ConfirmationsSecondary {
+		/// Type of currency (BTC)
 		currency: Currency,
+		/// Required number of confirmations
 		required: u64,
+		/// Actual number of confirmations
 		actual: u64,
 	},
 	/// Wait for the Grin redeem tx to be mined

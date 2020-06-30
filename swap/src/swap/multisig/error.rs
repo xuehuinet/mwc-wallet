@@ -15,29 +15,41 @@
 use failure::Fail;
 use grin_util::secp;
 
+/// Multisig error
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum ErrorKind {
-	#[fail(display = "Invalid reveal")]
+	/// Reveal phase error
+	#[fail(display = "Multisig Invalid reveal")]
 	Reveal,
-	#[fail(display = "Invalid hash length")]
+	/// Not expected hash length, expected is 32
+	#[fail(display = "Multisig Invalid hash length")]
 	HashLength,
-	#[fail(display = "Participant already exists")]
+	/// Participant already exists
+	#[fail(display = "Multisig Participant already exists")]
 	ParticipantExists,
-	#[fail(display = "Participant doesn't exist")]
+	/// Expected participant doesn't exist
+	#[fail(display = "Multisig Participant doesn't exist")]
 	ParticipantDoesntExist,
-	#[fail(display = "Participant created in the wrong order")]
+	/// Participant created in the wrong order
+	#[fail(display = "Multisig Participant created in the wrong order")]
 	ParticipantOrdering,
-	#[fail(display = "Participant invalid")]
+	/// Participant invalid
+	#[fail(display = "Multisig Participant invalid")]
 	ParticipantInvalid,
+	/// Multisig incomplete
 	#[fail(display = "Multisig incomplete")]
 	MultiSigIncomplete,
-	#[fail(display = "Common nonce missing")]
+	/// Common nonce missing
+	#[fail(display = "Multisig Common nonce missing")]
 	CommonNonceMissing,
-	#[fail(display = "Round 1 missing field")]
+	/// Round 1 missing field
+	#[fail(display = "Multisig Round 1 missing field")]
 	Round1Missing,
-	#[fail(display = "Round 2 missing field")]
+	/// Round 2 missing field
+	#[fail(display = "Multisig Round 2 missing field")]
 	Round2Missing,
-	#[fail(display = "Secp: _0")]
+	/// Secp error
+	#[fail(display = "Multisig Secp: {}", _0)]
 	Secp(secp::Error),
 }
 
