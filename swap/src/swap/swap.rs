@@ -35,45 +35,69 @@ pub struct TxWrapper {
 	pub tx_hex: String,
 }
 
+/// Primary SWAP state. Both Seller and Buyer are using it.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Swap {
+	/// Swap session uuid
 	pub id: Uuid,
+	/// ? - it is allways 0
 	pub idx: u32,
+	/// Swap engine version. Both party are expected to have the same version
 	pub version: u8,
+	/// BTC redeem address. Seller want to get BTC to this address
 	pub address: Option<String>,
+	/// Network for the swap session (mainnet/floonet)
 	pub network: Network,
+	/// Role of the party (Byer or Seller)
 	pub role: Role,
+	/// Time when we started swap session
 	pub started: DateTime<Utc>,
+	/// Current status for swap session
 	pub status: Status,
+	/// MWC amount that Seller offer
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub primary_amount: u64,
+	/// BTC amount that Buyer pay
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub secondary_amount: u64,
+	/// units for BTC
 	pub secondary_currency: Currency,
+	/// Data associated with BTC deal
 	pub secondary_data: SecondaryData,
 	#[serde(
 		serialize_with = "option_pubkey_to_hex",
 		deserialize_with = "option_pubkey_from_hex"
 	)]
+	/// Buyer Redeem slate public key
 	pub(super) redeem_public: Option<PublicKey>,
+	/// Schnorr multisig this party participant id
 	pub(super) participant_id: usize,
+	/// Schnorr multisig builder and holder
 	pub(super) multisig: MultisigBuilder,
+	/// MWC Lock Slate
 	#[serde(deserialize_with = "slate_deser")]
 	pub(super) lock_slate: Slate,
+	/// Number of confirmations that lock state already get
 	pub(super) lock_confirmations: Option<u64>,
+	/// MWC Refund Slate
 	#[serde(deserialize_with = "slate_deser")]
 	pub(super) refund_slate: Slate,
 	#[serde(deserialize_with = "slate_deser")]
+	/// MWC redeem slate
 	pub(super) redeem_slate: Slate,
+	/// Redeem confirmations number
 	pub(super) redeem_confirmations: Option<u64>,
+	/// Signature that is done with multisig
 	#[serde(
 		serialize_with = "option_sig_to_hex",
 		deserialize_with = "option_sig_from_hex"
 	)]
+	/// Multisig signature
 	pub(super) adaptor_signature: Option<Signature>,
 }
 
 impl Swap {
+	/// Return true if Swap session is finished (not necessary with a success)
 	pub fn is_finalized(&self) -> bool {
 		use Status::*;
 
@@ -83,6 +107,7 @@ impl Swap {
 		}
 	}
 
+	/// Return true for Seller
 	pub fn is_seller(&self) -> bool {
 		match self.role {
 			Role::Seller(_, _) => true,
@@ -90,6 +115,7 @@ impl Swap {
 		}
 	}
 
+	/// Get MWC lock slate, change outputs
 	pub fn change_output<K: Keychain>(
 		&self,
 		keychain: &K,
@@ -109,6 +135,7 @@ impl Swap {
 		Ok((identifier, amount, commit))
 	}
 
+	/// Outputs from redeem slate
 	pub fn redeem_output<K: Keychain>(
 		&self,
 		keychain: &K,
@@ -130,21 +157,21 @@ impl Swap {
 	pub(super) fn expect_seller(&self) -> Result<(), ErrorKind> {
 		match self.role {
 			Role::Seller(_, _) => Ok(()),
-			_ => Err(ErrorKind::UnexpectedRole),
+			_ => Err(ErrorKind::UnexpectedRole("Swap Fn expect_seller()".to_string())),
 		}
 	}
 
 	pub(super) fn expect_buyer(&self) -> Result<(), ErrorKind> {
 		match self.role {
 			Role::Buyer => Ok(()),
-			_ => Err(ErrorKind::UnexpectedRole),
+			_ => Err(ErrorKind::UnexpectedRole("Swap Fn expect_buyer()".to_string())),
 		}
 	}
 
 	pub(super) fn unwrap_seller(&self) -> Result<(String, u64), ErrorKind> {
 		match &self.role {
 			Role::Seller(address, change) => Ok((address.clone(), *change)),
-			_ => Err(ErrorKind::UnexpectedRole),
+			_ => Err(ErrorKind::UnexpectedRole("Swap Fn unwrap_seller()".to_string())),
 		}
 	}
 
@@ -234,7 +261,7 @@ impl Swap {
 			.tx
 			.kernels()
 			.get(0)
-			.ok_or(ErrorKind::UnexpectedAction)?
+			.ok_or(ErrorKind::UnexpectedAction("Swap Fn find_redeem_kernel() redeem slate is not initialized, not found kernel".to_string()))?
 			.excess;
 
 		let res = node_client
@@ -244,6 +271,7 @@ impl Swap {
 		Ok(res)
 	}
 
+	/// Check if MWC funds are available. Checking if lock slate has more confirmation that is needed.
 	pub(super) fn is_locked(&self, confirmations: u64) -> bool {
 		self.lock_confirmations.unwrap_or(0) >= confirmations
 	}

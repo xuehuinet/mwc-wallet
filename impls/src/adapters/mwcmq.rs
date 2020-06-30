@@ -1007,6 +1007,7 @@ impl MWCMQSBroker {
 
 						for i in 0..3 {
 							if splitxvec[i].starts_with("swapmessage=") {
+								// TODO  code duplicaiton
 								let split2 = splitxvec[i].split("=");
 								let vec2: Vec<&str> = split2.collect();
 								if vec2.len() <= 1 {

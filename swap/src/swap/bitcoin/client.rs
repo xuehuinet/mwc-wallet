@@ -23,14 +23,19 @@ use std::io::Cursor;
 use std::mem;
 use std::sync::Arc;
 
+/// Single BTC output
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub struct Output {
+	/// A reference to a bitcoin transaction output
 	#[serde(with = "OutPointRef")]
 	pub out_point: OutPoint,
+	/// BTC Output value
 	pub value: u64,
+	/// BTC Output  height
 	pub height: u64,
 }
 
+/// Serialization for bitcoin::OutPoint. Helper
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(remote = "OutPoint")]
 struct OutPointRef {
@@ -50,30 +55,44 @@ impl Hash for Output {
 	}
 }
 
+/// Bitcoin node client
 pub trait BtcNodeClient: Sync + Send + 'static {
+	/// Get node height
 	fn height(&mut self) -> Result<u64, ErrorKind>;
+	/// Get unspent outputs for the address
 	fn unspent(&mut self, address: &Address) -> Result<Vec<Output>, ErrorKind>;
+	/// Post BTC tranaction,
 	fn post_tx(&mut self, tx: Vec<u8>) -> Result<(), ErrorKind>;
+	/// Get BTC transaction info.
+	/// Return (height, tx)
 	fn transaction(
 		&mut self,
-		tx_hash: &sha256d::Hash,
+		tx_hash: &sha256d::Hash, // tx hash
 	) -> Result<Option<(Option<u64>, Transaction)>, ErrorKind>;
 }
 
+/// Mock BTC node for the testing
 #[derive(Debug, Clone)]
 pub struct TestBtcNodeClientState {
+	/// current height
 	pub height: u64,
+	/// Transactions to heights
 	pub tx_heights: HashMap<sha256d::Hash, u64>,
+	/// Mined transactions
 	pub txs: HashMap<sha256d::Hash, Transaction>,
+	/// Pending transactions
 	pub pending: HashMap<sha256d::Hash, Transaction>,
 }
 
+/// Mock BTC node client
 #[derive(Debug, Clone)]
 pub struct TestBtcNodeClient {
+	/// mock node state
 	pub state: Arc<Mutex<TestBtcNodeClientState>>,
 }
 
 impl TestBtcNodeClient {
+	/// Create an instance at height
 	pub fn new(height: u64) -> Self {
 		Self {
 			state: Arc::new(Mutex::new(TestBtcNodeClientState {
@@ -85,6 +104,7 @@ impl TestBtcNodeClient {
 		}
 	}
 
+	/// Add 'mined' transaction
 	pub fn push_transaction(&self, transaction: &Transaction) {
 		let mut state = self.state.lock();
 		let height = state.height;
@@ -94,6 +114,7 @@ impl TestBtcNodeClient {
 		state.txs.insert(txid, transaction.clone());
 	}
 
+	/// Mine a new block. All oending transacitons will be included
 	pub fn mine_block(&self) {
 		let mut state = self.state.lock();
 		state.height += 1;
@@ -106,6 +127,7 @@ impl TestBtcNodeClient {
 		}
 	}
 
+	/// Mine several blocks
 	pub fn mine_blocks(&self, count: u64) {
 		if count > 0 {
 			self.mine_block();
@@ -152,18 +174,18 @@ impl BtcNodeClient for TestBtcNodeClient {
 
 		let cursor = Cursor::new(tx);
 		let tx = Transaction::consensus_decode(cursor)
-			.map_err(|_| ErrorKind::NodeClient("Unable to parse transaction".into()))?;
+			.map_err(|_| ErrorKind::ElectrumNodeClient("Unable to parse transaction".into()))?;
 
 		let txid = tx.txid();
 		if state.pending.contains_key(&txid) {
-			return Err(ErrorKind::NodeClient("Already in mempool".into()));
+			return Err(ErrorKind::ElectrumNodeClient("Already in mempool".into()));
 		}
 		if state.txs.contains_key(&txid) {
-			return Err(ErrorKind::NodeClient("Already in chain".into()));
+			return Err(ErrorKind::ElectrumNodeClient("Already in chain".into()));
 		}
 
 		tx.verify(&state.txs)
-			.map_err(|e| ErrorKind::NodeClient(format!("{}", e)))?;
+			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("{}", e)))?;
 		state.pending.insert(txid, tx.clone());
 
 		Ok(())

@@ -68,14 +68,20 @@ impl SwapMessage {
 	}
 }
 
+/// TODO  No reasons to use mwc_node_uri & mwc_api_secret
+/// Wallet has the mwc node client. We need to reuse it
 #[derive(Clone)]
 pub struct SwapConfig {
+	/// TODO del me, wallet has it
 	pub mwc_node_uri: String,
+	/// TODO del me, wallet has it
 	pub mwc_api_secret: Option<String>,
+	/// Electrum node URI
 	pub electrum_node_uri: String,
 }
 
 impl SwapConfig {
+	/// Create a new instance for config
 	pub fn new(
 		mwc_node_uri: String,
 		mwc_api_secret: Option<String>,

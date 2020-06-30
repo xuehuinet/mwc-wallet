@@ -26,12 +26,15 @@ use grin_util::secp::aggsig::export_secnonce_single as generate_nonce;
 use std::str::FromStr;
 use std::time::Duration;
 
+/// SwapApi trait implementaiton for BTC
 pub struct BtcSwapApi<C, B>
 where
 	C: NodeClient,
 	B: BtcNodeClient,
 {
+	/// Client for MWC node
 	node_client: C,
+	/// Client for BTC electrumx node
 	btc_node_client: B,
 }
 
@@ -48,17 +51,19 @@ where
 		}
 	}
 
+	/// Update swap.secondary_data with a roll back script.
 	fn script<K: Keychain>(&self, keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind> {
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
 		btc_data.script(
 			keychain.secp(),
 			swap.redeem_public
 				.as_ref()
-				.ok_or(ErrorKind::UnexpectedAction)?,
+				.ok_or(ErrorKind::UnexpectedAction("swap.redeem_public value is not defined. Method BtcSwapApi::script".to_string()))?,
 		)?;
 		Ok(())
 	}
 
+	/// Check BTC amount at the chain.
 	fn btc_balance<K: Keychain>(
 		&mut self,
 		keychain: &K,
@@ -113,13 +118,14 @@ where
 
 	// Seller specific methods
 
-	/// Seller checks Grin and Bitcoin chains for the locked funds
+	/// Seller checks Grin and Bitcoin chains for the locked funds, Statu::Accepted
+	/// Return Ok(None) if everything is ready. Otherwise it is action.
 	fn seller_check_locks<K: Keychain>(
 		&mut self,
 		keychain: &K,
 		swap: &mut Swap,
 	) -> Result<Option<Action>, ErrorKind> {
-		// Check Grin chain
+		//  Check if Lock slate is ready and confirmed.
 		if !swap.is_locked(3) {
 			match swap.lock_confirmations {
 				None => return Ok(Some(Action::PublishTx)),
@@ -138,6 +144,7 @@ where
 
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
+			// Waiting for Btc confirmations
 			let (pending_amount, confirmed_amount, mut least_confirmations) =
 				self.btc_balance(keychain, swap, 2)?;
 			if pending_amount + confirmed_amount < swap.secondary_amount {
@@ -174,7 +181,7 @@ where
 			Status::Accepted | Status::Locked => {
 				self.seller_init_redeem(keychain, swap, context, message)
 			}
-			_ => Err(ErrorKind::UnexpectedMessageType),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!("seller_receive_message get unexpected status {:?}", swap.status) )),
 		}
 	}
 
@@ -205,12 +212,14 @@ where
 		message: Message,
 	) -> Result<(), ErrorKind> {
 		let (_, init_redeem, _) = message.unwrap_init_redeem()?;
+		// Expected that mwc & btc are already locked at that moment
 		SellApi::init_redeem(keychain, swap, context, init_redeem)?;
 
 		Ok(())
 	}
 
-	/// Seller builds the transaction to redeem their Bitcoins
+	/// Seller builds the transaction to redeem their Bitcoins, Status::Redeem
+	/// Updating data:  swap.secondary_data.redeem_tx
 	fn seller_build_redeem_tx<K: Keychain>(
 		&self,
 		keychain: &K,
@@ -230,7 +239,7 @@ where
 		// This function should only be called once
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
 		if btc_data.redeem_tx.is_some() {
-			return Err(ErrorKind::OneShot)?;
+			return Err(ErrorKind::OneShot("Fn: seller_build_redeem_tx, btc_data.redeem_tx is not empty".to_string()))?;
 		}
 
 		btc_data.redeem_tx(
@@ -347,7 +356,7 @@ where
 	) -> Result<(), ErrorKind> {
 		match swap.status {
 			Status::InitRedeem => self.buyer_redeem(keychain, swap, context, message),
-			_ => Err(ErrorKind::UnexpectedMessageType),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!("Fn buyer_receive_message, get status {:?}", swap.status))),
 		}
 	}
 
@@ -401,7 +410,7 @@ where
 
 		let role_context = if is_seller {
 			RoleContext::Seller(SellerContext {
-				inputs: inputs.ok_or(ErrorKind::UnexpectedRole)?,
+				inputs: inputs.ok_or(ErrorKind::UnexpectedRole("Fn create_context() for seller not found inputs".to_string()))?,
 				change_output: keys.next().unwrap(),
 				refund_output: keys.next().unwrap(),
 				secondary_context: SecondarySellerContext::Btc(BtcSellerContext {
@@ -514,7 +523,7 @@ where
 				if btc_data.redeem_confirmations.unwrap_or(0) > 0 {
 					swap.status = Status::Completed;
 				} else {
-					return Err(ErrorKind::UnexpectedAction);
+					return Err(ErrorKind::UnexpectedAction(format!("swapapi Fn completed() found incorrect btc_data.redeem_confirmations value: {:?}", btc_data.redeem_confirmations)));
 				}
 			}
 			Role::Buyer => BuyApi::completed(swap)?,
@@ -580,6 +589,7 @@ where
 			Role::Seller(_, _) => {
 				let mut message = SellApi::message(swap)?;
 				if let Update::Offer(_) = message.inner {
+					// exist for Status::Created. Seller creates the offer
 					message.set_inner_secondary(
 						swap.secondary_data.unwrap_btc()?.offer_update().wrap(),
 					);
@@ -668,13 +678,13 @@ where
 		swap.expect(Status::RedeemSecondary)?;
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
 		if btc_data.redeem_confirmations.is_some() {
-			return Err(ErrorKind::UnexpectedAction);
+			return Err(ErrorKind::UnexpectedAction("btc_data.redeem_confirmations is already defined at publish_secondary_transaction()".to_string()));
 		}
 
 		let tx = btc_data
 			.redeem_tx
 			.as_ref()
-			.ok_or(ErrorKind::UnexpectedAction)?
+			.ok_or(ErrorKind::UnexpectedAction("Fn publish_secondary_transaction() called with not prepared data for BTC Redeem Tx".to_string()))?
 			.tx
 			.clone();
 		self.btc_node_client.post_tx(tx)?;

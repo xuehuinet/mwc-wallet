@@ -13,6 +13,7 @@
 // limitations under the License.
 
 mod error;
+/// Types used for multisig operations
 pub mod types;
 
 pub use self::error::ErrorKind;

@@ -25,14 +25,22 @@ use hex::FromHex;
 use rand::thread_rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+/// Multisig builder
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Builder {
+	/// Number of participant. For swap it is 2
 	num_participants: usize,
 	#[serde(with = "secp_ser::string_or_u64")]
+	/// MWC amount that are used for swap
 	amount: u64,
+	/// False: use comitment Hash
+	/// True:  use comitment data
 	commit_reveal: bool,
+	/// Multisig participants data
 	pub participants: Vec<ParticipantData>,
+	/// This party participant Id
 	participant_id: usize,
+	/// This party secret
 	#[serde(serialize_with = "seckey_to_hex", deserialize_with = "seckey_from_hex")]
 	nonce: SecretKey,
 	#[serde(
@@ -41,10 +49,12 @@ pub struct Builder {
 		skip_serializing_if = "Option::is_none",
 		default
 	)]
+	/// Sharable nonce
 	pub common_nonce: Option<SecretKey>,
 }
 
 impl Builder {
+	/// Create a builder
 	pub fn new(
 		num_participants: usize,
 		amount: u64,
@@ -64,6 +74,7 @@ impl Builder {
 		}
 	}
 
+	/// Create this party participant part
 	pub fn create_participant(
 		&mut self,
 		secp: &Secp256k1,
@@ -82,6 +93,7 @@ impl Builder {
 		Ok(())
 	}
 
+	/// Import participant data from the other party
 	pub fn import_participant(
 		&mut self,
 		id: usize,
@@ -104,6 +116,7 @@ impl Builder {
 		Ok(())
 	}
 
+	/// Checking revealed data
 	pub fn reveal_participant(
 		&mut self,
 		id: usize,
@@ -123,6 +136,7 @@ impl Builder {
 		}
 	}
 
+	/// Round 1 of building multisig
 	pub fn round_1_participant(
 		&mut self,
 		id: usize,
@@ -145,6 +159,7 @@ impl Builder {
 		Ok(())
 	}
 
+	/// Round 2 of building multisig
 	pub fn round_2_participant(
 		&mut self,
 		id: usize,
@@ -166,6 +181,7 @@ impl Builder {
 		Ok(())
 	}
 
+	/// Export this party participant data
 	pub fn export(&self) -> Result<ParticipantData, ErrorKind> {
 		if self.participants.len() <= self.participant_id {
 			return Err(ErrorKind::ParticipantDoesntExist);
@@ -174,6 +190,7 @@ impl Builder {
 		Ok(self.participants[self.participant_id].clone())
 	}
 
+	/// Checking revealed data
 	pub fn reveal(&mut self, secp: &Secp256k1, secret_key: &SecretKey) -> Result<(), ErrorKind> {
 		if self.participants.len() != self.num_participants {
 			return Err(ErrorKind::MultiSigIncomplete);
@@ -184,6 +201,7 @@ impl Builder {
 		Ok(())
 	}
 
+	/// Mulisig buiding round 1
 	pub fn round_1(&mut self, secp: &Secp256k1, blind: &SecretKey) -> Result<(), ErrorKind> {
 		let mut t_1 = PublicKey::new();
 		let mut t_2 = PublicKey::new();
@@ -211,6 +229,7 @@ impl Builder {
 		Ok(())
 	}
 
+	/// Mulisig buiding round 2
 	pub fn round_2(&mut self, secp: &Secp256k1, blind: &SecretKey) -> Result<(), ErrorKind> {
 		let mut t_1 = self.sum_t_1(secp)?;
 		let mut t_2 = self.sum_t_2(secp)?;
@@ -233,6 +252,7 @@ impl Builder {
 		Ok(())
 	}
 
+	/// Finalize building multisig
 	pub fn finalize(&self, secp: &Secp256k1, blind: &SecretKey) -> Result<RangeProof, ErrorKind> {
 		let mut t_1 = self.sum_t_1(secp)?;
 		let mut t_2 = self.sum_t_2(secp)?;
@@ -257,6 +277,7 @@ impl Builder {
 		Ok(proof)
 	}
 
+	/// Multisig as commit
 	pub fn as_input(&self, secp: &Secp256k1) -> Result<TxInput, ErrorKind> {
 		Ok(TxInput {
 			features: OutputFeatures::Plain,
@@ -264,6 +285,7 @@ impl Builder {
 		})
 	}
 
+	/// Multisig as output
 	pub fn as_output(&self, secp: &Secp256k1, blind: &SecretKey) -> Result<TxOutput, ErrorKind> {
 		Ok(TxOutput {
 			features: OutputFeatures::Plain,
@@ -272,6 +294,7 @@ impl Builder {
 		})
 	}
 
+	/// Build a commitment with initialized multisig
 	pub fn commit(&self, secp: &Secp256k1) -> Result<Commitment, ErrorKind> {
 		let mut partial_commitments: Vec<Commitment> = self
 			.participants
@@ -344,8 +367,10 @@ impl Builder {
 	}
 }
 
+/// Multisig participant data
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ParticipantData {
+	/// Hash for commit (not revealed data)
 	#[serde(skip_serializing_if = "Option::is_none", default)]
 	partial_commitment_hash: Option<Hash>,
 	#[serde(
@@ -354,6 +379,7 @@ pub struct ParticipantData {
 		skip_serializing_if = "Option::is_none",
 		default
 	)]
+	/// Commit (revealed case)
 	pub partial_commitment: Option<Commitment>,
 	#[serde(
 		serialize_with = "option_pubkey_to_hex",
@@ -361,6 +387,7 @@ pub struct ParticipantData {
 		skip_serializing_if = "Option::is_none",
 		default
 	)]
+	/// Public key
 	t_1: Option<PublicKey>,
 	#[serde(
 		serialize_with = "option_pubkey_to_hex",
@@ -368,6 +395,7 @@ pub struct ParticipantData {
 		skip_serializing_if = "Option::is_none",
 		default
 	)]
+	/// Public key
 	t_2: Option<PublicKey>,
 	#[serde(
 		serialize_with = "option_seckey_to_hex",
@@ -375,10 +403,12 @@ pub struct ParticipantData {
 		skip_serializing_if = "Option::is_none",
 		default
 	)]
+	/// Secret
 	tau_x: Option<SecretKey>,
 }
 
 impl ParticipantData {
+	/// Build from commitment as not revealed
 	pub fn new_commit(partial_commitment: Commitment) -> Self {
 		ParticipantData {
 			partial_commitment_hash: Some(partial_commitment.hash().unwrap()),
@@ -389,6 +419,7 @@ impl ParticipantData {
 		}
 	}
 
+	/// Build from commitment as revealed
 	pub fn new_revealed(partial_commitment: Commitment) -> Self {
 		ParticipantData {
 			partial_commitment_hash: None,
@@ -399,6 +430,7 @@ impl ParticipantData {
 		}
 	}
 
+	/// Convert this to not revealed
 	pub fn new_foreign_commit(&self) -> Result<Self, ErrorKind> {
 		let hash = self
 			.partial_commitment_hash
@@ -413,6 +445,7 @@ impl ParticipantData {
 		})
 	}
 
+	/// Convert this to revealed
 	pub fn new_foreign_reveal(&self) -> Result<Self, ErrorKind> {
 		let commit = self
 			.partial_commitment
@@ -427,6 +460,7 @@ impl ParticipantData {
 		})
 	}
 
+	/// Check if partial_commitment match the hash
 	fn reveal(&mut self, partial_commitment: &Commitment) -> Result<(), ErrorKind> {
 		let hash = self
 			.partial_commitment_hash
@@ -440,12 +474,14 @@ impl ParticipantData {
 	}
 }
 
+/// Hash value
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub struct Hash {
 	inner: Vec<u8>,
 }
 
 impl Hash {
+	/// Create a new hash instance
 	pub fn new(inner: Vec<u8>) -> Result<Self, ErrorKind> {
 		if inner.len() != 32 {
 			return Err(ErrorKind::HashLength);
@@ -454,6 +490,7 @@ impl Hash {
 		Ok(Self { inner })
 	}
 
+	/// Init secret from the hash
 	pub fn to_secret_key(&self, secp: &Secp256k1) -> Result<SecretKey, ErrorKind> {
 		let key = SecretKey::from_slice(secp, &self.inner)?;
 		Ok(key)
@@ -483,16 +520,19 @@ impl<'de> Deserialize<'de> for Hash {
 	}
 }
 
+/// Trait that make Hashable
 pub trait Hashed {
+	/// Calculate hash value
 	fn hash(&self) -> Result<Hash, ErrorKind>;
 }
-
+/// Define Hash for Pedersen Commitment
 impl Hashed for Commitment {
 	fn hash(&self) -> Result<Hash, ErrorKind> {
 		Hash::new(blake2b(32, &[], &self.0).as_bytes().to_vec())
 	}
 }
 
+/// Define hash for vector
 impl Hashed for Vec<u8> {
 	fn hash(&self) -> Result<Hash, ErrorKind> {
 		Hash::new(blake2b(32, &[], &self).as_bytes().to_vec())

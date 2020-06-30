@@ -12,15 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Swap API trait
 pub mod api;
+
+/// Library that support bitcoin operations
 pub mod bitcoin;
-pub mod buyer;
+
+/// Swap crate errors
 pub mod error;
+
+/// Messages that Buyer and Seller are exchanging during the swap process
 pub mod message;
+
+/// schnorr signature routine
 pub mod multisig;
+
+/// Swap buyer API (selling MWC for BTC)
+pub mod buyer;
+/// Swap Seller API (selling BTC for MWC)
 pub mod seller;
-pub mod ser;
+/// Swap state object that is used by both byer abd seller
 pub mod swap;
+
+
+/// Serialization adapters
+pub mod ser;
+
+/// Types used by swap library
 pub mod types;
 
 pub use self::error::ErrorKind;
@@ -65,16 +83,14 @@ mod tests {
 	use grin_core::core::transaction::Weighting;
 	use grin_core::core::verifier_cache::LruVerifierCache;
 	use grin_core::core::{Transaction, TxKernel};
-	use grin_core::ser::{deserialize, ProtocolVersion};
 	use grin_keychain::{ExtKeychain, Identifier, Keychain, SwitchCommitmentType};
 	use grin_util::secp::key::{PublicKey, SecretKey};
 	use grin_util::secp::pedersen::{Commitment, RangeProof};
-	use grin_util::{from_hex, to_hex};
+	use grin_util::{to_hex};
 	use libwallet::NodeClient;
 	use parking_lot::{Mutex, RwLock};
 	use std::collections::HashMap;
 	use std::fs::{read_to_string, write};
-	use std::io::Cursor;
 	use std::mem;
 	use std::str::FromStr;
 	use std::sync::Arc;
@@ -232,7 +248,7 @@ mod tests {
 			let res = (self.state.lock().height, "testnodehash".to_string(), 123455);
 			Ok(res)
 		}
-		fn get_header_info(&self, height: u64) -> Result<libwallet::HeaderInfo, libwallet::Error> {
+		fn get_header_info(&self, _height: u64) -> Result<libwallet::HeaderInfo, libwallet::Error> {
 			unimplemented!()
 		}
 		fn get_connected_peer_info(
@@ -242,16 +258,16 @@ mod tests {
 		}
 		fn height_range_to_pmmr_indices(
 			&self,
-			start_height: u64,
-			end_height: Option<u64>,
+			_start_height: u64,
+			_end_height: Option<u64>,
 		) -> Result<(u64, u64), libwallet::Error> {
 			unimplemented!()
 		}
 		fn get_blocks_by_height(
 			&self,
-			start_height: u64,
-			end_height: u64,
-			threads_number: usize,
+			_start_height: u64,
+			_end_height: u64,
+			_threads_number: usize,
 		) -> Result<Vec<grin_api::BlockPrintable>, libwallet::Error> {
 			unimplemented!()
 		}
@@ -259,10 +275,6 @@ mod tests {
 			unimplemented!()
 		}
 		fn post_tx(&self, tx: &Transaction, _fluff: bool) -> Result<(), libwallet::Error> {
-			//let wrapper1 = from_hex(tx.)
-			//let wrapper = from_hex(tx.body.   clone()).unwrap();
-			//let mut cursor = Cursor::new(wrapper);
-			//let tx: Transaction = deserialize(&mut cursor, ProtocolVersion(1)).unwrap();
 			tx.validate(
 				Weighting::AsTransaction,
 				Arc::new(RwLock::new(LruVerifierCache::new())),
@@ -327,9 +339,6 @@ mod tests {
 		fn get_version_info(&mut self) -> Option<libwallet::NodeVersionInfo> {
 			unimplemented!()
 		}
-		//fn get_chain_height(&self) -> Result<u64, libwallet::Error> {
-		//	Ok(self.state.lock().height)
-		//}
 		fn get_outputs_from_node(
 			&self,
 			wallet_outputs: &Vec<Commitment>,

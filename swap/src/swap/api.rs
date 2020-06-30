@@ -19,7 +19,11 @@ use super::types::{Action, Context, Currency};
 use super::Keychain;
 use grin_keychain::Identifier;
 
+/// Swap API trait that is used by both Buyer and Seller.
+/// Every currency that Swap want to support, need to implement
+/// this trait. Current we have only implementaiton: api::BtcSwapApi
 pub trait SwapApi<K: Keychain>: Sync + Send {
+	/// Number of the keys at the create_context, keys (For BTC it is 4)
 	fn context_key_count(
 		&mut self,
 		_keychain: &K,
@@ -27,36 +31,42 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		is_seller: bool,
 	) -> Result<usize, ErrorKind>;
 
+	/// Creating buyer/seller context. Keys are used to generate this session secrets.
+	/// Number of them defined by context_key_count
 	fn create_context(
 		&mut self,
 		keychain: &K,
 		secondary_currency: Currency,
 		is_seller: bool,
-		inputs: Option<Vec<(Identifier, u64)>>,
+		inputs: Option<Vec<(Identifier, u64)>>, // inputs with amounts that sellect is agree to use.
 		keys: Vec<Identifier>,
 	) -> Result<Context, ErrorKind>;
 
-	/// Seller creates a swap offer
+	/// Seller creates a swap offer and creates the core Swap Object.
+	/// It is a starting point for Seller swap workflow
 	fn create_swap_offer(
 		&mut self,
 		keychain: &K,
 		context: &Context,
-		address: Option<String>,
-		primary_amount: u64,
-		secondary_amount: u64,
+		address: Option<String>, // This address, not clear why it is needed. For Tracking?
+		primary_amount: u64,  // mwc amount to sell
+		secondary_amount: u64, // btc amount to buy
 		secondary_currency: Currency,
-		secondary_redeem_address: String,
+		secondary_redeem_address: String, // redeed address for BTC
 	) -> Result<(Swap, Action), ErrorKind>;
 
-	/// Buyer accepts a swap offer
+	/// Buyer accepts a swap offer and creates the core Swap Object.
+	/// It is a starting point for Buyer swap workflow.
 	fn accept_swap_offer(
 		&mut self,
 		keychain: &K,
 		context: &Context,
-		address: Option<String>,
-		message: Message,
+		address: Option<String>,  // This address, not clear why it is needed. For Tracking?
+		message: Message, // Income message with offer form the Seller. Seller Status  Created->Offered
 	) -> Result<(Swap, Action), ErrorKind>;
 
+	/// Report redeem step is completed.
+	/// Note:  I think it is a REPORT, not an action. Action is done by SwapDealer
 	fn completed(
 		&mut self,
 		keychain: &K,
@@ -64,8 +74,10 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		context: &Context,
 	) -> Result<Action, ErrorKind>;
 
+	/// Not implemented yet. Guess should the report about that.
 	fn refunded(&mut self, keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind>;
 
+	/// Not implemented yet. Guess should the report about that.
 	fn cancelled(&mut self, keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind>;
 
 	/// Check which action should be taken by the user
@@ -76,6 +88,7 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		context: &Context,
 	) -> Result<Action, ErrorKind>;
 
+	/// Producing message for another party. Message content is vary and depend on the current state
 	fn message(&mut self, keychain: &K, swap: &Swap) -> Result<Message, ErrorKind>;
 
 	/// Message has been sent to the counter-party, update state accordingly
@@ -95,6 +108,9 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		message: Message,
 	) -> Result<Action, ErrorKind>;
 
+	/// Publish MWC transaction.
+	/// Seller: publishing lock_slate, Status::Accepted
+	/// Buyer:  publishing redeem_slate, Status::Redeem
 	fn publish_transaction(
 		&mut self,
 		keychain: &K,
@@ -102,6 +118,8 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		context: &Context,
 	) -> Result<Action, ErrorKind>;
 
+	/// Publishing Secinadary (BTC) transactions
+	/// Seller: redeep BTC transaction at State RedeemSecondary
 	fn publish_secondary_transaction(
 		&mut self,
 		keychain: &K,

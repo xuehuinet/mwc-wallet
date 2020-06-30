@@ -25,7 +25,7 @@ use libwallet::{Slate, VersionedSlate};
 use serde::{Deserialize, Deserializer, Serializer};
 //use uuid::Uuid;
 
-// Slate
+/// Slate deserialization
 pub fn slate_deser<'a, D>(deserializer: D) -> Result<Slate, D::Error>
 where
 	D: Deserializer<'a>,
@@ -34,7 +34,7 @@ where
 	Ok(s.into())
 }
 
-// Vec<u8>
+/// Serialize Vec<u8> as HEX
 pub fn bytes_to_hex<S>(key: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -42,6 +42,7 @@ where
 	serializer.serialize_str(&hex::encode(key))
 }
 
+/// Deserialize HEX to Vec<u8>
 pub fn bytes_from_hex<'a, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
 where
 	D: Deserializer<'a>,
@@ -74,7 +75,7 @@ where
 	Ok(opt)
 }*/
 
-// Commitment
+/// Serialize Commitment as HEX string
 pub fn commit_to_hex<S>(key: &Commitment, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -82,6 +83,7 @@ where
 	serializer.serialize_str(&hex::encode(key.0.to_vec()))
 }
 
+/// Deserialize Commitment from HEX string
 fn commit_from_hex_string(s: String) -> Result<Commitment, Error> {
 	let v = Vec::from_hex(&s)?;
 	Ok(Commitment::from_vec(v))
@@ -96,7 +98,7 @@ fn commit_from_hex_string(s: String) -> Result<Commitment, Error> {
 		.map_err(D::Error::custom)
 }*/
 
-// Option<Commitment>
+/// Serialize Option<Commitment> as a HEX String
 pub fn option_commit_to_hex<S>(key: &Option<Commitment>, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -107,6 +109,7 @@ where
 	}
 }
 
+/// Deserialized HEX string to Option<Commitment>
 pub fn option_commit_from_hex<'a, D>(deserializer: D) -> Result<Option<Commitment>, D::Error>
 where
 	D: Deserializer<'a>,
@@ -121,7 +124,7 @@ where
 	}
 }
 
-// PublicKey
+/// PublicKey serialize as a HEX string
 pub fn pubkey_to_hex<S>(key: &PublicKey, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -137,6 +140,7 @@ fn pubkey_from_hex_string(s: String) -> Result<PublicKey, Error> {
 	Ok(p)
 }
 
+/// Deserialize Paulic Key from HEX string
 pub fn pubkey_from_hex<'a, D>(deserializer: D) -> Result<PublicKey, D::Error>
 where
 	D: Deserializer<'a>,
@@ -146,7 +150,7 @@ where
 	pubkey_from_hex_string(s).map_err(D::Error::custom)
 }
 
-// Option<PublicKey>
+/// Serialize Option<PublicKey> to HEX string
 pub fn option_pubkey_to_hex<S>(key: &Option<PublicKey>, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -157,6 +161,7 @@ where
 	}
 }
 
+/// Deserialize Option<PublicKey> from HEX string
 pub fn option_pubkey_from_hex<'a, D>(deserializer: D) -> Result<Option<PublicKey>, D::Error>
 where
 	D: Deserializer<'a>,
@@ -171,7 +176,7 @@ where
 	}
 }
 
-// SecretKey
+/// Serialize SecretKey as HEX string
 pub fn seckey_to_hex<S>(key: &SecretKey, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -186,6 +191,7 @@ fn seckey_from_hex_string(s: String) -> Result<SecretKey, Error> {
 	Ok(sk)
 }
 
+/// Deserialize SecretKey from HEX string
 pub fn seckey_from_hex<'a, D>(deserializer: D) -> Result<SecretKey, D::Error>
 where
 	D: Deserializer<'a>,
@@ -195,7 +201,7 @@ where
 	seckey_from_hex_string(s).map_err(D::Error::custom)
 }
 
-// Option<SecretKey>
+/// Serialize Option<SecretKey> to HEX string
 pub fn option_seckey_to_hex<S>(key: &Option<SecretKey>, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -206,6 +212,7 @@ where
 	}
 }
 
+/// Deserialize Option<SecretKey> from HEX
 pub fn option_seckey_from_hex<'a, D>(deserializer: D) -> Result<Option<SecretKey>, D::Error>
 where
 	D: Deserializer<'a>,
@@ -296,7 +303,7 @@ pub fn option_proof_from_hex<'a, D>(deserializer: D) -> Result<Option<RangeProof
 	}
 }*/
 
-// Signature
+/// Serialize Signature to HEX
 pub fn sig_to_hex<S>(sig: &Signature, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -312,6 +319,7 @@ fn sig_from_hex_string(s: String) -> Result<Signature, Error> {
 	Ok(sig)
 }
 
+/// Deseroalize Signature from HEX string
 pub fn sig_from_hex<'a, D>(deserializer: D) -> Result<Signature, D::Error>
 where
 	D: Deserializer<'a>,
@@ -321,7 +329,7 @@ where
 	sig_from_hex_string(s).map_err(D::Error::custom)
 }
 
-// Option<Signature>
+/// Serialize Option<Signature> to HEX string
 pub fn option_sig_to_hex<S>(sig: &Option<Signature>, serializer: S) -> Result<S::Ok, S::Error>
 where
 	S: Serializer,
@@ -332,6 +340,7 @@ where
 	}
 }
 
+/// Deserialize Option<Signature> from HEX string
 pub fn option_sig_from_hex<'a, D>(deserializer: D) -> Result<Option<Signature>, D::Error>
 where
 	D: Deserializer<'a>,

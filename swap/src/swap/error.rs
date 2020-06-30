@@ -20,77 +20,98 @@ use grin_util::secp;
 use libwallet;
 use std::io;
 
+/// Swap crate errors
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum ErrorKind {
-	#[fail(display = "Missing keychain")]
-	MissingKeychain,
-	#[fail(display = "Unexpected action")]
-	UnexpectedAction,
-	#[fail(display = "Unexpected network")]
-	UnexpectedNetwork,
-	#[fail(display = "Unexpected role")]
-	UnexpectedRole,
-	#[fail(display = "Unexpected status. Expected: {:?}, actual: {:?}", _0, _1)]
+	/// Unexpected state or status. Business logic is broken
+	#[fail(display = "Swap Unexpected action, {}", _0)]
+	UnexpectedAction(String),
+	/// Unexpected network
+	#[fail(display = "Swap Unexpected network {}", _0)]
+	UnexpectedNetwork(String),
+	/// Unexpected role. Business logic is broken
+	#[fail(display = "Swap Unexpected role, {}", _0)]
+	UnexpectedRole(String),
+	/// Unexpected status. Business logic is broken
+	#[fail(display = "Swap Unexpected status. Expected: {:?}, actual: {:?}", _0, _1)]
 	UnexpectedStatus(Status, Status),
+	/// Not enough MWC to start swap
 	#[fail(display = "Insufficient funds. Required: {}, available: {}", _0, _1)]
 	InsufficientFunds(u64, u64),
-	#[fail(display = "Unexpected message type")]
-	UnexpectedMessageType,
-	#[fail(display = "Unexpected secondary coin type")]
+	/// Message type is wrong. Business logic is broken or another party messing up with us.
+	#[fail(display = "Swap Unexpected message type, {}", _0)]
+	UnexpectedMessageType(String),
+	/// Likely BTC data is not initialized. Or workflow for your new currenly is not defined
+	#[fail(display = "Swap Unexpected secondary coin type")]
 	UnexpectedCoinType,
-	#[fail(display = "Version incompatibility")]
-	IncompatibleVersion,
+	/// Yours swap version is different from other party. Somebody need to make an upgrade
+	#[fail(display = "Swap engines version are different. Other party has version {}, you has {}. To make a deal, you need to have the same versions.", _0, _1)]
+	IncompatibleVersion(u8, u8),
+	/// Message from different swap. Probably other party messing up with us.
 	#[fail(display = "Mismatch between swap and message IDs")]
 	MismatchedId,
-	#[fail(display = "Invalid amount string")]
-	InvalidAmountString,
-	#[fail(display = "Invalid currency")]
-	InvalidCurrency,
-	#[fail(display = "Invalid lock height for lock tx")]
+	/// Unable to parse the amount string
+	#[fail(display = "Invalid amount string, {}", _0)]
+	InvalidAmountString(String),
+	/// Wrong currency name
+	#[fail(display = "Swap Invalid currency: {}", _0)]
+	InvalidCurrency(String),
+	/// Lock slate can't be locked
+	#[fail(display = "Invalid lock height for Swap lock tx")]
 	InvalidLockHeightLockTx,
-	#[fail(display = "Invalid lock height for refund tx")]
+	/// Refund slate lock is below expected value
+	#[fail(display = "Invalid lock height for Swap refund tx")]
 	InvalidLockHeightRefundTx,
-	#[fail(display = "Invalid lock for secondary currency")]
-	InvalidLockSecondary,
-	#[fail(display = "Invalid adaptor signature")]
+	/// Schnorr signature is invalid
+	#[fail(display = "Swap Invalid adaptor signature (Schnorr signature)")]
 	InvalidAdaptorSignature,
-	#[fail(display = "Secondary currency data complete")]
+	/// swap.refund is not defined
+	#[fail(display = "Swap secondary currency data not complete")]
 	SecondaryDataIncomplete,
-	#[fail(display = "This function should only be called once")]
-	OneShot,
+	/// Expected singe call for that
+	#[fail(display = "Swap function should only be called once, {}", _0)]
+	OneShot(String),
+	/// Swap is already finalized
 	#[fail(display = "Swap is already finalized")]
 	Finalized,
-	#[fail(display = "{}", _0)]
+	/// Multisig error
+	#[fail(display = "Swap Multisig error: {}", _0)]
 	Multisig(multisig::ErrorKind),
-	#[fail(display = "{}", _0)]
+	/// Keychain failed
+	#[fail(display = "Swap Keychain error: {}", _0)]
 	Keychain(grin_keychain::Error),
-	#[fail(display = "{}", _0)]
+	/// LibWallet error
+	#[fail(display = "Swap LibWaller error: {}", _0)]
 	LibWallet(libwallet::ErrorKind),
-	#[fail(display = "{}", _0)]
+	/// Secp issue
+	#[fail(display = "Swap Secp error: {}", _0)]
 	Secp(secp::Error),
-	#[fail(display = "I/O: {}", _0)]
+	/// IO error
+	#[fail(display = "Swap I/O: {}", _0)]
 	IO(String),
-	#[fail(display = "Serde error")]
-	Serde,
-	#[fail(display = "Rpc: {}", _0)]
+	/// Serde error
+	#[fail(display = "Swap Serde error: {}", _0)]
+	Serde(String),
+	/// Rps error
+	#[fail(display = "Swap Rpc error: {}", _0)]
 	Rpc(&'static str),
-	#[fail(display = "{}", _0)]
-	NodeClient(String),
-	#[fail(display = "{}", _0)]
-	GenericNetwork(String),
-	#[fail(display = "{}", _0)]
+	/// Electrum Node client error
+	#[fail(display = "Electrum Node error, {}", _0)]
+	ElectrumNodeClient(String),
+	/// Generic error
+	#[fail(display = "Swap generic error, {}", _0)]
 	Generic(String),
 }
 
 impl ErrorKind {
+	/// Check if this error network related
 	pub fn is_network_error(&self) -> bool {
 		use ErrorKind::*;
 		format!("");
 		match self {
 			Rpc(_)
-			| NodeClient(_)
-			| LibWallet(libwallet::ErrorKind::Node(_))
-			| GenericNetwork(_) => true,
+			| ElectrumNodeClient(_)
+			| LibWallet(libwallet::ErrorKind::Node(_)) => true,
 			_ => false,
 		}
 	}
@@ -127,8 +148,8 @@ impl From<io::Error> for ErrorKind {
 }
 
 impl From<serde_json::Error> for ErrorKind {
-	fn from(_error: serde_json::Error) -> ErrorKind {
-		ErrorKind::Serde
+	fn from(error: serde_json::Error) -> ErrorKind {
+		ErrorKind::Serde(format!("{}", error))
 	}
 }
 
@@ -142,12 +163,14 @@ impl From<committed::Error> for ErrorKind {
 	}
 }
 
+/// Return generic error with formatted arguments
 #[macro_export]
 macro_rules! generic {
     ($($arg:tt)*) => ($crate::ErrorKind::Generic(format!($($arg)*)))
 }
 
+/// Return network error with formatted arguments
 #[macro_export]
 macro_rules! network {
-    ($($arg:tt)*) => ($crate::ErrorKind::GenericNetwork(format!($($arg)*)))
+    ($($arg:tt)*) => ($crate::ErrorKind::ElectrumNodeClient(format!($($arg)*)))
 }

@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Implementation of the core for MWC swap trade
+
+#![warn(missing_docs)]
+
 extern crate bitcoin;
 extern crate bitcoin_hashes;
 extern crate blake2_rfc as blake2;
@@ -44,4 +48,5 @@ pub use swap::seller::SellApi;
 pub use swap::types::{Action, BuyerContext, Context, Currency, Role, SellerContext, Status};
 pub use swap::{is_test_mode, set_test_mode, ErrorKind, Keychain, Swap};
 
+/// mwc swap core library
 pub mod swap;

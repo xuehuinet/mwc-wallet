@@ -52,7 +52,7 @@ impl From<ElectrumError> for ErrorKind {
 	fn from(error: ElectrumError) -> ErrorKind {
 		match error {
 			ElectrumError::Response(e) => {
-				ErrorKind::NodeClient(format!("Received error: {}", e.message))
+				ErrorKind::ElectrumNodeClient(format!("Received error: {}", e.message))
 			}
 			ElectrumError::Other(e) => e,
 		}
@@ -80,19 +80,19 @@ impl ElectrumRpcClient {
 			RpcResponse::ResponseErr(e) => {
 				if e.id.map(|res_id| res_id == id).unwrap_or(true) {
 					let err: ElectrumResponseError = serde_json::from_value(e.error)
-						.map_err(|_| ErrorKind::NodeClient("Received error".into()))?;
+						.map_err(|_| ErrorKind::ElectrumNodeClient("Received error".into()))?;
 					return Err(err.into());
 				}
 			}
 			RpcResponse::ResponseOk(o) => {
 				if o.id.map(|res_id| res_id == id).unwrap_or(false) {
 					let obj: T = serde_json::from_value(o.result)
-						.map_err(|_| ErrorKind::NodeClient("Unable to decode response".into()))?;
+						.map_err(|_| ErrorKind::ElectrumNodeClient("Unable to decode response".into()))?;
 					return Ok(obj);
 				}
 			}
 		};
-		Err(ErrorKind::NodeClient(format!("No response received")).into())
+		Err(ErrorKind::ElectrumNodeClient(format!("No response received")).into())
 	}
 
 	fn next_id(&mut self) -> u32 {
@@ -127,10 +127,10 @@ impl ElectrumRpcClient {
 		self.write(&request)?;
 		let hash: String = self.wait(request.id)?;
 		let hash = from_hex(hash.as_str())
-			.map_err(|_e| ErrorKind::NodeClient("Unable to post tx".into()))?;
+			.map_err(|_e| ErrorKind::ElectrumNodeClient("Unable to post tx".into()))?;
 
 		if hash.len() != 32 {
-			return Err(ErrorKind::NodeClient("Unable to post tx".into()));
+			return Err(ErrorKind::ElectrumNodeClient("Unable to post tx".into()));
 		}
 
 		Ok(())
@@ -245,12 +245,16 @@ pub struct ElectrumTransaction {
 /// Warning: this client doesn't perform any of the SPV checks,
 /// it assumes the provided information is truthful
 pub struct ElectrumNodeClient {
+	/// BTC address
 	pub address: String,
+	/// true if it is a test network
 	pub testnet: bool,
+	/// ElectrumX client
 	client: Option<(ElectrumRpcClient, Instant)>,
 }
 
 impl ElectrumNodeClient {
+	/// Create a new instance.
 	pub fn new(address: String, testnet: bool) -> Self {
 		Self {
 			address,
@@ -258,7 +262,7 @@ impl ElectrumNodeClient {
 			client: None,
 		}
 	}
-
+	/// Connect to the ElectrumX node
 	pub fn connect(&mut self) -> Result<(), ErrorKind> {
 		self.client()?;
 		Ok(())
@@ -304,8 +308,8 @@ impl BtcNodeClient for ElectrumNodeClient {
 		let client = self.client()?;
 		let tx = client
 			.transaction(tx_hash)?
-			.ok_or(ErrorKind::NodeClient("Unable to determine height".into()))?;
-		tx.confirmations.ok_or(ErrorKind::GenericNetwork(
+			.ok_or(ErrorKind::ElectrumNodeClient("Unable to determine height".into()))?;
+		tx.confirmations.ok_or(ErrorKind::ElectrumNodeClient(
 			"Unable to determine height".into(),
 		))
 	}
@@ -331,12 +335,12 @@ impl BtcNodeClient for ElectrumNodeClient {
 			.collect();
 		Ok(outputs)
 	}
-
+	/// Post BTC transaction
 	fn post_tx(&mut self, tx: Vec<u8>) -> Result<(), ErrorKind> {
 		let client = self.client()?;
 		client.post_tx(tx)
 	}
-
+	/// Request a transaction from the node
 	fn transaction(
 		&mut self,
 		tx_hash: &Hash,
@@ -355,16 +359,17 @@ impl BtcNodeClient for ElectrumNodeClient {
 		};
 
 		let tx_bytes = from_hex(tx.hex.as_str())
-			.map_err(|_e| ErrorKind::NodeClient("Unable to parse hex".into()))?;
+			.map_err(|_e| ErrorKind::ElectrumNodeClient("Unable to parse hex".into()))?;
 
 		let cursor = Cursor::new(tx_bytes);
 		let tx = Transaction::consensus_decode(cursor)
-			.map_err(|_| ErrorKind::NodeClient("Unable to parse transaction".into()))?;
+			.map_err(|_| ErrorKind::ElectrumNodeClient("Unable to parse transaction".into()))?;
 
 		Ok(Some((height, tx)))
 	}
 }
 
+/// ElectrumX client error response.
 #[derive(Serialize, Deserialize, Debug)]
 struct ElectrumResponseError {
 	code: i64,
@@ -373,7 +378,7 @@ struct ElectrumResponseError {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+/*	use super::*;
 	use crate::swap::bitcoin::BtcData;
 	use crate::swap::types::Network;
 	use bitcoin_hashes::hex::FromHex;
@@ -383,7 +388,7 @@ mod tests {
 	use grin_util::secp::{ContextFlag, Secp256k1};
 	use rand::{thread_rng, Rng};
 
-	/*#[test]
+	#[test]
 	fn test_electrum() {
 		let secp = Secp256k1::with_caps(ContextFlag::Commit);
 		let addresses = vec![
