@@ -1401,7 +1401,8 @@ pub fn swap<L, C, K>(
 				let result = api.swap_get(keychain_mask, swap_id.clone() );
 				match result {
 					Ok(swap) => {
-						display::swap_trade(swap);
+						let (status,action) = api.get_swap_status_action(keychain_mask, swap_id.clone())?;
+						display::swap_trade(swap, &status, &action);
 						Ok(())
 					}
 					Err(e) => {

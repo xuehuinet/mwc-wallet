@@ -415,6 +415,41 @@ pub enum Action {
 	Refund,
 }
 
+impl fmt::Display for Action {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let disp = match &self {
+			Action::None =>
+				"Nothing to do".to_string(),
+			Action::SendMessage(i) =>
+				format!("Send Message {}", i),
+			Action::ReceiveMessage =>
+				"Waiting for respond from other party".to_string(),
+			Action::PublishTx =>
+				"Need to post MWC Lock Transaction".to_string(),
+			Action::PublishTxSecondary(currency) =>
+				format!("Publish a transaction for {}", currency),
+			Action::DepositSecondary{ currency, amount, address} =>
+				format!("Deposit {} {} at {}", currency.amount_to_hr_string(*amount, true), currency, address ),
+			Action::Confirmations{required, actual} =>
+				format!("Waiting for {} MWC lock confirmations, has {}", required, actual),
+			Action::ConfirmationsSecondary{currency, required, actual} =>
+				format!("Waiting for {} {} lock confirmations, has {}", required, currency, actual),
+			Action::ConfirmationRedeem =>
+				"Waiting for MWC Redeem transaction to be confirmed".to_string(),
+			Action::ConfirmationRedeemSecondary(currency, btc_address)  =>
+				format!("Waiting for {} Redeem transaction to be confirmed for {}", currency, btc_address),
+			Action::Complete =>
+				"Swap trade is complete".to_string(),
+			Action::Cancel =>
+				"Swap trade cancelled".to_string(),
+			Action::Refund =>
+				"Swap trade is cancelled, refund need to be issued".to_string(),
+		};
+		write!(f, "{}", disp)
+	}
+}
+
+
 #[cfg(test)]
 mod tests {
 	use super::*;

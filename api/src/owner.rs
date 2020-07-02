@@ -42,6 +42,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 use crate::libwallet::swap::swap::Swap;
+use crate::libwallet::swap::types::{Status, Action};
 
 /// Main interface into all wallet API functions.
 /// Wallet APIs are split into two seperate blocks of functionality
@@ -2312,6 +2313,7 @@ where
 		owner_swap::swap_list( self.wallet_inst.clone(), keychain_mask )
 	}
 
+	/// Delete swap trade
 	pub fn swap_delete (
 		&self,
 		keychain_mask: Option<&SecretKey>,
@@ -2319,7 +2321,7 @@ where
 	) -> Result<(), Error> {
 		owner_swap::swap_delete( self.wallet_inst.clone(), keychain_mask, &swap_id )
 	}
-
+	/// Retrieve swap trade
 	pub fn swap_get (
 		&self,
 		keychain_mask: Option<&SecretKey>,
@@ -2328,7 +2330,14 @@ where
 		owner_swap::swap_get( self.wallet_inst.clone(), keychain_mask, &swap_id )
 	}
 
-
+	/// Get swap state and action
+	pub fn get_swap_status_action(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: String,
+	) -> Result<(Status,Action), Error> {
+		owner_swap::get_swap_status_action( self.wallet_inst.clone(), keychain_mask, &swap_id )
+	}
 
 }
 
