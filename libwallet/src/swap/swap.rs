@@ -92,6 +92,10 @@ pub struct Swap {
 	)]
 	/// Multisig signature
 	pub(super) adaptor_signature: Option<Signature>,
+	/// Requred confirmations for MWC Locking
+	pub required_mwc_lock_confirmations: u64,
+	/// Requred confirmations for BTC Locking
+	pub required_secondary_lock_confirmations: u64,
 }
 
 impl Swap {

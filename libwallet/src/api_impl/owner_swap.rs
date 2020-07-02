@@ -92,7 +92,10 @@ pub fn swap_start<'a, L, C, K>(
         params.mwc_amount,     // mwc amount to sell
         params.secondary_amount,   // btc amount to buy
         secondary_currency,
-        params.secondary_redeem_address.clone())?; // redeed address for BTC
+        params.secondary_redeem_address.clone(),
+        params.required_mwc_lock_confirmations,
+        params.required_secondary_lock_confirmations,
+    )?; // redeed address for BTC
 
     // Store swap result into the file.
     let swap_id = swap.id.to_string();

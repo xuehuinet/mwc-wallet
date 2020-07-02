@@ -46,6 +46,8 @@ impl SellApi {
 		secondary_currency: Currency,
 		secondary_redeem_address: String,
 		height: u64,
+		required_mwc_lock_confirmations: u64,
+		required_secondary_lock_confirmations: u64,
 	) -> Result<Swap, ErrorKind> {
 		let test_mode = is_test_mode();
 		let scontext = context.unwrap_seller()?;
@@ -130,6 +132,8 @@ impl SellApi {
 			redeem_slate,
 			redeem_confirmations: None,
 			adaptor_signature: None,
+			required_mwc_lock_confirmations,
+			required_secondary_lock_confirmations,
 		};
 
 		Self::build_multisig(keychain, &mut swap, context)?;
@@ -390,6 +394,8 @@ impl SellApi {
 				CURRENT_SLATE_VERSION,
 			),
 			redeem_participant: swap.redeem_slate.participant_data[swap.participant_id].clone(),
+			required_mwc_lock_confirmations: swap.required_mwc_lock_confirmations,
+			required_secondary_lock_confirmations: swap.required_secondary_lock_confirmations,
 		}))
 	}
 

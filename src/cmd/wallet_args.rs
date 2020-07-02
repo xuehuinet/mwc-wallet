@@ -922,12 +922,20 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 
 	let btc_address = parse_required(args, "secondary_address")?;
 
+	let mwc_lock = parse_required(args, "required_mwc_lock_confirmations")?;
+	let mwc_lock = parse_u64(mwc_lock, "required_mwc_lock_confirmations")?;
+
+	let btc_lock = parse_required(args, "required_secondary_lock_confirmations")?;
+	let btc_lock = parse_u64(btc_lock, "required_secondary_lock_confirmations")?;
+
 	Ok(command::SwapStartArgs {
 		mwc_amount,
 		secondary_currency: secondary_currency.to_string(),
 		secondary_amount: btc_amount,
 		secondary_redeem_address: btc_address.to_string(),
 		minimum_confirmations: Some(min_c),
+		required_mwc_lock_confirmations: mwc_lock,
+		required_secondary_lock_confirmations: btc_lock,
 	})
 }
 

@@ -1284,6 +1284,10 @@ pub struct SwapStartArgs {
 	pub secondary_redeem_address: String,
 	/// Minimum confirmation for outputs. Default is 10
 	pub minimum_confirmations: Option<u64>,
+	/// Requred confirmations for MWC Locking
+	pub required_mwc_lock_confirmations: u64,
+	/// Requred confirmations for BTC Locking
+	pub required_secondary_lock_confirmations: u64,
 }
 
 pub fn swap_start<L, C, K>(
@@ -1304,6 +1308,8 @@ pub fn swap_start<L, C, K>(
 										secondary_amount: args.secondary_amount,
 										secondary_redeem_address: args.secondary_redeem_address,
 										minimum_confirmations: args.minimum_confirmations,
+										required_mwc_lock_confirmations: args.required_mwc_lock_confirmations,
+										required_secondary_lock_confirmations: args.required_secondary_lock_confirmations,
 									} );
 		match result {
 			Ok(swap_id) => {

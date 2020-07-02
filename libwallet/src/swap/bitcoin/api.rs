@@ -127,15 +127,15 @@ where
 		swap: &mut Swap,
 	) -> Result<Option<Action>, ErrorKind> {
 		//  Check if Lock slate is ready and confirmed.
-		if !swap.is_locked(3) {
+		if !swap.is_locked(swap.required_mwc_lock_confirmations ) {
 			match swap.lock_confirmations {
 				None => return Ok(Some(Action::PublishTx)),
 				Some(_) => {
 					let confirmations =
 						swap.update_lock_confirmations(keychain.secp(), &self.node_client)?;
-					if !swap.is_locked(3) {
+					if !swap.is_locked(swap.required_mwc_lock_confirmations) {
 						return Ok(Some(Action::Confirmations {
-							required: 3,
+							required: swap.required_mwc_lock_confirmations,
 							actual: confirmations,
 						}));
 					}
@@ -147,7 +147,7 @@ where
 		if !swap.secondary_data.unwrap_btc()?.locked {
 			// Waiting for Btc confirmations
 			let (pending_amount, confirmed_amount, mut least_confirmations) =
-				self.btc_balance(keychain, swap, 2)?;
+				self.btc_balance(keychain, swap, swap.required_secondary_lock_confirmations)?;
 			if pending_amount + confirmed_amount < swap.secondary_amount {
 				least_confirmations = 0;
 			};
@@ -155,7 +155,7 @@ where
 			if confirmed_amount < swap.secondary_amount {
 				return Ok(Some(Action::ConfirmationsSecondary {
 					currency: swap.secondary_currency,
-					required: 2,
+					required: swap.required_secondary_lock_confirmations,
 					actual: least_confirmations,
 				}));
 			}
@@ -299,7 +299,7 @@ where
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
 			let (pending_amount, confirmed_amount, least_confirmations) =
-				self.btc_balance(keychain, swap, 2)?;
+				self.btc_balance(keychain, swap, swap.required_secondary_lock_confirmations)?;
 			let chain_amount = pending_amount + confirmed_amount;
 			if chain_amount < swap.secondary_amount {
 				// At this point, user needs to deposit (more) Bitcoin
@@ -323,7 +323,7 @@ where
 				// Wait for enough confirmations
 				return Ok(Some(Action::ConfirmationsSecondary {
 					currency: swap.secondary_currency,
-					required: 6,
+					required: swap.required_secondary_lock_confirmations,
 					actual: least_confirmations,
 				}));
 			}
@@ -333,9 +333,9 @@ where
 
 		// Check Grin chain
 		let confirmations = swap.update_lock_confirmations(keychain.secp(), &self.node_client)?;
-		if !swap.is_locked(30) {
+		if !swap.is_locked(swap.required_mwc_lock_confirmations) {
 			return Ok(Some(Action::Confirmations {
-				required: 30,
+				required: swap.required_mwc_lock_confirmations,
 				actual: confirmations,
 			}));
 		}
@@ -447,6 +447,8 @@ where
 		secondary_amount: u64,
 		secondary_currency: Currency,
 		secondary_redeem_address: String,
+		required_mwc_lock_confirmations: u64,
+		required_secondary_lock_confirmations: u64,
 	) -> Result<(Swap, Action), ErrorKind> {
 		let redeem_address = Address::from_str(&secondary_redeem_address)
 			.map_err(|_| ErrorKind::Generic("Unable to parse BTC redeem address".into()))?;
@@ -473,6 +475,9 @@ where
 			Currency::Btc,
 			secondary_redeem_address,
 			height,
+			required_mwc_lock_confirmations,
+			required_secondary_lock_confirmations,
+
 		)?;
 
 		let btc_data = BtcData::new(

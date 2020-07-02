@@ -118,7 +118,9 @@
         "part_sig": null,
         "message": null,
         "message_sig": null
-      }
+      },
+      "required_mwc_lock_confirmations": 30,
+      "required_secondary_lock_confirmations": 6
     }
   },
   "inner_secondary": {

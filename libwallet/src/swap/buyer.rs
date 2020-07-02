@@ -103,6 +103,8 @@ impl BuyApi {
 			redeem_slate,
 			redeem_confirmations: None,
 			adaptor_signature: None,
+			required_mwc_lock_confirmations: offer.required_mwc_lock_confirmations,
+			required_secondary_lock_confirmations: offer.required_secondary_lock_confirmations,
 		};
 
 		swap.redeem_public = Some(PublicKey::from_secret_key(
