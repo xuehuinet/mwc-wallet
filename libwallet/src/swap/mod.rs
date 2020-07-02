@@ -392,6 +392,8 @@ mod tests {
 				3_000_000,
 				Currency::Btc,
 				secondary_redeem_address,
+				30,
+				3,
 			)
 			.unwrap();
 		let message = api_sell.message(&kc_sell, &swap).unwrap();
@@ -434,6 +436,8 @@ mod tests {
 				btc_amount,
 				Currency::Btc,
 				secondary_redeem_address,
+				30,
+				6
 			)
 			.unwrap();
 		assert_eq!(action, Action::SendMessage(1));
@@ -688,10 +692,10 @@ mod tests {
 
 		// Seller: wait BTC confirmations
 		nc.mine_blocks(20);
-		match api_sell
+		let action = api_sell
 			.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap()
-		{
+			.unwrap();
+		match action {
 			Action::ConfirmationsSecondary {
 				currency: _,
 				required: _,

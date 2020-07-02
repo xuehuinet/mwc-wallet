@@ -334,4 +334,8 @@ pub struct SwapStartArgs {
 	pub secondary_redeem_address: String,
 	/// Minimum confirmation number for the inputs to spend
 	pub minimum_confirmations: Option<u64>,
+	/// Needed confirmations for MWC Lock transacition
+	pub required_mwc_lock_confirmations: u64,
+	/// Needed confirmations for BTC Lock transacition
+	pub required_secondary_lock_confirmations: u64,
 }

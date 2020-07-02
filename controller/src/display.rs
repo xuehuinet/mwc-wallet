@@ -647,6 +647,8 @@ pub fn swap_trade(swap: Swap) {
 	println!("Swap ID: {}", swap.id);
 	println!("MWC amount: {}", core::amount_to_hr_string(swap.primary_amount, true) );
 	println!("{} amount: {}", swap.secondary_currency, swap.secondary_currency.amount_to_hr_string(swap.secondary_amount, true) );
+	println!("Requied MWC lock confirmations: {}", swap.required_mwc_lock_confirmations);
+	println!("Requied {} lock confirmations: {}", swap.secondary_currency, swap.required_secondary_lock_confirmations);
 
 	match swap.role {
 		Role::Seller(btc_address, _) => {

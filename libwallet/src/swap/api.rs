@@ -55,6 +55,8 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		secondary_amount: u64,   // btc amount to buy
 		secondary_currency: Currency,
 		secondary_redeem_address: String, // redeed address for BTC
+		required_mwc_lock_confirmations: u64, // Needed conformation numbers for mwc & btc
+		required_secondary_lock_confirmations: u64,
 	) -> Result<(Swap, Action), ErrorKind>;
 
 	/// Buyer accepts a swap offer and creates the core Swap Object.

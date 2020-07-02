@@ -124,6 +124,10 @@ pub struct OfferUpdate {
 	pub refund_slate: VersionedSlate,
 	/// Needed info to build step 1 on redeem state (that saving some interaction)
 	pub redeem_participant: TxParticipant,
+	/// Requred confirmations for MWC Locking
+	pub required_mwc_lock_confirmations: u64,
+	/// Requred confirmations for BTC Locking
+	pub required_secondary_lock_confirmations: u64,
 }
 
 /// Buyer, Status::Offered  Buyer responded for offer

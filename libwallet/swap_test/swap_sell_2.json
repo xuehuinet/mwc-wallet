@@ -207,5 +207,7 @@
     ]
   },
   "redeem_confirmations": null,
-  "adaptor_signature": null
+  "adaptor_signature": null,
+  "required_mwc_lock_confirmations": 30,
+  "required_secondary_lock_confirmations": 6
 }
