@@ -18,7 +18,7 @@ use crate::libwallet::{
 	AcctPathMapping, Error, OutputCommitMapping, OutputStatus, TxLogEntry, WalletInfo,
 };
 use crate::libwallet::swap::swap::Swap;
-use crate::libwallet::swap::types::Role;
+use crate::libwallet::swap::types::{Role, Status, Action};
 
 use crate::util;
 use colored::*;
@@ -643,7 +643,7 @@ pub fn swap_trades(trades: Vec<(String,String)>) {
 
 
 /// Display list of wallet accounts in a pretty way
-pub fn swap_trade(swap: Swap) {
+pub fn swap_trade(swap: Swap, status: &Status, action: &Action) {
 	println!("Swap ID: {}", swap.id);
 	println!("MWC amount: {}", core::amount_to_hr_string(swap.primary_amount, true) );
 	println!("{} amount: {}", swap.secondary_currency, swap.secondary_currency.amount_to_hr_string(swap.secondary_amount, true) );
@@ -659,6 +659,7 @@ pub fn swap_trade(swap: Swap) {
 		}
 	}
 	println!("Started: {}", swap.started);
-	println!("Status: {}", swap.status);
+	println!("Status: {}", status);
+	println!("Action: {}", action);
 }
 

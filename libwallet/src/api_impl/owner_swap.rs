@@ -22,11 +22,11 @@ use crate::types::{NodeClient};
 use crate::{wallet_lock, WalletInst, WalletLCProvider, SwapStartArgs};
 use crate::{Error};
 use std::sync::Arc;
-use crate::swap::types::Currency;
 use std::convert::TryFrom;
 use crate::swap::trades;
 use crate::swap::error::ErrorKind;
 use crate::swap::swap::Swap;
+use crate::swap::types::{Currency,Action, Status};
 
 // TODO  - Validation for all parameters.
 
@@ -45,7 +45,6 @@ pub fn swap_start<'a, L, C, K>(
     // This method only initialize and store the swap process. Nothing is done
 
     // TODO  - validate SwapStartArgs values
-    // TODO  - validate if params.secondary_redeem_address is valid.
     // TODO  - we probably want to do that as a generic solution because all params need to be validated
 
     wallet_lock!(wallet_inst, w);
@@ -160,3 +159,28 @@ pub fn swap_get<'a, L, C, K>(
     let (_, swap) = trades::get_swap_trade(swap_id)?;
     Ok(swap)
 }
+
+/// Get a status and action for the swap.
+pub fn get_swap_status_action<'a, L, C, K>(
+    wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+    keychain_mask: Option<&SecretKey>,
+    swap_id: &str,
+) -> Result<(Status, Action), Error>
+    where
+        L: WalletLCProvider<'a, C, K>,
+        C: NodeClient + 'a,
+        K: Keychain + 'a,
+{
+    let (context, mut swap) = trades::get_swap_trade(swap_id)?;
+
+    wallet_lock!(wallet_inst, w);
+    let node_client = w.w2n_client().clone();
+    let keychain = w.keychain(keychain_mask)?;
+
+    let mut swap_api = crate::swap::api::create_instance( &swap.secondary_currency, node_client)?;
+    let action = swap_api.required_action(&keychain, &mut swap, &context)?;
+
+    Ok((swap.status, action))
+}
+
+
