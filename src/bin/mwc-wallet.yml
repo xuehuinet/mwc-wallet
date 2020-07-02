@@ -456,3 +456,76 @@ subcommands:
             short: f
             long: file
             takes_value: true
+  - swap_start:
+      about: Start MWC atomic swap trading.
+      args:
+        - mwc_amount:
+            help: MWC amount to trade
+            short: m
+            long: mwc_amount
+            takes_value: true
+        - minimum_confirmations:
+            help: Minimum confirmations number for the outputs to spend
+            short: c
+            long: min_conf
+            default_value: "10"
+            takes_value: true
+        - secondary_currency:
+            help: Secondary currency name
+            short: s
+            long: secondary_currency
+            takes_value: true
+            possible_values:
+              - btc
+            default_value: btc
+        - secondary_amount:
+            help: BTC amount expected to get before fees paid
+            short: b
+            long: secondary_amount
+            takes_value: true
+        - secondary_address:
+            help: resulting BTC address
+            short: a
+            long: secondary_address
+            takes_value: true
+  - swap:
+      about: Trade MWC to another currency (BTC) with atomic swap
+      args:
+        - list:
+            help: List SWAP trades
+            short: l
+            long: list
+            takes_value: false
+        - verbose:
+            help: Show details for List command and print maximum details for
+            short: v
+            long: verbose
+            takes_value: false
+        - delete:
+            help: Delete SWAP trade. Note, be sure that you finish or cancel you trade before to delete it.
+            short: d
+            long: delete
+            takes_value: false
+        - check:
+            help: Check the status of the trade
+            short: c
+            long: check
+            takes_value: false
+        - process:
+            help: Process the next step of the swap trade
+            short: p
+            long: process
+            takes_value: false
+        - action:
+            help: Action step to perform. Expected match 'check' output
+            short: a
+            long: action
+            takes_value: true
+            possible_values:
+              - aaaa
+              - bbbb
+        - swap_id:
+            help: Id of swap trade. Required for some commands
+            short: i
+            long: swap_id
+            takes_value: true

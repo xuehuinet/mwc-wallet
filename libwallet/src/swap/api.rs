@@ -18,6 +18,9 @@ use super::swap::Swap;
 use super::types::{Action, Context, Currency};
 use super::Keychain;
 use grin_keychain::Identifier;
+use crate::swap::bitcoin::{BtcSwapApi, ElectrumNodeClient};
+use crate::NodeClient;
+use grin_core::global;
 
 /// Swap API trait that is used by both Buyer and Seller.
 /// Every currency that Swap want to support, need to implement
@@ -48,9 +51,8 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		&mut self,
 		keychain: &K,
 		context: &Context,
-		address: Option<String>, // This address, not clear why it is needed. For Tracking?
-		primary_amount: u64,  // mwc amount to sell
-		secondary_amount: u64, // btc amount to buy
+		primary_amount: u64,     // mwc amount to sell
+		secondary_amount: u64,   // btc amount to buy
 		secondary_currency: Currency,
 		secondary_redeem_address: String, // redeed address for BTC
 	) -> Result<(Swap, Action), ErrorKind>;
@@ -61,7 +63,6 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		&mut self,
 		keychain: &K,
 		context: &Context,
-		address: Option<String>,  // This address, not clear why it is needed. For Tracking?
 		message: Message, // Income message with offer form the Seller. Seller Status  Created->Offered
 	) -> Result<(Swap, Action), ErrorKind>;
 
@@ -126,4 +127,28 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		swap: &mut Swap,
 		context: &Context,
 	) -> Result<Action, ErrorKind>;
+}
+
+/// Create an appropriate instance for the Currency
+/// electrumx_uri - mandatory for BTC
+/// Note: Result lifetime is equal of arguments lifetime!
+pub fn create_instance<'a, C, K>(currency: &Currency, node_client: C ) -> Result<Box<dyn SwapApi<K> + 'a>, ErrorKind>
+	where
+		C: NodeClient + 'a,
+		K: Keychain + 'a,
+{
+	match currency {
+		Currency::Btc => {
+			let electrumx_uri = crate::swap::trades::get_electrumx_uri();
+			if electrumx_uri.is_none() {
+				return Err( ErrorKind::UndefinedElectrumXURI );
+			}
+
+			let btc_node_client = ElectrumNodeClient::new(
+				electrumx_uri.expect("BTC API requires BTC node client"),
+				!global::is_mainnet(),
+			);
+			Ok(Box::new( BtcSwapApi::new(node_client, btc_node_client) ))
+		}
+	}
 }

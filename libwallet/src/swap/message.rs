@@ -20,7 +20,7 @@ use super::ErrorKind;
 use grin_core::libtx::secp_ser;
 use grin_util::secp::key::PublicKey;
 use grin_util::secp::Signature;
-use libwallet::{ParticipantData as TxParticipant, VersionedSlate};
+use crate::{ParticipantData as TxParticipant, VersionedSlate};
 use uuid::Uuid;
 
 /// Swap message that is used for Seller/Buyer interaction

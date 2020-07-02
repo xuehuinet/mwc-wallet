@@ -33,7 +33,8 @@ pub mod buyer;
 pub mod seller;
 /// Swap state object that is used by both byer abd seller
 pub mod swap;
-
+/// Swap trade sessions catalog
+pub mod trades;
 
 /// Serialization adapters
 pub mod ser;
@@ -51,9 +52,8 @@ pub(crate) use self::buyer::BuyApi;
 pub(crate) use self::seller::SellApi;
 
 pub use grin_keychain::Keychain;
-pub use libwallet::NodeClient;
 
-use libwallet::SlateVersion;
+use crate::SlateVersion;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 const CURRENT_VERSION: u8 = 1;
@@ -77,18 +77,18 @@ pub fn is_test_mode() -> bool {
 #[cfg(test)]
 
 mod tests {
-	use crate::bitcoin::network::constants::Network as BtcNetwork;
-	use crate::bitcoin::util::key::PublicKey as BtcPublicKey;
-	use crate::bitcoin::{Address, Transaction as BtcTransaction, TxOut};
+	use bitcoin_lib::network::constants::Network as BtcNetwork;
+	use bitcoin_lib::util::key::PublicKey as BtcPublicKey;
+	use bitcoin_lib::{Address, Transaction as BtcTransaction, TxOut};
 	use grin_core::core::transaction::Weighting;
 	use grin_core::core::verifier_cache::LruVerifierCache;
 	use grin_core::core::{Transaction, TxKernel};
 	use grin_keychain::{ExtKeychain, Identifier, Keychain, SwitchCommitmentType};
 	use grin_util::secp::key::{PublicKey, SecretKey};
 	use grin_util::secp::pedersen::{Commitment, RangeProof};
-	use grin_util::{to_hex};
-	use libwallet::NodeClient;
-	use parking_lot::{Mutex, RwLock};
+	use grin_util::to_hex;
+	use crate::NodeClient;
+	use crate::grin_util::{Mutex, RwLock};
 	use std::collections::HashMap;
 	use std::fs::{read_to_string, write};
 	use std::mem;
@@ -104,7 +104,7 @@ mod tests {
 
 	fn keychain(idx: u8) -> ExtKeychain {
 		let seed_sell: String = format!("fixed0rng0for0testing0purposes0{}", idx % 10);
-		let seed_sell = blake2::blake2b::blake2b(32, &[], seed_sell.as_bytes());
+		let seed_sell = crate::blake2::blake2b::blake2b(32, &[], seed_sell.as_bytes());
 		ExtKeychain::from_seed(seed_sell.as_bytes(), false).unwrap()
 	}
 
@@ -233,7 +233,7 @@ mod tests {
 
 	impl NodeClient for TestNodeClient {
 		fn node_url(&self) -> &str {
-			unimplemented!()
+			"test_node_url"
 		}
 		fn set_node_url(&mut self, _node_url: &str) {
 			unimplemented!()
@@ -244,23 +244,23 @@ mod tests {
 		fn set_node_api_secret(&mut self, _node_api_secret: Option<String>) {
 			unimplemented!()
 		}
-		fn get_chain_tip(&self) -> Result<(u64, String, u64), libwallet::Error> {
+		fn get_chain_tip(&self) -> Result<(u64, String, u64), crate::Error> {
 			let res = (self.state.lock().height, "testnodehash".to_string(), 123455);
 			Ok(res)
 		}
-		fn get_header_info(&self, _height: u64) -> Result<libwallet::HeaderInfo, libwallet::Error> {
+		fn get_header_info(&self, _height: u64) -> Result<crate::HeaderInfo, crate::Error> {
 			unimplemented!()
 		}
 		fn get_connected_peer_info(
 			&self,
-		) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, libwallet::Error> {
+		) -> Result<Vec<grin_p2p::types::PeerInfoDisplay>, crate::Error> {
 			unimplemented!()
 		}
 		fn height_range_to_pmmr_indices(
 			&self,
 			_start_height: u64,
 			_end_height: Option<u64>,
-		) -> Result<(u64, u64), libwallet::Error> {
+		) -> Result<(u64, u64), crate::Error> {
 			unimplemented!()
 		}
 		fn get_blocks_by_height(
@@ -268,24 +268,24 @@ mod tests {
 			_start_height: u64,
 			_end_height: u64,
 			_threads_number: usize,
-		) -> Result<Vec<grin_api::BlockPrintable>, libwallet::Error> {
+		) -> Result<Vec<grin_api::BlockPrintable>, crate::Error> {
 			unimplemented!()
 		}
 		fn reset_cache(&self) {
 			unimplemented!()
 		}
-		fn post_tx(&self, tx: &Transaction, _fluff: bool) -> Result<(), libwallet::Error> {
+		fn post_tx(&self, tx: &Transaction, _fluff: bool) -> Result<(), crate::Error> {
 			tx.validate(
 				Weighting::AsTransaction,
 				Arc::new(RwLock::new(LruVerifierCache::new())),
 			)
-			.map_err(|_| libwallet::ErrorKind::Node("Node failure".to_string()))?;
+			.map_err(|_| crate::ErrorKind::Node("Node failure".to_string()))?;
 
 			let mut state = self.state.lock();
 			for input in tx.inputs() {
 				// Output not unspent
 				if !state.outputs.contains_key(&input.commit) {
-					return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
+					return Err(crate::ErrorKind::Node("Node failure".to_string()).into());
 				}
 
 				// Double spend attempt
@@ -293,7 +293,7 @@ mod tests {
 					for in_pending in tx_pending.inputs() {
 						if in_pending.commit == input.commit {
 							return Err(
-								libwallet::ErrorKind::Node("Node failure".to_string()).into()
+								crate::ErrorKind::Node("Node failure".to_string()).into()
 							);
 						}
 					}
@@ -302,14 +302,14 @@ mod tests {
 			// Check for duplicate output
 			for output in tx.outputs() {
 				if state.outputs.contains_key(&output.commit) {
-					return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
+					return Err(crate::ErrorKind::Node("Node failure".to_string()).into());
 				}
 
 				for tx_pending in state.pending.iter() {
 					for out_pending in tx_pending.outputs() {
 						if out_pending.commit == output.commit {
 							return Err(
-								libwallet::ErrorKind::Node("Node failure".to_string()).into()
+								crate::ErrorKind::Node("Node failure".to_string()).into()
 							);
 						}
 					}
@@ -319,14 +319,14 @@ mod tests {
 			for kernel in tx.kernels() {
 				// Duplicate kernel
 				if state.kernels.contains_key(&kernel.excess) {
-					return Err(libwallet::ErrorKind::Node("Node failure".to_string()).into());
+					return Err(crate::ErrorKind::Node("Node failure".to_string()).into());
 				}
 
 				for tx_pending in state.pending.iter() {
 					for kernel_pending in tx_pending.kernels() {
 						if kernel_pending.excess == kernel.excess {
 							return Err(
-								libwallet::ErrorKind::Node("Node failure".to_string()).into()
+								crate::ErrorKind::Node("Node failure".to_string()).into()
 							);
 						}
 					}
@@ -336,13 +336,13 @@ mod tests {
 
 			Ok(())
 		}
-		fn get_version_info(&mut self) -> Option<libwallet::NodeVersionInfo> {
+		fn get_version_info(&mut self) -> Option<crate::NodeVersionInfo> {
 			unimplemented!()
 		}
 		fn get_outputs_from_node(
 			&self,
 			wallet_outputs: &Vec<Commitment>,
-		) -> Result<HashMap<Commitment, (String, u64, u64)>, libwallet::Error> {
+		) -> Result<HashMap<Commitment, (String, u64, u64)>, crate::Error> {
 			let mut map = HashMap::new();
 			let state = self.state.lock();
 			for output in wallet_outputs {
@@ -357,7 +357,7 @@ mod tests {
 			_start_height: u64,
 			_end_height: Option<u64>,
 			_max_outputs: u64,
-		) -> Result<(u64, u64, Vec<(Commitment, RangeProof, bool, u64, u64)>), libwallet::Error> {
+		) -> Result<(u64, u64, Vec<(Commitment, RangeProof, bool, u64, u64)>), crate::Error> {
 			unimplemented!()
 		}
 		fn get_kernel(
@@ -365,7 +365,7 @@ mod tests {
 			excess: &Commitment,
 			_min_height: Option<u64>,
 			_max_height: Option<u64>,
-		) -> Result<Option<(TxKernel, u64, u64)>, libwallet::Error> {
+		) -> Result<Option<(TxKernel, u64, u64)>, crate::Error> {
 			let state = self.state.lock();
 			let res = state
 				.kernels
@@ -388,7 +388,6 @@ mod tests {
 			.create_swap_offer(
 				&kc_sell,
 				&ctx_sell,
-				None,
 				100 * GRIN_UNIT,
 				3_000_000,
 				Currency::Btc,
@@ -404,7 +403,7 @@ mod tests {
 			TestNodeClient::new(height + 4 * 60),
 			TestBtcNodeClient::new(1),
 		);
-		let res = api_buy.accept_swap_offer(&kc_buy, &ctx_buy, None, message);
+		let res = api_buy.accept_swap_offer(&kc_buy, &ctx_buy, message);
 		assert_eq!(res.err().unwrap(), ErrorKind::InvalidLockHeightRefundTx); // Swap cannot be accepted
 	}
 
@@ -431,7 +430,6 @@ mod tests {
 			.create_swap_offer(
 				&kc_sell,
 				&ctx_sell,
-				None,
 				amount,
 				btc_amount,
 				Currency::Btc,
@@ -449,32 +447,32 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_sell_10001.json",
+				"libwallet/swap/test/swap_sell_10001.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 
 			write(
-				"test/message_10001.json",
+				"libwallet/swap_test/message_10001.json",
 				serde_json::to_string_pretty(&message_1).unwrap(),
 			)
 			.unwrap();
 			write(
-				"test/context_sell0001.json",
+				"libwallet/swap_test/context_sell0001.json",
 				serde_json::to_string_pretty(&ctx_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_sell_1.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_sell_1.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 			assert_eq!(
-				read_to_string("test/message_1.json").unwrap(),
+				read_to_string("libwallet/swap_test/message_1.json").unwrap(),
 				serde_json::to_string_pretty(&message_1).unwrap()
 			);
 			assert_eq!(
-				read_to_string("test/context_sell.json").unwrap(),
+				read_to_string("libwallet/swap_test/context_sell.json").unwrap(),
 				serde_json::to_string_pretty(&ctx_sell).unwrap()
 			);
 		}
@@ -491,7 +489,7 @@ mod tests {
 		// Buyer: accept swap offer
 		let mut api_buy = BtcSwapApi::new(nc.clone(), btc_nc.clone());
 		let (mut swap_buy, action) = api_buy
-			.accept_swap_offer(&kc_buy, &ctx_buy, None, message_1)
+			.accept_swap_offer(&kc_buy, &ctx_buy, message_1)
 			.unwrap();
 		assert_eq!(swap_buy.status, Status::Offered);
 		assert_eq!(action, Action::SendMessage(1));
@@ -598,31 +596,31 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_buy_1.json",
+				"libwallet/swap_test/swap_buy_1.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
 			.unwrap();
 			write(
-				"test/message_2.json",
+				"libwallet/swap_test/message_2.json",
 				serde_json::to_string_pretty(&message_2).unwrap(),
 			)
 			.unwrap();
 			write(
-				"test/context_buy.json",
+				"libwallet/swap_test/context_buy.json",
 				serde_json::to_string_pretty(&ctx_buy).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_buy_1.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_buy_1.json").unwrap(),
 				serde_json::to_string_pretty(&swap_buy).unwrap()
 			);
 			assert_eq!(
-				read_to_string("test/message_2.json").unwrap(),
+				read_to_string("libwallet/swap_test/message_2.json").unwrap(),
 				serde_json::to_string_pretty(&message_2).unwrap()
 			);
 			assert_eq!(
-				read_to_string("test/context_buy.json").unwrap(),
+				read_to_string("libwallet/swap_test/context_buy.json").unwrap(),
 				serde_json::to_string_pretty(&ctx_buy).unwrap()
 			);
 		}
@@ -646,23 +644,23 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_sell_2.json",
+				"libwallet/swap_test/swap_sell_2.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_sell_2.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_sell_2.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
 
 		// Seller: wait for Grin confirmations
 		nc.mine_blocks(10);
-		match api_sell
+		let action = api_sell
 			.required_action(&kc_sell, &mut swap_sell, &ctx_sell)
-			.unwrap()
-		{
+			.unwrap();
+		match action {
 			Action::Confirmations {
 				required: _,
 				actual,
@@ -705,13 +703,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_sell_3.json",
+				"libwallet/swap_test/swap_sell_3.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_sell_3.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_sell_3.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
@@ -729,22 +727,22 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_buy_2.json",
+				"libwallet/swap_test/swap_buy_2.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
 			.unwrap();
 			write(
-				"test/message_3.json",
+				"libwallet/swap_test/message_3.json",
 				serde_json::to_string_pretty(&message_3).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_buy_2.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_buy_2.json").unwrap(),
 				serde_json::to_string_pretty(&swap_buy).unwrap()
 			);
 			assert_eq!(
-				read_to_string("test/message_3.json").unwrap(),
+				read_to_string("libwallet/swap_test/message_3.json").unwrap(),
 				serde_json::to_string_pretty(&message_3).unwrap()
 			);
 		}
@@ -771,22 +769,22 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_sell_4.json",
+				"libwallet/swap_test/swap_sell_4.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 			write(
-				"test/message_4.json",
+				"libwallet/swap_test/message_4.json",
 				serde_json::to_string_pretty(&message_4).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_sell_4.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_sell_4.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 			assert_eq!(
-				read_to_string("test/message_4.json").unwrap(),
+				read_to_string("libwallet/swap_test/message_4.json").unwrap(),
 				serde_json::to_string_pretty(&message_4).unwrap()
 			);
 		}
@@ -820,13 +818,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_buy_3.json",
+				"libwallet/swap_test/swap_buy_3.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_buy_3.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_buy_3.json").unwrap(),
 				serde_json::to_string_pretty(&swap_buy).unwrap()
 			);
 		}
@@ -840,13 +838,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_sell_5.json",
+				"libwallet/swap_test/swap_sell_5.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_sell_5.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_sell_5.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
@@ -874,13 +872,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"test/swap_sell_6.json",
+				"libwallet/swap_test/swap_sell_6.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("test/swap_sell_6.json").unwrap(),
+				read_to_string("libwallet/swap_test/swap_sell_6.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
@@ -891,7 +889,7 @@ mod tests {
 	#[test]
 	fn test_swap_serde() {
 		// Seller context
-		let ctx_sell_str = read_to_string("test/context_sell.json").unwrap();
+		let ctx_sell_str = read_to_string("libwallet/swap_test/context_sell.json").unwrap();
 		let ctx_sell: Context = serde_json::from_str(&ctx_sell_str).unwrap();
 		assert_eq!(
 			serde_json::to_string_pretty(&ctx_sell).unwrap(),
@@ -899,14 +897,14 @@ mod tests {
 		);
 
 		// Buyer context
-		let ctx_buy_str = read_to_string("test/context_buy.json").unwrap();
+		let ctx_buy_str = read_to_string("libwallet/swap_test/context_buy.json").unwrap();
 		let ctx_buy: Context = serde_json::from_str(&ctx_buy_str).unwrap();
 		assert_eq!(serde_json::to_string_pretty(&ctx_buy).unwrap(), ctx_buy_str);
 
 		// Seller's swap state in different stages
 		for i in 0..6 {
 			println!("TRY SELL {}", i);
-			let swap_str = read_to_string(format!("test/swap_sell_{}.json", i + 1)).unwrap();
+			let swap_str = read_to_string(format!("libwallet/swap_test/swap_sell_{}.json", i + 1)).unwrap();
 			let swap: Swap = serde_json::from_str(&swap_str).unwrap();
 			assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
 			println!("OK SELL {}", i);
@@ -915,7 +913,7 @@ mod tests {
 		// Buyer's swap state in different stages
 		for i in 0..3 {
 			println!("TRY BUY {}", i);
-			let swap_str = read_to_string(format!("test/swap_buy_{}.json", i + 1)).unwrap();
+			let swap_str = read_to_string(format!("libwallet/swap_test/swap_buy_{}.json", i + 1)).unwrap();
 			let swap: Swap = serde_json::from_str(&swap_str).unwrap();
 			assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
 			println!("OK BUY {}", i);
@@ -924,7 +922,7 @@ mod tests {
 		// Messages
 		for i in 0..4 {
 			println!("TRY MSG {}", i);
-			let message_str = read_to_string(format!("test/message_{}.json", i + 1)).unwrap();
+			let message_str = read_to_string(format!("libwallet/swap_test/message_{}.json", i + 1)).unwrap();
 			let message: Message = serde_json::from_str(&message_str).unwrap();
 			assert_eq!(serde_json::to_string_pretty(&message).unwrap(), message_str);
 			println!("OK MSG {}", i);

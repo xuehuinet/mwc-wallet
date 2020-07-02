@@ -17,7 +17,7 @@ use crate::adapters::types::MWCMQSAddress;
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::proof::crypto;
 use crate::libwallet::proof::crypto::Hex;
-use crate::swap::message::SwapMessage;
+//use crate::swap::message::SwapMessage;
 use crate::util::Mutex;
 use crate::SlateSender;
 use grin_core::core::amount_to_hr_string;
@@ -27,7 +27,7 @@ use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::proof::tx_proof::{push_proof_for_slate, TxProof};
 use grin_wallet_libwallet::Slate;
 use grin_wallet_util::grin_util::secp::key::SecretKey;
-use grinswap::swap::message::Message;
+use grin_wallet_libwallet::swap::message::Message;
 use regex::Regex;
 use std::collections::HashMap;
 use std::io::Read;
@@ -1004,8 +1004,8 @@ impl MWCMQSBroker {
 								break;
 							}
 						}
-
-						for i in 0..3 {
+						// TODO  process this message and call Owner API that process swap messages
+						/*for i in 0..3 {
 							if splitxvec[i].starts_with("swapmessage=") {
 								// TODO  code duplicaiton
 								let split2 = splitxvec[i].split("=");
@@ -1048,7 +1048,7 @@ impl MWCMQSBroker {
 								self.handler.lock().on_message(&from, swapmessage);
 								break;
 							}
-						}
+						}*/
 					}
 
 					if break_out {

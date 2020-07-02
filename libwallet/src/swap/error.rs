@@ -17,12 +17,14 @@ use super::types::Status;
 use failure::Fail;
 use grin_core::core::committed;
 use grin_util::secp;
-use libwallet;
 use std::io;
 
 /// Swap crate errors
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum ErrorKind {
+	/// ElectrumX connection URI is not setup
+	#[fail(display = "ElectrumX URI is not defined. Please specify at wallet config connection to ElectrumX host")]
+	UndefinedElectrumXURI,
 	/// Unexpected state or status. Business logic is broken
 	#[fail(display = "Swap Unexpected action, {}", _0)]
 	UnexpectedAction(String),
@@ -82,7 +84,7 @@ pub enum ErrorKind {
 	Keychain(grin_keychain::Error),
 	/// LibWallet error
 	#[fail(display = "Swap LibWaller error: {}", _0)]
-	LibWallet(libwallet::ErrorKind),
+	LibWallet(crate::ErrorKind),
 	/// Secp issue
 	#[fail(display = "Swap Secp error: {}", _0)]
 	Secp(secp::Error),
@@ -98,6 +100,12 @@ pub enum ErrorKind {
 	/// Electrum Node client error
 	#[fail(display = "Electrum Node error, {}", _0)]
 	ElectrumNodeClient(String),
+	/// Requested swap trade not found
+	#[fail(display = "Swap trade {} not found", _0)]
+	TradeNotFound(String),
+	/// swap trade IO error
+	#[fail(display = "Swap trade {} IO error, {}", _0, _1)]
+	TradeIoError(String, String),
 	/// Generic error
 	#[fail(display = "Swap generic error, {}", _0)]
 	Generic(String),
@@ -109,9 +117,7 @@ impl ErrorKind {
 		use ErrorKind::*;
 		format!("");
 		match self {
-			Rpc(_)
-			| ElectrumNodeClient(_)
-			| LibWallet(libwallet::ErrorKind::Node(_)) => true,
+			Rpc(_) | ElectrumNodeClient(_) | LibWallet(crate::ErrorKind::Node(_)) => true,
 			_ => false,
 		}
 	}
@@ -129,8 +135,8 @@ impl From<multisig::ErrorKind> for ErrorKind {
 	}
 }
 
-impl From<libwallet::Error> for ErrorKind {
-	fn from(error: libwallet::Error) -> ErrorKind {
+impl From<crate::Error> for ErrorKind {
+	fn from(error: crate::Error) -> ErrorKind {
 		ErrorKind::LibWallet(error.kind())
 	}
 }

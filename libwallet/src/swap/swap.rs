@@ -25,7 +25,7 @@ use grin_keychain::{Identifier, SwitchCommitmentType};
 use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::pedersen::{Commitment, RangeProof};
 use grin_util::secp::{Message as SecpMessage, Secp256k1, Signature};
-use libwallet::{NodeClient, Slate};
+use crate::{NodeClient, Slate};
 use uuid::Uuid;
 
 /// Dummy wrapper for the hex-encoded serialized transaction.
@@ -44,8 +44,6 @@ pub struct Swap {
 	pub idx: u32,
 	/// Swap engine version. Both party are expected to have the same version
 	pub version: u8,
-	/// BTC redeem address. Seller want to get BTC to this address
-	pub address: Option<String>,
 	/// Network for the swap session (mainnet/floonet)
 	pub network: Network,
 	/// Role of the party (Byer or Seller)

@@ -19,6 +19,7 @@ use crate::grin_core::libtx;
 use crate::grin_keychain;
 use crate::grin_store;
 use crate::grin_util::secp;
+use crate::swap::error::ErrorKind as SwapErrorKind;
 use crate::util;
 use failure::{Backtrace, Context, Fail};
 use std::env;
@@ -313,8 +314,12 @@ pub enum ErrorKind {
 	HexError(String),
 
 	/// Derive key error
-	#[fail(display = " Derive key error, {}", _0)]
+	#[fail(display = "Derive key error, {}", _0)]
 	DeriveKeyError(String),
+
+	/// Swap error
+	#[fail(display = "Swap Error , {}", _0)]
+	SwapError(String),
 }
 
 impl Display for Error {
@@ -433,3 +438,10 @@ impl From<util::OnionV3AddressError> for Error {
 		Error::from(ErrorKind::OnionV3Address(error))
 	}
 }
+
+impl From<SwapErrorKind> for Error {
+	fn from(error: SwapErrorKind) -> Error {
+		Error::from(ErrorKind::SwapError(format!("{}",error)))
+	}
+}
+

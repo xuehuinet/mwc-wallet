@@ -893,6 +893,88 @@ pub fn parse_verify_proof_args(args: &ArgMatches) -> Result<command::ProofVerify
 	})
 }
 
+pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs, ParseError> {
+
+	let mwc_amount = parse_required(args, "mwc_amount")?;
+	let mwc_amount = core::core::amount_from_hr_string(mwc_amount);
+	let mwc_amount = match mwc_amount {
+		Ok(a) => a,
+		Err(e) => {
+			let msg = format!("Could not parse MWC amount as a number with optional decimal point. e={}",e);
+			return Err(ParseError::ArgumentError(msg));
+		}
+	};
+
+	let min_c = parse_required(args, "minimum_confirmations")?;
+	let min_c = parse_u64(min_c, "minimum_confirmations")?;
+
+	let secondary_currency = parse_required(args, "secondary_currency")?;
+
+	let btc_amount = parse_required(args, "secondary_amount")?;
+	let btc_amount = core::core::amount_from_hr_string(btc_amount);
+	let btc_amount = match btc_amount {
+		Ok(a) => a,
+		Err(e) => {
+			let msg = format!("Could not parse BTC amount as a number with optional decimal point. e={}",e);
+			return Err(ParseError::ArgumentError(msg));
+		}
+	};
+
+	let btc_address = parse_required(args, "secondary_address")?;
+
+	Ok(command::SwapStartArgs {
+		mwc_amount,
+		secondary_currency: secondary_currency.to_string(),
+		secondary_amount: btc_amount,
+		secondary_redeem_address: btc_address.to_string(),
+		minimum_confirmations: Some(min_c),
+	})
+}
+
+pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseError> {
+	let verbose = args.is_present("verbose");
+	if args.is_present("list") {
+		return Ok(command::SwapArgs{
+			subcommand: command::SwapSubcommand::List,
+			verbose,
+			swap_id: None,
+			action: None,
+		});
+	}
+
+	let swap_id = parse_required(args, "swap_id")?;
+
+	if args.is_present("delete") {
+		return Ok(command::SwapArgs{
+			subcommand: command::SwapSubcommand::Delete,
+			verbose,
+			swap_id: Some(swap_id.to_string()),
+			action: None,
+		});
+	}
+
+	if args.is_present("check") {
+		return Ok(command::SwapArgs{
+			subcommand: command::SwapSubcommand::Check,
+			verbose,
+			swap_id: Some(swap_id.to_string()),
+			action: None,
+		});
+	}
+
+	if args.is_present("process") {
+		let action = parse_required(args, "action")?;
+		return Ok(command::SwapArgs{
+			subcommand: command::SwapSubcommand::Check,
+			verbose,
+			swap_id: Some(swap_id.to_string()),
+			action: Some(action.to_string()),
+		});
+	}
+
+	Err(ParseError::ArgumentError(format!("Please define some action to do")))
+}
+
 pub fn wallet_command<C, F>(
 	wallet_args: &ArgMatches,
 	mut wallet_config: WalletConfig,
@@ -1015,8 +1097,13 @@ where
 				false,
 				wallet_config.wallet_data_dir.as_deref(),
 			)?;
+
+			let wallet_inst = lc.wallet_inst()?;
+
+			grin_wallet_libwallet::swap::trades::init_swap_trade_backend( wallet_inst.get_data_file_dir(),
+													   wallet_config.electrum_node_addr.clone() );
+
 			if let Some(account) = wallet_args.value_of("account") {
-				let wallet_inst = lc.wallet_inst()?;
 				wallet_inst.set_parent_key_id_by_name(account)?;
 			}
 			mask
@@ -1245,6 +1332,23 @@ where
 			// for CLI mode only, should be handled externally
 			Ok(())
 		}
+		("swap_start", Some(args)) => {
+			let a = arg_parse!(parse_swap_start_args(&args));
+			command::swap_start(
+				owner_api,
+				km,
+				a,
+			)
+		}
+		("swap", Some(args)) => {
+			let a = arg_parse!(parse_swap_args(&args));
+			command::swap(
+				owner_api,
+				km,
+				a,
+			)
+		}
+
 		(cmd, _) => {
 			return Err(ErrorKind::ArgumentError(format!(
 				"Unknown wallet command '{}', use 'mwc help wallet' for details",
