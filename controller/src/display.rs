@@ -17,6 +17,9 @@ use crate::core::global;
 use crate::libwallet::{
 	AcctPathMapping, Error, OutputCommitMapping, OutputStatus, TxLogEntry, WalletInfo,
 };
+use crate::libwallet::swap::swap::Swap;
+use crate::libwallet::swap::types::Role;
+
 use crate::util;
 use colored::*;
 use grin_wallet_util::OnionV3Address;
@@ -617,3 +620,43 @@ pub fn payment_proof(tx: &TxLogEntry) -> Result<(), Error> {
 
 	Ok(())
 }
+
+/// Display list of wallet accounts in a pretty way
+pub fn swap_trades(trades: Vec<(String,String)>) {
+	println!("\n____ Swap trades ____\n",);
+	let mut table = table!();
+
+	table.set_titles(row![
+		mMG->"Swap ID",
+		bMG->"Status",
+	]);
+	for m in trades {
+		table.add_row(row![
+			bFC->m.0,
+			bGC->m.1,
+		]);
+	}
+	table.set_format(*prettytable::format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+	table.printstd();
+	println!();
+}
+
+
+/// Display list of wallet accounts in a pretty way
+pub fn swap_trade(swap: Swap) {
+	println!("Swap ID: {}", swap.id);
+	println!("MWC amount: {}", core::amount_to_hr_string(swap.primary_amount, true) );
+	println!("{} amount: {}", swap.secondary_currency, swap.secondary_currency.amount_to_hr_string(swap.secondary_amount, true) );
+
+	match swap.role {
+		Role::Seller(btc_address, _) => {
+			println!("Role: Seller, redeem address {}", btc_address);
+		}
+		Role::Buyer => {
+			println!("Role: Buyer");
+		}
+	}
+	println!("Started: {}", swap.started);
+	println!("Status: {}", swap.status);
+}
+

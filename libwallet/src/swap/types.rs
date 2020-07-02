@@ -392,7 +392,7 @@ pub enum Action {
 		/// Required number of confirmations
 		required: u64,
 		/// Actual number of confirmations
-		actual: u64
+		actual: u64,
 	},
 	/// Wait for sufficient confirmations on the secondary currency
 	ConfirmationsSecondary {

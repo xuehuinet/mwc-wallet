@@ -71,9 +71,9 @@ pub struct BtcData {
 impl BtcData {
 	/// Create seller BTC data (party that receive BTC).
 	pub(crate) fn new<K>(
-		keychain: &K,    // Private key
+		keychain: &K,               // Private key
 		context: &BtcSellerContext, // Derivarive index
-		duration: Duration, // BTC locking duration
+		duration: Duration,         // BTC locking duration
 	) -> Result<Self, ErrorKind>
 	where
 		K: Keychain,
@@ -292,7 +292,7 @@ impl BtcData {
 	/// Seller init BTC offer for buyer
 	pub(crate) fn offer_update(&self) -> BtcUpdate {
 		BtcUpdate::Offer(BtcOfferUpdate {
-			lock_time: self.lock_time,  // Offered lock time for BTC coins
+			lock_time: self.lock_time,   // Offered lock time for BTC coins
 			cosign: self.cosign.clone(), // Buyer part of Schnorr multisig.
 		})
 	}

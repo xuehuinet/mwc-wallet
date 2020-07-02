@@ -255,6 +255,7 @@ pub struct ElectrumNodeClient {
 
 impl ElectrumNodeClient {
 	/// Create a new instance.
+	/// address - it is URI for electrumX host    host:port
 	pub fn new(address: String, testnet: bool) -> Self {
 		Self {
 			address,
@@ -378,7 +379,7 @@ struct ElectrumResponseError {
 
 #[cfg(test)]
 mod tests {
-/*	use super::*;
+	/*	use super::*;
 	use crate::swap::bitcoin::BtcData;
 	use crate::swap::types::Network;
 	use bitcoin_hashes::hex::FromHex;

@@ -189,7 +189,6 @@ where
 				mqs_config.clone(),
 				keychain_mask,
 				true,
-				None,
 			)
 			.map_err(|e| {
 				error!("Unable to start mwcmqs listener, {}", e);
@@ -230,7 +229,7 @@ where
 			mqs_config.clone(),
 			km.clone(),
 			false,
-			None,
+			//None,
 		)?;
 	}
 
@@ -436,7 +435,7 @@ where
 						mqs_config_unwrapped,
 						Arc::new(Mutex::new(km)),
 						false,
-						None,
+						//None,
 					)?;
 					thread::sleep(Duration::from_millis(2000));
 				}
@@ -1272,3 +1271,145 @@ where
 	})?;
 	Ok(())
 }
+
+/// Arguments for the swap command
+pub struct SwapStartArgs {
+	/// MWC to send
+	pub mwc_amount: u64,
+	/// Secondary currency
+	pub secondary_currency: String,
+	/// BTC to recieve
+	pub secondary_amount: u64,
+	/// Secondary currency redeem address
+	pub secondary_redeem_address: String,
+	/// Minimum confirmation for outputs. Default is 10
+	pub minimum_confirmations: Option<u64>,
+}
+
+pub fn swap_start<L, C, K>(
+	owner_api: &mut Owner<L, C, K>,
+	keychain_mask: Option<&SecretKey>,
+	args: SwapStartArgs,
+) -> Result<(), Error>
+	where
+		L: WalletLCProvider<'static, C, K> + 'static,
+		C: NodeClient + 'static,
+		K: keychain::Keychain + 'static,
+{
+	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+		let result = api.swap_start(keychain_mask,
+									&grin_wallet_libwallet::api_impl::types::SwapStartArgs {
+										mwc_amount: args.mwc_amount,
+										secondary_currency: args.secondary_currency,
+										secondary_amount: args.secondary_amount,
+										secondary_redeem_address: args.secondary_redeem_address,
+										minimum_confirmations: args.minimum_confirmations,
+									} );
+		match result {
+			Ok(swap_id) => {
+				warn!("Swap trade is created: {}",swap_id);
+				Ok(())
+			}
+			Err(e) => {
+				error!("Unable to start Swap trade: {}", e);
+				Err(ErrorKind::LibWallet(format!("Unable to start Swap trade: {}", e)).into())
+			}
+		}
+	})?;
+	Ok(())
+}
+
+// Swap operation
+pub enum SwapSubcommand {
+	List,
+	Delete,
+	Check,
+	Process
+}
+
+/// Arguments for the swap command
+pub struct SwapArgs {
+	/// What we want to do with a swap
+	pub subcommand: SwapSubcommand,
+	/// Using verbose outptus/printing
+	pub verbose: bool,
+	/// Swap ID that will are working with
+	pub swap_id: Option<String>,
+	/// Action to process. Value must match expected
+	pub action: Option<String>,
+
+}
+
+pub fn swap<L, C, K>(
+	owner_api: &mut Owner<L, C, K>,
+	keychain_mask: Option<&SecretKey>,
+	args: SwapArgs,
+) -> Result<(), Error>
+	where
+		L: WalletLCProvider<'static, C, K> + 'static,
+		C: NodeClient + 'static,
+		K: keychain::Keychain + 'static,
+{
+	match args.subcommand {
+		SwapSubcommand::List => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let result = api.swap_list(keychain_mask);
+				match result {
+					Ok( list ) => {
+						if list.is_empty() {
+							println!("You don't have any Swap trades");
+						}
+						else {
+							display::swap_trades(list);
+						}
+						Ok(())
+					}
+					Err (e) => {
+						error!("Unable to List Swap trades: {}", e);
+						Err(ErrorKind::LibWallet(format!("Unable to List Swap trades: {}", e)).into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+		SwapSubcommand::Delete => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
+				let result = api.swap_delete(keychain_mask, swap_id.clone() );
+				match result {
+					Ok(_) => {
+						println!("Swap trade {} was sucessfully deleted.", swap_id);
+						Ok(())
+					}
+					Err(e) => {
+						error!("Unable to delete Swap {}: {}", swap_id, e);
+						Err(ErrorKind::LibWallet(format!("Unable to delete Swap {}: {}", swap_id, e)).into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+		SwapSubcommand::Check => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
+				let result = api.swap_get(keychain_mask, swap_id.clone() );
+				match result {
+					Ok(swap) => {
+						display::swap_trade(swap);
+						Ok(())
+					}
+					Err(e) => {
+						error!("Unable to retrieve Swap {}: {}", swap_id, e);
+						Err(ErrorKind::LibWallet(format!("Unable to retrieve Swap {}: {}", swap_id, e)).into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+		SwapSubcommand::Process => {
+			error!("Not implemented yet");
+			Ok(())
+		}
+	}
+}
+

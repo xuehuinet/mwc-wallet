@@ -23,7 +23,7 @@ use grin_keychain::{BlindSum, BlindingFactor};
 use grin_util::secp::aggsig;
 use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::pedersen::{Commitment, RangeProof};
-use libwallet::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
+use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
 use rand::thread_rng;
 use std::mem;
 use uuid::Uuid;
@@ -41,7 +41,6 @@ impl SellApi {
 	pub fn create_swap_offer<K: Keychain>(
 		keychain: &K,
 		context: &Context,
-		address: Option<String>,
 		primary_amount: u64,
 		secondary_amount: u64,
 		secondary_currency: Currency,
@@ -114,7 +113,6 @@ impl SellApi {
 			id,
 			idx: 0,
 			version: CURRENT_VERSION,
-			address,
 			network: Network::Floonet,
 			role: Role::Seller(secondary_redeem_address, change),
 			started,
@@ -245,7 +243,9 @@ impl SellApi {
 
 		let adaptor_signature = signature_as_secret(
 			secp,
-			&swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction("Seller Fn calculate_redeem_secret() multisig is empty".to_string()))?,
+			&swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction(
+				"Seller Fn calculate_redeem_secret() multisig is empty".to_string(),
+			))?,
 		)?;
 		let signature = signature_as_secret(
 			secp,
@@ -669,7 +669,10 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.redeem_slate;
 		if slate.participant_data.len() > 0 {
-			return Err(ErrorKind::OneShot("Seller Fn build_redeem_participant() redeem slate is already initialized".to_string()));
+			return Err(ErrorKind::OneShot(
+				"Seller Fn build_redeem_participant() redeem slate is already initialized"
+					.to_string(),
+			));
 		}
 
 		// Build participant

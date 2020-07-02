@@ -1385,7 +1385,6 @@ dependencies = [
  "grin_wallet_impls",
  "grin_wallet_libwallet",
  "grin_wallet_util",
- "grinswap",
  "hyper 0.13.6",
  "lazy_static",
  "log",
@@ -1423,7 +1422,6 @@ dependencies = [
  "grin_wallet_config",
  "grin_wallet_libwallet",
  "grin_wallet_util",
- "grinswap",
  "http 0.1.21",
  "hyper 0.13.6",
  "hyper-rustls 0.20.0",
@@ -1450,6 +1448,8 @@ dependencies = [
 name = "grin_wallet_libwallet"
 version = "3.2.1"
 dependencies = [
+ "bitcoin",
+ "bitcoin_hashes",
  "blake2-rfc",
  "byteorder",
  "chrono",
@@ -1465,6 +1465,7 @@ dependencies = [
  "grin_util",
  "grin_wallet_config",
  "grin_wallet_util",
+ "hex",
  "hmac",
  "lazy_static",
  "libc",
@@ -1502,35 +1503,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "sha3",
-]
-
-[[package]]
-name = "grinswap"
-version = "3.2.1"
-dependencies = [
- "bitcoin",
- "bitcoin_hashes",
- "blake2-rfc",
- "byteorder",
- "chrono",
- "failure",
- "failure_derive",
- "grin_api",
- "grin_core",
- "grin_keychain",
- "grin_p2p",
- "grin_store",
- "grin_util",
- "grin_wallet_libwallet",
- "hex",
- "lazy_static",
- "parking_lot 0.6.4",
- "rand 0.5.6",
- "serde",
- "serde_derive",
- "serde_json",
- "sha2 0.8.2",
- "uuid",
 ]
 
 [[package]]
@@ -2235,7 +2207,6 @@ dependencies = [
  "grin_wallet_impls",
  "grin_wallet_libwallet",
  "grin_wallet_util",
- "grinswap",
  "lazy_static",
  "linefeed",
  "log",

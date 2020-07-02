@@ -19,7 +19,8 @@ use crate::swap::types::{
 	Action, BuyerContext, Context, Currency, Role, RoleContext, SecondaryBuyerContext,
 	SecondarySellerContext, SellerContext, Status,
 };
-use crate::swap::{BuyApi, ErrorKind, NodeClient, SellApi, Swap, SwapApi};
+use crate::swap::{BuyApi, ErrorKind, SellApi, Swap, SwapApi};
+use crate::NodeClient;
 use bitcoin::{Address, AddressType};
 use grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
 use grin_util::secp::aggsig::export_secnonce_single as generate_nonce;
@@ -442,7 +443,6 @@ where
 		&mut self,
 		keychain: &K,
 		context: &Context,
-		address: Option<String>,
 		primary_amount: u64,
 		secondary_amount: u64,
 		secondary_currency: Currency,
@@ -468,7 +468,6 @@ where
 		let mut swap = SellApi::create_swap_offer(
 			keychain,
 			context,
-			address,
 			primary_amount,
 			secondary_amount,
 			Currency::Btc,
@@ -492,7 +491,6 @@ where
 		&mut self,
 		keychain: &K,
 		context: &Context,
-		address: Option<String>,
 		message: Message,
 	) -> Result<(Swap, Action), ErrorKind> {
 		let (id, offer, secondary_update) = message.unwrap_offer()?;
@@ -503,7 +501,7 @@ where
 		)?;
 
 		let height = self.node_client.get_chain_tip()?.0;
-		let mut swap = BuyApi::accept_swap_offer(keychain, context, address, id, offer, height)?;
+		let mut swap = BuyApi::accept_swap_offer(keychain, context, id, offer, height)?;
 		swap.secondary_data = btc_data.wrap();
 
 		let action = self.required_action(keychain, &mut swap, context)?;

@@ -16,7 +16,7 @@ use crate::swap::ErrorKind;
 use bitcoin::consensus::Decodable;
 use bitcoin::{Address, OutPoint, Transaction};
 use bitcoin_hashes::sha256d;
-use parking_lot::Mutex;
+use crate::grin_util::Mutex;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::io::Cursor;

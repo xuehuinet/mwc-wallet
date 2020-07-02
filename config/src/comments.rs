@@ -132,6 +132,14 @@ fn comments() -> HashMap<String, String> {
 	);
 
 	retval.insert(
+		"electrum_node_addr".to_string(),
+		"
+# ElectrumX BTC Node URI needed for atomic swap that include with BTC.
+"
+			.to_string(),
+	);
+
+	retval.insert(
 		"[logging]".to_string(),
 		"
 #########################################

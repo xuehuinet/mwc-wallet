@@ -21,7 +21,7 @@ use grin_util::secp::pedersen::Commitment;
 //use grin_util::secp::pedersen::RangeProof;
 use grin_util::secp::{ContextFlag, Secp256k1, Signature};
 use hex::{self, FromHex};
-use libwallet::{Slate, VersionedSlate};
+use crate::{Slate, VersionedSlate};
 use serde::{Deserialize, Deserializer, Serializer};
 //use uuid::Uuid;
 

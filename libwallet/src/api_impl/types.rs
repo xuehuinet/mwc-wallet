@@ -320,3 +320,18 @@ pub struct PaymentProof {
 	#[serde(with = "dalek_ser::dalek_sig_serde")]
 	pub sender_sig: DalekSignature,
 }
+
+/// Init swap operation
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SwapStartArgs {
+	/// MWC to send
+	pub mwc_amount: u64,
+	/// Secondary currency
+	pub secondary_currency: String,
+	/// BTC to recieve
+	pub secondary_amount: u64,
+	/// Secondary currency redeem address
+	pub secondary_redeem_address: String,
+	/// Minimum confirmation number for the inputs to spend
+	pub minimum_confirmations: Option<u64>,
+}

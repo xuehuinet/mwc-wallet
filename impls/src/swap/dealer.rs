@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
 use blake2_rfc::blake2b::blake2b;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -827,3 +828,4 @@ impl SwapDealer {
 		Ok(())
 	}
 }
+*/

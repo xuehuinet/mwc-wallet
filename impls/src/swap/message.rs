@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
 use crate::error::ErrorKind;
 use grin_util::secp::key::SecretKey;
 use grin_wallet_libwallet::proof::message::EncryptedMessage;
@@ -94,3 +95,4 @@ impl SwapConfig {
 		}
 	}
 }
+*/

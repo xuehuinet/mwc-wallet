@@ -24,11 +24,11 @@ use crate::core::global;
 use crate::impls::create_sender;
 use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::api_impl::owner_updater::{start_updater_log_thread, StatusMessage};
-use crate::libwallet::api_impl::{owner, owner_updater};
+use crate::libwallet::api_impl::{owner, owner_swap, owner_updater};
 use crate::libwallet::{
 	AcctPathMapping, Error, ErrorKind, InitTxArgs, IssueInvoiceTxArgs, NodeClient,
 	NodeHeightResult, OutputCommitMapping, PaymentProof, Slate, TxLogEntry, WalletInfo, WalletInst,
-	WalletLCProvider,
+	WalletLCProvider,SwapStartArgs,
 };
 use crate::util::logger::LoggingConfig;
 use crate::util::secp::key::SecretKey;
@@ -41,6 +41,7 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
+use crate::libwallet::swap::swap::Swap;
 
 /// Main interface into all wallet API functions.
 /// Wallet APIs are split into two seperate blocks of functionality
@@ -2293,6 +2294,42 @@ where
 	) -> Result<(bool, bool), Error> {
 		owner::verify_payment_proof(self.wallet_inst.clone(), keychain_mask, proof)
 	}
+
+	/// Start swap trade process. Return SwapID that can be used to check the status or perform further action.
+	pub fn swap_start(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		params: &SwapStartArgs
+	) -> Result<String, Error> {
+		owner_swap::swap_start( self.wallet_inst.clone(), keychain_mask, params )
+	}
+
+	/// List all available swap operations. SwapId & Status
+	pub fn swap_list (
+		&self,
+		keychain_mask: Option<&SecretKey>,
+	) -> Result<Vec<(String,String)>, Error> {
+		owner_swap::swap_list( self.wallet_inst.clone(), keychain_mask )
+	}
+
+	pub fn swap_delete (
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: String,
+	) -> Result<(), Error> {
+		owner_swap::swap_delete( self.wallet_inst.clone(), keychain_mask, &swap_id )
+	}
+
+	pub fn swap_get (
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: String,
+	) -> Result<Swap, Error> {
+		owner_swap::swap_get( self.wallet_inst.clone(), keychain_mask, &swap_id )
+	}
+
+
+
 }
 
 #[doc(hidden)]

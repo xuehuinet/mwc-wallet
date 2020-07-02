@@ -23,7 +23,7 @@ use grin_keychain::{BlindSum, BlindingFactor, SwitchCommitmentType};
 use grin_util::secp::aggsig;
 use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::pedersen::RangeProof;
-use libwallet::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
+use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
 use rand::thread_rng;
 use std::mem;
 use uuid::Uuid;
@@ -37,7 +37,6 @@ impl BuyApi {
 	pub fn accept_swap_offer<K: Keychain>(
 		keychain: &K,
 		context: &Context,
-		address: Option<String>,
 		id: Uuid,
 		offer: OfferUpdate,
 		height: u64,
@@ -87,7 +86,6 @@ impl BuyApi {
 			id,
 			idx: 0,
 			version: CURRENT_VERSION,
-			address,
 			network: offer.network,
 			role: Role::Buyer,
 			started,
