@@ -27,6 +27,10 @@ use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate}
 use rand::thread_rng;
 use std::mem;
 use uuid::Uuid;
+use grin_core::core::Weighting;
+use std::sync::Arc;
+use grin_util::RwLock;
+use grin_core::core::verifier_cache::LruVerifierCache;
 
 /// Seller API. Bunch of methods that cover seller action for MWC swap
 /// This party is Selling MWC and buying BTC
@@ -86,7 +90,7 @@ impl SellApi {
 
 		// Make sure we have enough funds
 		let mut sum_in = 0;
-		for (_, input_amount) in &scontext.inputs {
+		for (_, _, input_amount) in &scontext.inputs {
 			sum_in += *input_amount;
 		}
 
@@ -368,7 +372,26 @@ impl SellApi {
 				} else {
 					Action::Complete
 				}
-			}
+			},
+			Status::Cancelled => {
+				if swap.lock_confirmations.is_none() { // Funds are not locked. Nothing need to be done
+					Action::None
+				}
+				else {
+					let height = node_client.get_chain_tip()?.0;
+					if height < swap.refund_slate.lock_height {
+						Action::WaitingForRefund{
+							required: swap.refund_slate.lock_height,
+							height,
+						}
+					}
+					else {
+						// Refund can be issued
+						Action::Refund
+					}
+				}
+
+			},
 			_ => Action::None,
 		};
 		Ok(action)
@@ -407,6 +430,35 @@ impl SellApi {
 			redeem_participant: swap.redeem_slate.participant_data[swap.participant_id].clone(),
 		}))
 	}
+
+	/// Publish MWC transaction to the node
+	pub fn publish_refund<C: NodeClient>(
+		node_client: &C,
+		swap: &mut Swap,
+	) -> Result<(), ErrorKind> {
+		match swap.status {
+			Status::Cancelled => {
+				// check if refund slate is ready
+				swap.refund_slate.tx.validate(Weighting::AsTransaction,Arc::new(RwLock::new(LruVerifierCache::new())))
+					.map_err(|e| ErrorKind::UnexpectedAction(format!("refund_slate is not valid, {}", e)))?;
+
+				// Check if locking is valid
+				let tip = node_client.get_chain_tip()?.0;
+				if swap.refund_slate.lock_height > tip {
+					return Err( ErrorKind::UnexpectedAction(format!("Refund slate lock height {} is higher than the tip {}. Please wait until block {} will be mained.", swap.refund_slate.lock_height, tip, tip)) );
+				}
+
+				publish_transaction(node_client, &swap.refund_slate.tx, false)?;
+				Ok(())
+			}
+			_ => Err(ErrorKind::UnexpectedAction(format!("Buyer Fn publish_refund() can be called form Cancelled status only, current status: {:?}", swap.status ))),
+		}
+	}
+
+
+// ----------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------
 
 	fn build_multisig<K: Keychain>(
 		keychain: &K,
@@ -459,7 +511,7 @@ impl SellApi {
 		let mut sum = BlindSum::new();
 
 		// Input(s)
-		for (input_identifier, input_amount) in &scontext.inputs {
+		for (input_identifier, _, input_amount) in &scontext.inputs {
 			sum = sum.sub_key_id(input_identifier.to_value_path(*input_amount));
 		}
 
@@ -492,7 +544,7 @@ impl SellApi {
 		// Build lock slate
 		// The multisig output is missing because it is not yet fully known
 		let mut elems = Vec::new();
-		for (input_identifier, input_amount) in &scontext.inputs {
+		for (input_identifier, _, input_amount) in &scontext.inputs {
 			elems.push(build::input(*input_amount, input_identifier.clone()));
 		}
 		elems.push(build::output(change, scontext.change_output.clone()));

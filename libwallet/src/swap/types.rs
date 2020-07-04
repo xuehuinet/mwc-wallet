@@ -91,7 +91,7 @@ pub enum Status {
 	Completed,
 	/// Failure scenario for Seller: MWC refund transaction was posted, get a refund
 	Refunded,
-	/// Failure scenario for Buyer: Session is cancelled, nothing need to be done
+	/// Failure scenario for both parties: Session is cancelled, might wait for Refund.
 	Cancelled,
 }
 
@@ -310,10 +310,12 @@ pub enum RoleContext {
 /// Context for the seller party
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SellerContext {
-	/// MWC Inputs that we are agree to sell
-	pub inputs: Vec<(Identifier, u64)>,
+	/// MWC Inputs that we are agree to sell: <Id, mmr_index (if known), amount>
+	pub inputs: Vec<(Identifier, Option<u64>, u64)>,
 	/// MWC Change outputs from the lock slate (Derivative ID)
 	pub change_output: Identifier,
+	/// Lock slate change amount
+	pub change_amount: u64,
 	/// MWC refund output  (Derivative ID)
 	pub refund_output: Identifier,
 	/// Secondary currency (BTC) related context
@@ -411,6 +413,13 @@ pub enum Action {
 	Complete,
 	/// Cancel swap
 	Cancel,
+	/// Waiting for refund to pass through
+	WaitingForRefund{
+		/// Required height
+		required: u64,
+		/// Actual height
+		height: u64,
+	},
 	/// Execute refund
 	Refund,
 }
@@ -421,13 +430,13 @@ impl fmt::Display for Action {
 			Action::None =>
 				"Nothing to do".to_string(),
 			Action::SendMessage(i) =>
-				format!("Send Message {}", i),
+				format!("(msg{}) Send Message {}", i, i),
 			Action::ReceiveMessage =>
-				"Waiting for respond from other party".to_string(),
+				"(receive) Waiting for respond from other party".to_string(),
 			Action::PublishTx =>
-				"Need to post MWC Lock Transaction".to_string(),
+				"(postlock) Need to post MWC Lock Transaction".to_string(),
 			Action::PublishTxSecondary(currency) =>
-				format!("Publish a transaction for {}", currency),
+				format!("(publish_{}) Publish a transaction for {}", currency, currency),
 			Action::DepositSecondary{ currency, amount, address} =>
 				format!("Deposit {} {} at {}", currency.amount_to_hr_string(*amount, true), currency, address ),
 			Action::Confirmations{required, actual} =>
@@ -441,14 +450,57 @@ impl fmt::Display for Action {
 			Action::Complete =>
 				"Swap trade is complete".to_string(),
 			Action::Cancel =>
-				"Swap trade cancelled".to_string(),
+				"(cancel) Swap trade cancelled".to_string(),
+			// Waiting for refund to pass through
+			Action::WaitingForRefund{ required, height} => {
+				let blocks_left = required - height;
+				format!("Waiting for block {} to be ready to post refund slate, {} blocks are left", required, blocks_left)
+			},
 			Action::Refund =>
-				"Swap trade is cancelled, refund need to be issued".to_string(),
+				"(refund) Refund can be issued".to_string(),
 		};
 		write!(f, "{}", disp)
 	}
 }
 
+impl Action {
+	/// String to the
+	pub fn from_cmd(cmd: &str) -> Option<Action> {
+		match cmd {
+			"msg1" => Some( Action::SendMessage(1)),
+			"msg2" => Some( Action::SendMessage(2)),
+			"receive" => Some( Action::ReceiveMessage),
+			"postlock" => Some( Action::PublishTx),
+			"refund" => Some( Action::Refund ),
+			"publish_btc" => Some(Action::PublishTxSecondary(Currency::Btc)),
+			"cancel" => Some( Action::Cancel ),
+			_ => None,
+		}
+	}
+
+	/// Action to the command string. Only action that have require some user input, has this maping
+	pub fn to_cmd(&self) -> Option<String> {
+		match &self {
+			Action::None |
+				Action::ConfirmationRedeem |
+				Action::Complete | Action::Cancel =>
+				None,
+			Action::DepositSecondary{currency: _, amount: _, address: _} => None,
+			Action::ConfirmationRedeemSecondary(_currency, _btc_address) => None,
+			Action::Confirmations{required: _, actual: _} => None,
+			Action::ConfirmationsSecondary{currency: _, required: _, actual: _ } => None,
+			Action::SendMessage(i) =>
+				Some(format!("msg{}", i)),
+			Action::ReceiveMessage =>
+				Some("receive".to_string()),
+			Action::PublishTx =>
+				Some("postlock".to_string()),
+			Action::Refund =>
+				Some("refund".to_string()),
+			_ => None,
+		}
+	}
+}
 
 #[cfg(test)]
 mod tests {

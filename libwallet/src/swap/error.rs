@@ -74,8 +74,8 @@ pub enum ErrorKind {
 	#[fail(display = "Swap function should only be called once, {}", _0)]
 	OneShot(String),
 	/// Swap is already finalized
-	#[fail(display = "Swap is already finalized")]
-	Finalized,
+	#[fail(display = "Swap is not active (finalized or cancelled)")]
+	NotActive,
 	/// Multisig error
 	#[fail(display = "Swap Multisig error: {}", _0)]
 	Multisig(multisig::ErrorKind),

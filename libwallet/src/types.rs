@@ -23,7 +23,7 @@ use crate::grin_core::libtx::{aggsig, secp_ser};
 use crate::grin_core::{global, ser};
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::grin_util::logger::LoggingConfig;
-use crate::grin_util::secp::key::{PublicKey, SecretKey};
+use crate::grin_util::secp::key::{PublicKey, SecretKey, ZERO_KEY};
 use crate::grin_util::secp::pedersen::Commitment;
 use crate::grin_util::secp::{self, pedersen, Secp256k1};
 use crate::grin_util::ZeroingString;
@@ -37,6 +37,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use uuid::Uuid;
+use crate::Slate;
 
 /// Combined trait to allow dynamic wallet dispatch
 pub trait WalletInst<'a, L, C, K>: Send + Sync
@@ -648,6 +649,31 @@ impl Context {
 			output_commits: vec![],
 			input_commits: vec![],
 		}
+	}
+
+	/// Call it if you really understand what you are doing. This method will not be able to
+	/// construct valid context. Currently it is used for processing lock for non standard slates.
+	pub fn from_send_slate(
+		slate: &Slate,
+		swap_context: &super::swap::Context,
+		parent_key_id: Identifier,
+		participant_id: usize
+	) -> Result<Context,Error> {
+		let seller_context = swap_context.unwrap_seller()?;
+		Ok(Context {
+			parent_key_id,
+			sec_key: ZERO_KEY, // Not needed
+			sec_nonce: swap_context.lock_nonce.clone(),
+			// Id, mmr_index (if known), amount
+			input_ids: seller_context.inputs.clone(),
+			output_ids: vec![(seller_context.change_output.clone(), None, seller_context.change_amount)],
+			amount: slate.amount,
+			fee: slate.fee,
+			participant_id,
+			payment_proof_derivation_index: None,
+			output_commits: slate.tx.body.outputs.iter().map(|o| o.commit).collect(),
+			input_commits: slate.tx.body.inputs.iter().map(|i| i.commit).collect(),
+		})
 	}
 }
 

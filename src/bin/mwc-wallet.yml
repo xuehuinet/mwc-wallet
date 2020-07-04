@@ -489,15 +489,23 @@ subcommands:
             long: secondary_address
             takes_value: true
         - required_mwc_lock_confirmations:
-            help: Number of confirmations required for locked MWC coins. Default is 60.
+            help: Number of confirmations required for locked MWC coins
             long: mwc_lock_confirmations
             takes_value: true
             default_value: "60"
         - required_secondary_lock_confirmations:
-            help: Number of confirmations required for locked BTC coins. Default is 6.
+            help: Number of confirmations required for locked BTC coins
             long: secondary_lock_confirmations
             takes_value: true
             default_value: "6"
+  - swap_message:
+      about: Process incoming swap message written in the file. Note, file base processing is not usual.
+      args:
+        - file:
+            help: filename with a message
+            short: f
+            long: file
+            takes_value: true
   - swap:
       about: Trade MWC to another currency (BTC) with atomic swap
       args:
@@ -511,10 +519,10 @@ subcommands:
             short: v
             long: verbose
             takes_value: false
-        - delete:
-            help: Delete SWAP trade. Note, be sure that you finish or cancel you trade before to delete it.
-            short: d
-            long: delete
+        - remove:
+            help: Remove SWAP trade. Note, be sure that you finish or cancel you trade before to delete it.
+            short: r
+            long: remove
             takes_value: false
         - check:
             help: Check the status of the trade
@@ -532,10 +540,31 @@ subcommands:
             long: action
             takes_value: true
             possible_values:
-              - aaaa
-              - bbbb
+              - continue
+              - msg1
+              - msg2
+              - postlock
+              - refund
+              - cancel
+            default_value: continue
         - swap_id:
             help: Id of swap trade. Required for some commands
             short: i
             long: swap_id
+            takes_value: true
+        - method:
+            help: Method for sending the message to other party
+            short: m
+            long: method
+            possible_values:
+              - http
+              - file
+              - keybase
+              - mwcmqs
+            default_value: file
+            takes_value: true
+        - dest:
+            help: Send the destination for the method above
+            short: d
+            long: dest
             takes_value: true

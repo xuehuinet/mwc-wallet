@@ -19,14 +19,19 @@ use crate::grin_util::Mutex;
 
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::types::{NodeClient};
-use crate::{wallet_lock, WalletInst, WalletLCProvider, SwapStartArgs};
+use crate::{wallet_lock, WalletInst, WalletLCProvider, SwapStartArgs, WalletBackend, TxLogEntry, TxLogEntryType, OutputData, OutputStatus};
 use crate::{Error};
 use std::sync::Arc;
 use std::convert::TryFrom;
-use crate::swap::trades;
+use crate::swap::{trades, Context, SwapApi};
 use crate::swap::error::ErrorKind;
 use crate::swap::swap::Swap;
 use crate::swap::types::{Currency,Action, Status};
+use std::fs::File;
+use std::io::Write;
+use crate::swap::message::{Message, Update};
+use crate::internal::selection;
+use grin_util::to_hex;
 
 // TODO  - Validation for all parameters.
 
@@ -50,21 +55,13 @@ pub fn swap_start<'a, L, C, K>(
     wallet_lock!(wallet_inst, w);
     let node_client = w.w2n_client().clone();
     let keychain = w.keychain(keychain_mask)?;
-
     let height = node_client.get_chain_tip()?.0;
 
     let secondary_currency = Currency::try_from(params.secondary_currency.as_str())?;
     let mut swap_api = crate::swap::api::create_instance( &secondary_currency, node_client)?;
 
-    let secondary_key_size = (*swap_api).context_key_count(&keychain, secondary_currency, true)?;
-    let mut keys: Vec<Identifier> = Vec::new();
-
-    for _ in 0..secondary_key_size {
-        keys.push( w.next_child(keychain_mask)? );
-    }
-
     let parent_key_id = w.parent_key_id(); // account is current one
-    let (outputs, _, _ , _) = crate::internal::selection::select_coins_and_fee(
+    let (outputs, total, amount, fee) = crate::internal::selection::select_coins_and_fee(
         &mut **w,
         params.mwc_amount,
         height,
@@ -78,12 +75,16 @@ pub fn swap_start<'a, L, C, K>(
         false,
         0)?;
 
-    let context = (*swap_api).create_context(
-        &keychain,
-        secondary_currency,
-        true,
-        Some(outputs.iter().map(|out| (out.key_id.clone(), out.value) ).collect()),
-        keys)?;
+    let context = create_context(
+         &mut **w,
+         keychain_mask,
+         &mut swap_api,
+         &keychain,
+         secondary_currency,
+         true,
+         Some(outputs.iter().map(|out| (out.key_id.clone(), out.mmr_index.clone(), out.value) ).collect()),
+         total - amount - fee,
+    )?;
 
     let (swap, _) = (*swap_api).create_swap_offer(
         &keychain,
@@ -183,4 +184,268 @@ pub fn get_swap_status_action<'a, L, C, K>(
     Ok((swap.status, action))
 }
 
+/// Process the action for the swap. Action has to match the expected one
+pub fn swap_process<'a, L, C, K>(
+    wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+    keychain_mask: Option<&SecretKey>,
+    swap_id: &str,
+    action: Action,
+    method: Option<String>,
+    destination: Option<String>,
+) -> Result<(), Error>
+    where
+        L: WalletLCProvider<'a, C, K>,
+        C: NodeClient + 'a,
+        K: Keychain + 'a,
+{
+    let (context, mut swap) = trades::get_swap_trade(swap_id)?;
+
+    wallet_lock!(wallet_inst, w);
+    let node_client = w.w2n_client().clone();
+    let keychain = w.keychain(keychain_mask)?;
+    let parent_key_id = w.parent_key_id();
+
+    let mut swap_api = crate::swap::api::create_instance( &swap.secondary_currency, node_client.clone())?;
+    let swap_action = swap_api.required_action(&keychain, &mut swap, &context)?;
+
+    if action!=Action::Cancel && action != swap_action {
+        return Err(ErrorKind::Generic(format!("Unable to process unexpected action {}, expected action is {}", action, swap_action)).into());
+    }
+
+    match action {
+        Action::SendMessage(_i) => {
+            // Destination currently if only file.
+            if method.is_none() || destination.is_none() {
+                return  Err(ErrorKind::Generic("Please specify method and destination to send a message".to_string()).into());
+            }
+            let message = swap_api.message(&keychain, &swap)?;
+            let msg_str = message.to_json()?;
+
+            // Destination is allwais a file name
+            // TODO - need to support method
+            let destination = destination.unwrap();
+
+            // TODO - Note, this code need to be updated !!!!
+            let mut file = File::create(destination.clone())?;
+            file.write_all(msg_str.as_bytes())?;
+            println!("Message is written into the file {}", destination);
+
+            // update swap status after the send. For file it is fair enough to have the message is sent
+            swap_api.message_sent(&keychain, &mut swap, &context)?;
+            trades::store_swap_trade(&context, &swap)?;
+            return Ok(());
+        }
+        Action::ReceiveMessage => {
+            // TODO - need to change. Currently message will be read form the file
+            //    We can keep it as one of alternatives, but also same need to be done for other protocols.
+            //    Because of that message is processed with different API call.
+            println!("Please use 'swap_message' command to process message from the file");
+            return Ok(());
+        }
+        Action::PublishTx => {
+            // Let's lock output and create transaction first.
+            // If those inputs are already spent - it is really bad because we have to cancel the swap.
+            assert!(swap.is_seller());
+
+            if swap.lock_confirmations.is_some() {
+                return Err(ErrorKind::UnexpectedAction("Seller Fn publish_transaction() lock is not initialized".to_string()).into());
+            }
+
+            let slate_context = crate::types::Context::from_send_slate(&swap.lock_slate,&context,parent_key_id,0)?;
+            selection::lock_tx_context(&mut **w, keychain_mask, &swap.lock_slate, &slate_context, Some(format!("Swap {} Lock", swap_id)))?;
+
+            swap_api.publish_transaction(&keychain, &mut swap, &context)?;
+            trades::store_swap_trade(&context, &swap)?;
+            println!("Lock MWC slate is published at transaction {}", swap.lock_slate.id );
+            return Ok(());
+        }
+        Action::PublishTxSecondary(_currency) => {
+            swap_api.publish_secondary_transaction(&keychain, &mut swap, &context)?;
+            println!("{} redeem transaction is published", swap.secondary_currency );
+            return Ok(());
+        }
+        Action::DepositSecondary{ currency, amount, address} => {
+            println!("Please deposit {} {} to {}", currency.amount_to_hr_string(amount, true), currency, address );
+            return Ok(());
+        }
+        Action::Cancel => {
+            // We want to cancel transaction.
+            swap_api.cancelled(&keychain, &mut swap)?;
+            trades::store_swap_trade(&context, &swap)?;
+            return Ok(());
+        }
+        Action::Refund => {
+            // Posting refund slate
+            // first let's check if we can post it
+            swap_api.refunded(&keychain, &mut swap)?;
+            trades::store_swap_trade(&context, &swap)?;
+
+            let seller_context = context.unwrap_seller()?;
+
+            let mut batch = w.batch(keychain_mask)?;
+            let log_id = batch.next_tx_log_id(&parent_key_id)?;
+            let mut t = TxLogEntry::new(parent_key_id.clone(), TxLogEntryType::TxReceived, log_id);
+
+            // Creating trnasaction
+            t.tx_slate_id = Some(swap.refund_slate.id.clone());
+            t.amount_credited = swap.refund_slate.amount;
+            t.address = Some(format!("Swap {} Refund", swap_id));
+            t.num_outputs = 1;
+            t.output_commits = swap.refund_slate.tx.body.outputs.iter().map(|o| o.commit.clone()).collect();
+            t.messages = None;
+            t.ttl_cutoff_height = None;
+            // when invoicing, this will be invalid
+            assert!(swap.refund_slate.tx.body.kernels.len()==1);
+            t.kernel_excess = Some( swap.refund_slate.tx.body.kernels[0].excess );
+            t.kernel_lookup_min_height = Some(swap.refund_slate.height);
+            batch.save_tx_log_entry(t, &parent_key_id)?;
+
+            assert!( swap.refund_slate.tx.body.outputs.len()==1 );
+
+            // Creating output for that
+            batch.save(OutputData {
+                    root_key_id: parent_key_id.clone(),
+                    key_id: seller_context.refund_output.clone(),
+                    mmr_index: None,
+                    n_child: seller_context.refund_output.to_path().last_path_index(),
+                    commit: Some(to_hex(swap.refund_slate.tx.body.outputs[0].commit.0.to_vec())),
+                    value: swap.refund_slate.amount,
+                    status: OutputStatus::Unconfirmed,
+                    height: swap.refund_slate.height,
+                    lock_height: swap.refund_slate.lock_height,
+                    is_coinbase: false,
+                    tx_log_entry: Some(log_id),
+                })?;
+            batch.commit()?;
+
+            return Ok(());
+        }
+        _ => {
+            println!("Sorry, not supported action {}", swap_action);
+            return Ok(());
+        }
+    }
+}
+
+/// Processing swap income message. Note result of that can be a new offer of modification of the current one
+/// We only notify user about that, no permission will be ask.
+/// Reason: Nothing will be done with the funds until user will go forward manually
+pub fn swap_income_message<'a, L, C, K>(
+    wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+    keychain_mask: Option<&SecretKey>,
+    swap_message: &str
+) -> Result<(), Error>
+    where
+        L: WalletLCProvider<'a, C, K>,
+        C: NodeClient + 'a,
+        K: Keychain + 'a,
+{
+    let message = Message::from_json(swap_message)?;
+    let swap_id = message.id.to_string();
+
+    match &message.inner {
+        Update::None => return Err( ErrorKind::Generic("Get empty message, nothing to process".to_string()).into()),
+        Update::Offer( offer_update ) => {
+            // We get an offer
+            wallet_lock!(wallet_inst, w);
+            let node_client = w.w2n_client().clone();
+            let keychain = w.keychain(keychain_mask)?;
+
+            if trades::get_swap_trade(swap_id.as_str()).is_ok() {
+                return Err( ErrorKind::Generic(format!("trade with SwapID {} already exist. Probably you already processed this message", swap_id)).into());
+            }
+
+            let mut swap_api = crate::swap::api::create_instance( &offer_update.secondary_currency, node_client)?;
+            // Creating Buyer context
+            let context = create_context(
+                                        &mut **w,
+                                        keychain_mask,
+                                        &mut swap_api,
+                                        &keychain,
+                                         offer_update.secondary_currency,
+                                        false,
+                                        None,
+                                        0)?;
+
+            let (swap, _) = swap_api.accept_swap_offer(&keychain, &context, message)?;
+            trades::store_swap_trade( &context, &swap )?;
+            println!("You get an offer to swap BTC to MWC. SwapID is {}", swap.id);
+            return Ok(());
+        }
+        _ => {
+            let (context,mut swap) = trades::get_swap_trade(swap_id.as_str())?;
+
+            wallet_lock!(wallet_inst, w);
+            let node_client = w.w2n_client().clone();
+            let keychain = w.keychain(keychain_mask)?;
+            let mut swap_api = crate::swap::api::create_instance( &swap.secondary_currency, node_client)?;
+            let swap_action = swap_api.required_action(&keychain, &mut swap, &context)?;
+            // Processing the rest 3 messages.
+            match &message.inner {
+                Update::AcceptOffer(_accept_offer_update) => {
+                    if !(swap_action == Action::ReceiveMessage && swap.status==Status::Offered && swap.is_seller()) {
+                        return Err( ErrorKind::Generic(format!("AcceptOffer message for SwapId {} is declined because this trade status doesn't meet expectations", swap_id)).into());
+                    }
+                    swap_api.receive_message(&keychain, &mut swap, &context, message)?;
+                    trades::store_swap_trade( &context, &swap )?;
+                    println!("Processed message AcceptOffer for SwapId {}", swap.id);
+                    return Ok(());
+                }
+                Update::InitRedeem(_init_redeem_update) => {
+                    if !(swap_action == Action::ReceiveMessage && swap.status==Status::InitRedeem && !swap.is_seller()) {
+                        return Err( ErrorKind::Generic(format!("InitRedeem message for SwapId {} is declined because this trade status doesn't meet expectations", swap_id)).into());
+                    }
+                    swap_api.receive_message(&keychain, &mut swap, &context, message)?;
+                    trades::store_swap_trade( &context, &swap )?;
+                    println!("Processed message InitRedeem for SwapId {}", swap.id);
+                    return Ok(());
+                }
+                Update::Redeem(_redeem_update) => {
+                    if !(swap_action == Action::ReceiveMessage && swap.status==Status::InitRedeem && swap.is_seller()) {
+                        return Err( ErrorKind::Generic(format!("Redeem message for SwapId {} is declined because this trade status doesn't meet expectations", swap_id)).into());
+                    }
+                    swap_api.receive_message(&keychain, &mut swap, &context, message)?;
+                    trades::store_swap_trade( &context, &swap )?;
+                    println!("Processed message Redeem for SwapId {}", swap.id);
+                    return Ok(());
+                }
+                _ => panic!("swap_income_message internal error"), // Not expected anything else.
+            };
+        }
+    };
+}
+
+// Local Helper method to create a context
+fn create_context<'a, T: ?Sized, C, K>(
+                            wallet: &mut T,
+                            keychain_mask: Option<&SecretKey>,
+                            swap_api: &mut Box<dyn SwapApi<K> + 'a>,
+                            keychain: &K,
+                            secondary_currency: Currency,
+                            is_seller: bool,
+                            inputs: Option<Vec<(Identifier, Option<u64>, u64)>>,
+                            change_amount: u64,
+) -> Result<Context, Error>
+    where
+        T: WalletBackend<'a, C, K>,
+        C: NodeClient + 'a,
+        K: Keychain + 'a,
+{
+    let secondary_key_size = (**swap_api).context_key_count(keychain, secondary_currency, is_seller)?;
+    let mut keys: Vec<Identifier> = Vec::new();
+
+    for _ in 0..secondary_key_size {
+        keys.push( wallet.next_child(keychain_mask)? );
+    }
+
+    let context = (**swap_api).create_context(
+        keychain,
+        secondary_currency,
+        is_seller,
+        inputs,
+        change_amount,
+        keys)?;
+
+    Ok(context)
+}
 

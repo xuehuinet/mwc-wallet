@@ -38,6 +38,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use uuid::Uuid;
+use grin_wallet_libwallet::swap::types::Action;
 
 /// Arguments common to all wallet commands
 #[derive(Clone)]
@@ -1333,6 +1334,28 @@ pub enum SwapSubcommand {
 	Process
 }
 
+/// Processing swap message from the file
+pub fn swap_message<L, C, K>(
+	owner_api: &mut Owner<L, C, K>,
+	keychain_mask: Option<&SecretKey>,
+	message_filename: &str,
+) -> Result<(), Error>
+	where
+		L: WalletLCProvider<'static, C, K> + 'static,
+		C: NodeClient + 'static,
+		K: keychain::Keychain + 'static,
+{
+	let mut file = File::open(message_filename).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to open file {}, {}", message_filename, e)))?;
+	let mut contents = String::new();
+	file.read_to_string(&mut contents).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to read from file {}, {}", message_filename, e)))?;
+
+	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+		api.swap_income_message(keychain_mask,contents)?;
+		Ok(())
+	})?;
+	Ok(())
+}
+
 /// Arguments for the swap command
 pub struct SwapArgs {
 	/// What we want to do with a swap
@@ -1343,7 +1366,10 @@ pub struct SwapArgs {
 	pub swap_id: Option<String>,
 	/// Action to process. Value must match expected
 	pub action: Option<String>,
-
+	/// Transport that can be used for interaction
+	pub method: Option<String>,
+	/// Destination is something needed to be send
+	pub destination: Option<String>,
 }
 
 pub fn swap<L, C, K>(
@@ -1414,7 +1440,52 @@ pub fn swap<L, C, K>(
 			Ok(())
 		}
 		SwapSubcommand::Process => {
-			error!("Not implemented yet");
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
+				let mut action = args.action.ok_or( ErrorKind::ArgumentError("Not found expected 'action' argument".to_string()))?;
+				//let swap = api.swap_get(keychain_mask, swap_id.clone() )?;
+				let (_swap_status,swap_action) = api.get_swap_status_action(keychain_mask, swap_id.clone())?;
+				let swap_action_str = swap_action.to_cmd().unwrap_or("none".to_string());
+
+				// Let's check the action
+				if action=="continue" {
+					if swap_action_str != "none" {
+						println!("Do you want process {}? (Yes/No)", swap_action);
+						let mut input = String::new();
+						let _ = std::io::stdin().read_line(&mut input);
+						let input = input.to_lowercase().trim().to_string();
+						if !input.starts_with("y") {
+							return Ok(())
+						}
+					}
+					action = swap_action_str.clone();
+				}
+
+				if action == "none" {
+					println!("Nothing can be done now");
+					return Ok(())
+				}
+
+				if action != "cancel" && action != swap_action_str {
+					println!("You can't process {}, current action is {}", action, swap_action );
+					return Ok(())
+				}
+
+				// Some action is expected, let's perform if
+
+				let result = api.swap_process(
+					keychain_mask, &swap_id,
+					Action::from_cmd(&action).ok_or(ErrorKind::ArgumentError(format!("Unable to parse {}", action)))?,
+					args.method, args.destination);
+
+				match result {
+					Ok(_) => Ok(()),
+					Err(e) => {
+						error!("Unable to process Swap {}: {}", swap_id, e);
+						Err(ErrorKind::LibWallet(format!("Unable to process Swap {}: {}", swap_id, e)).into())
+					}
+				}
+			})?;
 			Ok(())
 		}
 	}

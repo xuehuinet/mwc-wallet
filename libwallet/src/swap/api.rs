@@ -41,7 +41,8 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		keychain: &K,
 		secondary_currency: Currency,
 		is_seller: bool,
-		inputs: Option<Vec<(Identifier, u64)>>, // inputs with amounts that sellect is agree to use.
+		inputs: Option<Vec<(Identifier, Option<u64>, u64)>>,  // inputs with amounts that sellect is agree to use.
+		change_amount: u64,
 		keys: Vec<Identifier>,
 	) -> Result<Context, ErrorKind>;
 
@@ -68,8 +69,7 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		message: Message, // Income message with offer form the Seller. Seller Status  Created->Offered
 	) -> Result<(Swap, Action), ErrorKind>;
 
-	/// Report redeem step is completed.
-	/// Note:  I think it is a REPORT, not an action. Action is done by SwapDealer
+	/// Check if redeem step is completed. If yes - State will be move to 'Completed'
 	fn completed(
 		&mut self,
 		keychain: &K,
@@ -77,10 +77,13 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		context: &Context,
 	) -> Result<Action, ErrorKind>;
 
-	/// Not implemented yet. Guess should the report about that.
+	/// Execute refund. Refund can be executed if swap trade is cancelled. automatically or
+	/// by timeout (Waiting process must be limited to some point)
 	fn refunded(&mut self, keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind>;
 
-	/// Not implemented yet. Guess should the report about that.
+	/// Cancel the trade. Other party need to be notified with higher level channel.
+	/// It is not mwc-wallet responsibility to say nice good buy to other party.
+	/// Wallet inplemention only swap logic related activity.
 	fn cancelled(&mut self, keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind>;
 
 	/// Check which action should be taken by the user

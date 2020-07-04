@@ -58,13 +58,7 @@ impl SwapMessage {
 			ErrorKind::SwapMessageGenericError(format!("Unable to decrypt message, {}", e))
 		})?;
 
-		let swap: Message = serde_json::from_str(&decrypted_message).map_err(|e| {
-			ErrorKind::SwapMessageGenericError(format!(
-				"Unable to build Swap Message from mqs message, {}",
-				e
-			))
-		})?;
-
+		let swap = Message::from_json(decrypted_message)?;
 		Ok(swap)
 	}
 }

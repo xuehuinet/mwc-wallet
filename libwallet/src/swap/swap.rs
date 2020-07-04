@@ -74,12 +74,12 @@ pub struct Swap {
 	pub(super) multisig: MultisigBuilder,
 	/// MWC Lock Slate
 	#[serde(deserialize_with = "slate_deser")]
-	pub(super) lock_slate: Slate,
+	pub lock_slate: Slate,
 	/// Number of confirmations that lock state already get
-	pub(super) lock_confirmations: Option<u64>,
+	pub lock_confirmations: Option<u64>,
 	/// MWC Refund Slate
 	#[serde(deserialize_with = "slate_deser")]
-	pub(super) refund_slate: Slate,
+	pub refund_slate: Slate,
 	#[serde(deserialize_with = "slate_deser")]
 	/// MWC redeem slate
 	pub(super) redeem_slate: Slate,
@@ -99,8 +99,9 @@ pub struct Swap {
 }
 
 impl Swap {
-	/// Return true if Swap session is finished (not necessary with a success)
-	pub fn is_finalized(&self) -> bool {
+	/// Return true if Swap session is finished (not necessary with a success) and not expecting any
+	/// inputs.
+	pub fn is_not_active(&self) -> bool {
 		use Status::*;
 
 		match self.status {
@@ -130,7 +131,7 @@ impl Swap {
 		let amount = scontext
 			.inputs
 			.iter()
-			.fold(0, |acc, (_, value)| acc + *value)
+			.fold(0, |acc, (_,_, value)| acc + *value)
 			.saturating_sub(self.primary_amount);
 		let commit = keychain.commit(amount, &identifier, SwitchCommitmentType::Regular)?;
 
@@ -361,7 +362,6 @@ pub fn publish_transaction<C: NodeClient>(
 	tx: &tx::Transaction,
 	fluff: bool,
 ) -> Result<(), ErrorKind> {
-	println!("Node client = {}, txn = {:?}", node_client.node_url(), tx);
 	node_client.post_tx(tx, fluff)?;
 	Ok(())
 }
