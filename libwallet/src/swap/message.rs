@@ -84,6 +84,18 @@ impl Message {
 			_ => Err(ErrorKind::UnexpectedMessageType(format!("Fn unwrap_redeem() expecting Update::Redeem, get {:?}", self.inner))),
 		}
 	}
+
+	/// Message to Json String
+	pub fn to_json(&self) -> Result<String, ErrorKind> {
+		let str = serde_json::to_string(&self).map_err(|e| ErrorKind::Serde(format!("Unable to serialize a message, {}", e)))?;
+		Ok(str)
+	}
+
+	/// Build message from Json
+	pub fn from_json(s: &str) -> Result<Message, ErrorKind> {
+		Ok(serde_json::from_str(s).map_err(|e| ErrorKind::Serde(format!("Unable to parse Swap Message from {}, {}", s, e)))?)
+	}
+
 }
 
 /// Swap core data of the Seller/Buyer message

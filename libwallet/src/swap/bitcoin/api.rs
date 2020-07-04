@@ -399,7 +399,8 @@ where
 		keychain: &K,
 		secondary_currency: Currency,
 		is_seller: bool,
-		inputs: Option<Vec<(Identifier, u64)>>,
+		inputs: Option<Vec<(Identifier, Option<u64>, u64)>>,
+		change_amount: u64,
 		keys: Vec<Identifier>,
 	) -> Result<Context, ErrorKind> {
 		if secondary_currency != Currency::Btc {
@@ -413,6 +414,7 @@ where
 			RoleContext::Seller(SellerContext {
 				inputs: inputs.ok_or(ErrorKind::UnexpectedRole("Fn create_context() for seller not found inputs".to_string()))?,
 				change_output: keys.next().unwrap(),
+				change_amount,
 				refund_output: keys.next().unwrap(),
 				secondary_context: SecondarySellerContext::Btc(BtcSellerContext {
 					cosign: keys.next().unwrap(),
@@ -536,12 +538,26 @@ where
 		Ok(action)
 	}
 
-	fn refunded(&mut self, _keychain: &K, _swap: &mut Swap) -> Result<(), ErrorKind> {
-		unimplemented!();
+	fn refunded(&mut self, _keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind> {
+		match swap.role {
+			Role::Seller(_, _) => {
+				SellApi::publish_refund( &self.node_client, swap)?;
+				swap.status = Status::Refunded;
+				Ok(())
+			},
+			Role::Buyer => {
+				unimplemented!();
+			},
+		}
 	}
 
-	fn cancelled(&mut self, _keychain: &K, _swap: &mut Swap) -> Result<(), ErrorKind> {
-		unimplemented!();
+	fn cancelled(&mut self, _keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind> {
+		// User by some reason want to cancel. It is fine.
+		if swap.status == Status::Completed {
+			return Err(ErrorKind::UnexpectedAction("This trade is complited, you can't cancel it".to_string()));
+		}
+		swap.status = Status::Cancelled;
+		Ok(())
 	}
 
 	/// Check which action should be taken by the user
@@ -551,10 +567,6 @@ where
 		swap: &mut Swap,
 		context: &Context,
 	) -> Result<Action, ErrorKind> {
-		if swap.is_finalized() {
-			return Ok(Action::None);
-		}
-
 		let action = match swap.role {
 			Role::Seller(_, _) => {
 				if swap.status == Status::Accepted {
@@ -644,8 +656,8 @@ where
 			return Err(ErrorKind::MismatchedId);
 		}
 
-		if swap.is_finalized() {
-			return Err(ErrorKind::Finalized);
+		if swap.is_not_active() {
+			return Err(ErrorKind::NotActive);
 		}
 
 		match swap.role {

@@ -941,46 +941,35 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 
 pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseError> {
 	let verbose = args.is_present("verbose");
-	if args.is_present("list") {
-		return Ok(command::SwapArgs{
-			subcommand: command::SwapSubcommand::List,
-			verbose,
-			swap_id: None,
-			action: None,
-		});
+	let swap_id = args.value_of("swap_id").map(|s| String::from(s));
+	let action = args.value_of("action").map(|s| String::from(s));
+	let method = args.value_of("method").map(|s| String::from(s));
+	let destination = args.value_of("dest").map(|s| String::from(s));
+
+	let subcommand = if args.is_present("list") {
+			command::SwapSubcommand::List
 	}
-
-	let swap_id = parse_required(args, "swap_id")?;
-
-	if args.is_present("delete") {
-		return Ok(command::SwapArgs{
-			subcommand: command::SwapSubcommand::Delete,
-			verbose,
-			swap_id: Some(swap_id.to_string()),
-			action: None,
-		});
+	else if args.is_present("remove") {
+			command::SwapSubcommand::Delete
 	}
-
-	if args.is_present("check") {
-		return Ok(command::SwapArgs{
-			subcommand: command::SwapSubcommand::Check,
-			verbose,
-			swap_id: Some(swap_id.to_string()),
-			action: None,
-		});
+	else if args.is_present("check") {
+			command::SwapSubcommand::Check
 	}
-
-	if args.is_present("process") {
-		let action = parse_required(args, "action")?;
-		return Ok(command::SwapArgs{
-			subcommand: command::SwapSubcommand::Check,
-			verbose,
-			swap_id: Some(swap_id.to_string()),
-			action: Some(action.to_string()),
-		});
+	else if args.is_present("process") {
+			command::SwapSubcommand::Process
 	}
+	else {
+		return Err(ParseError::ArgumentError(format!("Please define some action to do")));
+	};
 
-	Err(ParseError::ArgumentError(format!("Please define some action to do")))
+	Ok(command::SwapArgs{
+		subcommand,
+		verbose,
+		swap_id,
+		action,
+		method,
+		destination,
+	})
 }
 
 pub fn wallet_command<C, F>(
@@ -1356,7 +1345,14 @@ where
 				a,
 			)
 		}
-
+		("swap_message", Some(args)) => {
+			let message_filename = parse_required(args, "file").map_err(|e| ErrorKind::ArgumentError(format!("{}", e)))?;
+			command::swap_message(
+				owner_api,
+				km,
+				message_filename,
+			)
+		}
 		(cmd, _) => {
 			return Err(ErrorKind::ArgumentError(format!(
 				"Unknown wallet command '{}', use 'mwc help wallet' for details",

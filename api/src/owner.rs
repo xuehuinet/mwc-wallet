@@ -2339,6 +2339,27 @@ where
 		owner_swap::get_swap_status_action( self.wallet_inst.clone(), keychain_mask, &swap_id )
 	}
 
+	pub fn swap_process(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: &str,
+		action: Action,
+		method: Option<String>,
+		destination: Option<String>,
+	) -> Result<(), Error> {
+		owner_swap::swap_process(self.wallet_inst.clone(), keychain_mask,
+			swap_id, action, method, destination )
+	}
+
+	/// Process swap income message
+	pub fn swap_income_message(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		message: String,
+	) -> Result<(), Error> {
+		owner_swap::swap_income_message( self.wallet_inst.clone(), keychain_mask, &message )
+	}
+
 }
 
 #[doc(hidden)]

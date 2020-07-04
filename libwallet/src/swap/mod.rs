@@ -117,10 +117,11 @@ mod tests {
 			redeem_nonce: key(kc, 1, 3),
 			role_context: RoleContext::Seller(SellerContext {
 				inputs: vec![
-					(key_id(0, 1), 60 * GRIN_UNIT),
-					(key_id(0, 2), 60 * GRIN_UNIT),
+					(key_id(0, 1), None, 60 * GRIN_UNIT),
+					(key_id(0, 2), None, 60 * GRIN_UNIT),
 				],
 				change_output: key_id(0, 3),
+				change_amount: 20 * GRIN_UNIT, // selling 100 coins, so 20 will be left
 				refund_output: key_id(0, 4),
 				secondary_context: SecondarySellerContext::Btc(BtcSellerContext {
 					cosign: key_id(0, 5),

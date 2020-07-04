@@ -1045,7 +1045,7 @@ impl MWCMQSBroker {
 									}
 								};
 
-								self.handler.lock().on_message(&from, swapmessage);
+								self.handler.lock().on_swap_message(&from, swapmessage);
 								break;
 							}
 						}*/
