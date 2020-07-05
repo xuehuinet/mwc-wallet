@@ -221,6 +221,7 @@ impl BuyApi {
 						Some((_, h)) => {
 							let height = node_client.get_chain_tip()?.0;
 							swap.redeem_confirmations = Some(height.saturating_sub(h) + 1);
+							swap.status = Status::Completed; // We are done
 							Action::Complete
 						}
 						None => Action::ConfirmationRedeem,

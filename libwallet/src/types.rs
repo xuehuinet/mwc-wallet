@@ -655,18 +655,19 @@ impl Context {
 	/// construct valid context. Currently it is used for processing lock for non standard slates.
 	pub fn from_send_slate(
 		slate: &Slate,
-		swap_context: &super::swap::Context,
+		nonce: SecretKey,
+		input_ids: Vec<(Identifier, Option<u64>, u64)>,
+		output_ids: Vec<(Identifier, Option<u64>, u64)>,
 		parent_key_id: Identifier,
 		participant_id: usize
 	) -> Result<Context,Error> {
-		let seller_context = swap_context.unwrap_seller()?;
 		Ok(Context {
 			parent_key_id,
 			sec_key: ZERO_KEY, // Not needed
-			sec_nonce: swap_context.lock_nonce.clone(),
+			sec_nonce: nonce.clone(),
 			// Id, mmr_index (if known), amount
-			input_ids: seller_context.inputs.clone(),
-			output_ids: vec![(seller_context.change_output.clone(), None, seller_context.change_amount)],
+			input_ids,
+			output_ids,
 			amount: slate.amount,
 			fee: slate.fee,
 			participant_id,

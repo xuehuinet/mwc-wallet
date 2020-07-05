@@ -315,10 +315,8 @@ where
 			}
 
 			// Enough confirmed or in mempool
-			print!(
-				"confirmed amount: {}, swap secondary amount: {}",
-				confirmed_amount, swap.secondary_amount
-			);
+			debug!("SWAP confirmed amount: {}, swap secondary amount: {}", confirmed_amount, swap.secondary_amount );
+
 			if confirmed_amount < swap.secondary_amount {
 				// Wait for enough confirmations
 				return Ok(Some(Action::ConfirmationsSecondary {

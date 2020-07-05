@@ -103,13 +103,13 @@ impl Message {
 pub enum Update {
 	/// Empty data placeholder
 	None,
-	/// Seller, Status::Created  Seller creates initial offer
+	/// Seller to Buyer, Status::Created  Seller creates initial offer
 	Offer(OfferUpdate),
 	/// Buyer sending back accepted offer
 	AcceptOffer(AcceptOfferUpdate),
-	/// Buyer, Status::Locked,  start working on Reedem slate
+	/// Buyer to Seller, Status::Locked,  start working on Reedem slate
 	InitRedeem(InitRedeemUpdate),
-	/// Seller, Status::InitRedeem, working on Reedem slate
+	/// Seller to Buyer, Status::InitRedeem, working on Reedem slate
 	Redeem(RedeemUpdate),
 }
 

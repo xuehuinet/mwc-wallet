@@ -432,9 +432,9 @@ impl fmt::Display for Action {
 			Action::SendMessage(i) =>
 				format!("(msg{}) Send Message {}", i, i),
 			Action::ReceiveMessage =>
-				"(receive) Waiting for respond from other party".to_string(),
+				"Waiting for respond from other party (cmd: swap_message)".to_string(),
 			Action::PublishTx =>
-				"(postlock) Need to post MWC Lock Transaction".to_string(),
+				"(publish_mwc) Publish a transaction for MWC".to_string(),
 			Action::PublishTxSecondary(currency) =>
 				format!("(publish_{}) Publish a transaction for {}", currency, currency),
 			Action::DepositSecondary{ currency, amount, address} =>
@@ -470,9 +470,9 @@ impl Action {
 			"msg1" => Some( Action::SendMessage(1)),
 			"msg2" => Some( Action::SendMessage(2)),
 			"receive" => Some( Action::ReceiveMessage),
-			"postlock" => Some( Action::PublishTx),
+			"publish_MWC" => Some( Action::PublishTx),
 			"refund" => Some( Action::Refund ),
-			"publish_btc" => Some(Action::PublishTxSecondary(Currency::Btc)),
+			"publish_BTC" => Some(Action::PublishTxSecondary(Currency::Btc)),
 			"cancel" => Some( Action::Cancel ),
 			_ => None,
 		}
@@ -494,7 +494,9 @@ impl Action {
 			Action::ReceiveMessage =>
 				Some("receive".to_string()),
 			Action::PublishTx =>
-				Some("postlock".to_string()),
+				Some("publish_MWC".to_string()),
+			Action::PublishTxSecondary(currency) =>
+				Some(format!("publish_{}", currency)),
 			Action::Refund =>
 				Some("refund".to_string()),
 			_ => None,

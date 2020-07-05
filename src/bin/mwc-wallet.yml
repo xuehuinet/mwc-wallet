@@ -543,7 +543,8 @@ subcommands:
               - continue
               - msg1
               - msg2
-              - postlock
+              - publish_MWC
+              - publish_BTC
               - refund
               - cancel
             default_value: continue

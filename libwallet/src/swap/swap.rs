@@ -82,9 +82,9 @@ pub struct Swap {
 	pub refund_slate: Slate,
 	#[serde(deserialize_with = "slate_deser")]
 	/// MWC redeem slate
-	pub(super) redeem_slate: Slate,
+	pub redeem_slate: Slate,
 	/// Redeem confirmations number
-	pub(super) redeem_confirmations: Option<u64>,
+	pub redeem_confirmations: Option<u64>,
 	/// Signature that is done with multisig
 	#[serde(
 		serialize_with = "option_sig_to_hex",
