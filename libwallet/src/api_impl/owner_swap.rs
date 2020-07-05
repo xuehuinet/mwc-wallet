@@ -19,7 +19,7 @@ use crate::grin_util::Mutex;
 
 use crate::grin_keychain::{Identifier, Keychain};
 use crate::types::{NodeClient};
-use crate::{wallet_lock, WalletInst, WalletLCProvider, SwapStartArgs, WalletBackend, TxLogEntry, TxLogEntryType, OutputData, OutputStatus};
+use crate::{wallet_lock, WalletInst, WalletLCProvider, SwapStartArgs, WalletBackend, TxLogEntry, TxLogEntryType, OutputData, OutputStatus, Slate};
 use crate::{Error};
 use std::sync::Arc;
 use std::convert::TryFrom;
@@ -242,26 +242,55 @@ pub fn swap_process<'a, L, C, K>(
             println!("Please use 'swap_message' command to process message from the file");
             return Ok(());
         }
-        Action::PublishTx => {
-            // Let's lock output and create transaction first.
-            // If those inputs are already spent - it is really bad because we have to cancel the swap.
-            assert!(swap.is_seller());
-
-            if swap.lock_confirmations.is_some() {
-                return Err(ErrorKind::UnexpectedAction("Seller Fn publish_transaction() lock is not initialized".to_string()).into());
-            }
-
-            let slate_context = crate::types::Context::from_send_slate(&swap.lock_slate,&context,parent_key_id,0)?;
-            selection::lock_tx_context(&mut **w, keychain_mask, &swap.lock_slate, &slate_context, Some(format!("Swap {} Lock", swap_id)))?;
-
-            swap_api.publish_transaction(&keychain, &mut swap, &context)?;
-            trades::store_swap_trade(&context, &swap)?;
-            println!("Lock MWC slate is published at transaction {}", swap.lock_slate.id );
-            return Ok(());
-        }
         Action::PublishTxSecondary(_currency) => {
             swap_api.publish_secondary_transaction(&keychain, &mut swap, &context)?;
             println!("{} redeem transaction is published", swap.secondary_currency );
+            return Ok(());
+        }
+        Action::PublishTx => {
+            // Let's lock output and create transaction first.
+            // If those inputs are already spent - it is really bad because we have to cancel the swap.
+
+            if swap.is_seller() {
+                // Seller publishing Lock Transaction
+                if swap.lock_confirmations.is_some() {
+                    return Err(ErrorKind::UnexpectedAction("Seller Fn publish_transaction() lock is not initialized".to_string()).into());
+                }
+
+                let seller_context = context.unwrap_seller()?;
+                let slate_context = crate::types::Context::from_send_slate(
+                    &swap.lock_slate,
+                    context.lock_nonce.clone(),
+                    seller_context.inputs.clone(),
+                    vec![(seller_context.change_output.clone(), None, seller_context.change_amount)],
+                    parent_key_id,
+                    0
+                )?;
+                selection::lock_tx_context(&mut **w, keychain_mask, &swap.lock_slate, &slate_context, Some(format!("Swap {} Lock", swap_id)))?;
+
+                swap_api.publish_transaction(&keychain, &mut swap, &context)?;
+                trades::store_swap_trade(&context, &swap)?;
+                println!("Lock MWC slate is published at transaction {}", swap.lock_slate.id);
+            }
+            else {
+                // Buyer publishing redeem transaction
+                if swap.redeem_confirmations.is_some() {
+                    // Tx already published
+                    return Err(ErrorKind::UnexpectedAction("Buyer Fn publish_transaction(), redeem_confirmations already defined".to_string()).into());
+                }
+
+                swap_api.publish_transaction(&keychain, &mut swap, &context)?;
+                trades::store_swap_trade(&context, &swap)?;
+
+                // Creating receive transaction from the slate
+                let buyer_context = context.unwrap_buyer()?;
+                create_receive_tx_record(&mut **w,
+                                         keychain_mask,
+                                         &swap.redeem_slate,
+                                         format!("Swap {}", swap_id),
+                                         &buyer_context.redeem)?;
+                println!("Redeem MWC slate is published at transaction {}", swap.redeem_slate.id);
+            }
             return Ok(());
         }
         Action::DepositSecondary{ currency, amount, address} => {
@@ -281,43 +310,11 @@ pub fn swap_process<'a, L, C, K>(
             trades::store_swap_trade(&context, &swap)?;
 
             let seller_context = context.unwrap_seller()?;
-
-            let mut batch = w.batch(keychain_mask)?;
-            let log_id = batch.next_tx_log_id(&parent_key_id)?;
-            let mut t = TxLogEntry::new(parent_key_id.clone(), TxLogEntryType::TxReceived, log_id);
-
-            // Creating trnasaction
-            t.tx_slate_id = Some(swap.refund_slate.id.clone());
-            t.amount_credited = swap.refund_slate.amount;
-            t.address = Some(format!("Swap {} Refund", swap_id));
-            t.num_outputs = 1;
-            t.output_commits = swap.refund_slate.tx.body.outputs.iter().map(|o| o.commit.clone()).collect();
-            t.messages = None;
-            t.ttl_cutoff_height = None;
-            // when invoicing, this will be invalid
-            assert!(swap.refund_slate.tx.body.kernels.len()==1);
-            t.kernel_excess = Some( swap.refund_slate.tx.body.kernels[0].excess );
-            t.kernel_lookup_min_height = Some(swap.refund_slate.height);
-            batch.save_tx_log_entry(t, &parent_key_id)?;
-
-            assert!( swap.refund_slate.tx.body.outputs.len()==1 );
-
-            // Creating output for that
-            batch.save(OutputData {
-                    root_key_id: parent_key_id.clone(),
-                    key_id: seller_context.refund_output.clone(),
-                    mmr_index: None,
-                    n_child: seller_context.refund_output.to_path().last_path_index(),
-                    commit: Some(to_hex(swap.refund_slate.tx.body.outputs[0].commit.0.to_vec())),
-                    value: swap.refund_slate.amount,
-                    status: OutputStatus::Unconfirmed,
-                    height: swap.refund_slate.height,
-                    lock_height: swap.refund_slate.lock_height,
-                    is_coinbase: false,
-                    tx_log_entry: Some(log_id),
-                })?;
-            batch.commit()?;
-
+            create_receive_tx_record(&mut **w,
+                   keychain_mask,
+                   &swap.refund_slate,
+                   format!("Swap {} Refund", swap_id),
+                   &seller_context.refund_output)?;
             return Ok(());
         }
         _ => {
@@ -325,6 +322,58 @@ pub fn swap_process<'a, L, C, K>(
             return Ok(());
         }
     }
+}
+
+// Creating Transaction and output for expected recieve slate
+fn create_receive_tx_record<'a, T: ?Sized, C, K>(
+    wallet: &mut T,
+    keychain_mask: Option<&SecretKey>,
+    slate: &Slate,
+    tx_name: String,
+    output_key_id: &Identifier,
+) -> Result<(), Error>
+    where
+        T: WalletBackend<'a, C, K>,
+        C: NodeClient + 'a,
+        K: Keychain + 'a,
+{
+    let parent_key_id = wallet.parent_key_id();
+    let mut batch = wallet.batch(keychain_mask)?;
+    let log_id = batch.next_tx_log_id(&parent_key_id)?;
+    let mut t = TxLogEntry::new(parent_key_id.clone(), TxLogEntryType::TxReceived, log_id);
+
+    // Creating trnasaction
+    t.tx_slate_id = Some(slate.id.clone());
+    t.amount_credited = slate.amount;
+    t.address = Some(tx_name);
+    t.num_outputs = 1;
+    t.output_commits = slate.tx.body.outputs.iter().map(|o| o.commit.clone()).collect();
+    t.messages = None;
+    t.ttl_cutoff_height = None;
+    // when invoicing, this will be invalid
+    assert!(slate.tx.body.kernels.len()==1);
+    t.kernel_excess = Some( slate.tx.body.kernels[0].excess );
+    t.kernel_lookup_min_height = Some(slate.height);
+    batch.save_tx_log_entry(t, &parent_key_id)?;
+
+    assert!( slate.tx.body.outputs.len()==1 );
+
+    // Creating output for that
+    batch.save(OutputData {
+        root_key_id: parent_key_id.clone(),
+        key_id: output_key_id.clone(),
+        mmr_index: None,
+        n_child: output_key_id.to_path().last_path_index(),
+        commit: Some(to_hex(slate.tx.body.outputs[0].commit.0.to_vec())),
+        value: slate.amount,
+        status: OutputStatus::Unconfirmed,
+        height: slate.height,
+        lock_height: slate.lock_height,
+        is_coinbase: false,
+        tx_log_entry: Some(log_id),
+    })?;
+    batch.commit()?;
+    Ok(())
 }
 
 /// Processing swap income message. Note result of that can be a new offer of modification of the current one
@@ -392,7 +441,7 @@ pub fn swap_income_message<'a, L, C, K>(
                     return Ok(());
                 }
                 Update::InitRedeem(_init_redeem_update) => {
-                    if !(swap_action == Action::ReceiveMessage && swap.status==Status::InitRedeem && !swap.is_seller()) {
+                    if !(swap_action == Action::ReceiveMessage && swap.status==Status::Locked && swap.is_seller()) {
                         return Err( ErrorKind::Generic(format!("InitRedeem message for SwapId {} is declined because this trade status doesn't meet expectations", swap_id)).into());
                     }
                     swap_api.receive_message(&keychain, &mut swap, &context, message)?;
@@ -401,7 +450,7 @@ pub fn swap_income_message<'a, L, C, K>(
                     return Ok(());
                 }
                 Update::Redeem(_redeem_update) => {
-                    if !(swap_action == Action::ReceiveMessage && swap.status==Status::InitRedeem && swap.is_seller()) {
+                    if !(swap_action == Action::ReceiveMessage && swap.status==Status::InitRedeem && !swap.is_seller()) {
                         return Err( ErrorKind::Generic(format!("Redeem message for SwapId {} is declined because this trade status doesn't meet expectations", swap_id)).into());
                     }
                     swap_api.receive_message(&keychain, &mut swap, &context, message)?;

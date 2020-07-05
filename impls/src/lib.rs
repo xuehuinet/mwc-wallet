@@ -44,8 +44,6 @@ pub mod lifecycle;
 pub mod node_clients;
 pub mod test_framework;
 pub mod tor;
-/// MWC swap support
-pub mod swap;
 
 pub use crate::adapters::{
 	create_sender,
