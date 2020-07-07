@@ -575,7 +575,7 @@ subcommands:
             default_value: file
             takes_value: true
         - dest:
-            help: Send the destination for the method above
+            help: Send message to the destination for the method above; address for the buyer BTC refund
             short: d
             long: dest
             takes_value: true

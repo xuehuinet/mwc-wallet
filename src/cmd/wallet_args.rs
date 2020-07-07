@@ -941,8 +941,8 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 		minimum_confirmations: Some(min_c),
 		required_mwc_lock_confirmations: mwc_lock,
 		required_secondary_lock_confirmations: btc_lock,
-		mwc_lock_time_seconds: mwc_lock_time_seconds_hours * 60,
-		seller_redeem_time: seller_redeem_time_hours * 60,
+		mwc_lock_time_seconds: mwc_lock_time_seconds_hours * 3600,
+		seller_redeem_time: seller_redeem_time_hours * 3600,
 	})
 }
 
