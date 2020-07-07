@@ -34,7 +34,7 @@ pub const TX_PROOF_SAVE_DIR: &'static str = "saved_proofs";
 
 lazy_static! {
 	/// Global proof in memory storage.
-	static ref SLATE_PROOFS: Mutex< HashMap<uuid::Uuid, TxProof> > = { Mutex::new(HashMap::new()) };
+	static ref SLATE_PROOFS: Mutex< HashMap<uuid::Uuid, TxProof> > = Mutex::new(HashMap::new());
 }
 
 /// Add a txProof into the mem storage
