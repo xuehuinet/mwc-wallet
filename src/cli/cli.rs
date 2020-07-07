@@ -40,7 +40,7 @@ const PROMPT: &'static str = "mwc-wallet> ";
 
 // static for keeping track of current stdin buffer contents
 lazy_static! {
-	static ref STDIN_CONTENTS: Mutex<String> = { Mutex::new(String::from("")) };
+	static ref STDIN_CONTENTS: Mutex<String> = Mutex::new(String::from(""));
 }
 
 #[macro_export]

@@ -95,7 +95,7 @@ pub fn pubkey_from_onion_v3(onion_address: &str) -> Result<DalekPublicKey, Error
 		})?
 		.to_vec();
 
-	address.split_off(32);
+	address.truncate(32);
 	let key = DalekPublicKey::from_bytes(&address).map_err(|e| {
 		ErrorKind::AddressDecoding(format!(
 			"Provided onion V3 address is invalid (parsing dalek key), {}",
