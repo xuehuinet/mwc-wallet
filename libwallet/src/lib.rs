@@ -57,9 +57,9 @@ pub mod internal;
 pub mod proof;
 mod slate;
 pub mod slate_versions;
-mod types;
 /// Atomic Swap library
 pub mod swap;
+mod types;
 extern crate bitcoin as bitcoin_lib;
 extern crate bitcoin_hashes;
 
@@ -75,7 +75,7 @@ pub use api_impl::owner_swap;
 pub use api_impl::owner_updater::StatusMessage;
 pub use api_impl::types::{
 	BlockFees, InitTxArgs, InitTxSendArgs, IssueInvoiceTxArgs, NodeHeightResult,
-	OutputCommitMapping, PaymentProof, SendTXArgs, VersionInfo, SwapStartArgs,
+	OutputCommitMapping, PaymentProof, SendTXArgs, SwapStartArgs, VersionInfo,
 };
 pub use internal::scan::scan;
 pub use proof::tx_proof::TxProof;

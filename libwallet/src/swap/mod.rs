@@ -293,9 +293,7 @@ mod tests {
 				for tx_pending in state.pending.iter() {
 					for in_pending in tx_pending.inputs() {
 						if in_pending.commit == input.commit {
-							return Err(
-								crate::ErrorKind::Node("Node failure".to_string()).into()
-							);
+							return Err(crate::ErrorKind::Node("Node failure".to_string()).into());
 						}
 					}
 				}
@@ -309,9 +307,7 @@ mod tests {
 				for tx_pending in state.pending.iter() {
 					for out_pending in tx_pending.outputs() {
 						if out_pending.commit == output.commit {
-							return Err(
-								crate::ErrorKind::Node("Node failure".to_string()).into()
-							);
+							return Err(crate::ErrorKind::Node("Node failure".to_string()).into());
 						}
 					}
 				}
@@ -326,9 +322,7 @@ mod tests {
 				for tx_pending in state.pending.iter() {
 					for kernel_pending in tx_pending.kernels() {
 						if kernel_pending.excess == kernel.excess {
-							return Err(
-								crate::ErrorKind::Node("Node failure".to_string()).into()
-							);
+							return Err(crate::ErrorKind::Node("Node failure".to_string()).into());
 						}
 					}
 				}

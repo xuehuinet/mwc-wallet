@@ -1,7 +1,7 @@
 //The following is support mqs usage in mwc713
 use crate::error::{Error, ErrorKind};
-use grin_wallet_libwallet::Slate;
 use grin_wallet_libwallet::swap::message::Message;
+use grin_wallet_libwallet::Slate;
 use std::sync::mpsc::Sender;
 use url::Url; //only for the Address::parse
 

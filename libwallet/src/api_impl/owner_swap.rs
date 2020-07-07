@@ -112,7 +112,11 @@ where
 	let swap_id = swap.id.to_string();
 	if trades::get_swap_trade(swap_id.as_str()).is_ok() {
 		// Should be impossible, uuid suppose to be unique. But we don't want to overwrite anything
-		return Err(ErrorKind::TradeIoError(swap_id.clone(),"This trade record already exist".to_string()).into());
+		return Err(ErrorKind::TradeIoError(
+			swap_id.clone(),
+			"This trade record already exist".to_string(),
+		)
+		.into());
 	}
 
 	trades::store_swap_trade(&context, &swap)?;
@@ -220,14 +224,21 @@ where
 	let swap_action = swap_api.required_action(&keychain, &mut swap, &context)?;
 
 	if action != Action::Cancel && action != swap_action {
-		return Err(ErrorKind::Generic(format!("Unable to process unexpected action {}, expected action is {}",action, swap_action)).into());
+		return Err(ErrorKind::Generic(format!(
+			"Unable to process unexpected action {}, expected action is {}",
+			action, swap_action
+		))
+		.into());
 	}
 
 	match action {
 		Action::SendMessage(_i) => {
 			// Destination currently if only file.
 			if method.is_none() || destination.is_none() {
-				return Err(ErrorKind::Generic("Please specify method and destination to send a message".to_string(),).into());
+				return Err(ErrorKind::Generic(
+					"Please specify method and destination to send a message".to_string(),
+				)
+				.into());
 			}
 			let message = swap_api.message(&keychain, &swap)?;
 			let msg_str = message.to_json()?;
@@ -255,7 +266,10 @@ where
 		}
 		Action::PublishTxSecondary(_currency) => {
 			swap_api.publish_secondary_transaction(&keychain, &mut swap, &context)?;
-			println!("{} redeem transaction is published",swap.secondary_currency);
+			println!(
+				"{} redeem transaction is published",
+				swap.secondary_currency
+			);
 			return Ok(());
 		}
 		Action::PublishTx => {
@@ -265,7 +279,10 @@ where
 			if swap.is_seller() {
 				// Seller publishing Lock Transaction
 				if swap.lock_confirmations.is_some() {
-					return Err(ErrorKind::UnexpectedAction("Seller Fn publish_transaction() lock is not initialized".to_string(),).into());
+					return Err(ErrorKind::UnexpectedAction(
+						"Seller Fn publish_transaction() lock is not initialized".to_string(),
+					)
+					.into());
 				}
 
 				let seller_context = context.unwrap_seller()?;
@@ -291,12 +308,19 @@ where
 
 				swap_api.publish_transaction(&keychain, &mut swap, &context)?;
 				trades::store_swap_trade(&context, &swap)?;
-				println!("Lock MWC slate is published at transaction {}",swap.lock_slate.id);
+				println!(
+					"Lock MWC slate is published at transaction {}",
+					swap.lock_slate.id
+				);
 			} else {
 				// Buyer publishing redeem transaction
 				if swap.redeem_confirmations.is_some() {
 					// Tx already published
-					return Err(ErrorKind::UnexpectedAction("Buyer Fn publish_transaction(), redeem_confirmations already defined".to_string()).into());
+					return Err(ErrorKind::UnexpectedAction(
+						"Buyer Fn publish_transaction(), redeem_confirmations already defined"
+							.to_string(),
+					)
+					.into());
 				}
 
 				swap_api.publish_transaction(&keychain, &mut swap, &context)?;
@@ -311,7 +335,10 @@ where
 					format!("Swap {}", swap_id),
 					&buyer_context.redeem,
 				)?;
-				println!("Redeem MWC slate is published at transaction {}",swap.redeem_slate.id);
+				println!(
+					"Redeem MWC slate is published at transaction {}",
+					swap.redeem_slate.id
+				);
 			}
 			return Ok(());
 		}
@@ -320,7 +347,12 @@ where
 			amount,
 			address,
 		} => {
-			println!("Please deposit {} {} to {}",currency.amount_to_hr_string(amount, true),currency,address);
+			println!(
+				"Please deposit {} {} to {}",
+				currency.amount_to_hr_string(amount, true),
+				currency,
+				address
+			);
 			return Ok(());
 		}
 		Action::Cancel => {
@@ -431,7 +463,9 @@ where
 
 	match &message.inner {
 		Update::None => {
-			return Err(ErrorKind::Generic("Get empty message, nothing to process".to_string()).into())
+			return Err(
+				ErrorKind::Generic("Get empty message, nothing to process".to_string()).into(),
+			)
 		}
 		Update::Offer(offer_update) => {
 			// We get an offer

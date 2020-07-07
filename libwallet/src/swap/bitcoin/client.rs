@@ -173,8 +173,9 @@ impl BtcNodeClient for TestBtcNodeClient {
 		let mut state = self.state.lock();
 
 		let cursor = Cursor::new(tx);
-		let tx = Transaction::consensus_decode(cursor)
-			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to parse transaction, {}", e)))?;
+		let tx = Transaction::consensus_decode(cursor).map_err(|e| {
+			ErrorKind::ElectrumNodeClient(format!("Unable to parse transaction, {}", e))
+		})?;
 
 		let txid = tx.txid();
 		if state.pending.contains_key(&txid) {

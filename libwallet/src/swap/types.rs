@@ -213,7 +213,8 @@ fn parse_mantissa(mantissa: &str, exp: usize) -> Result<u64, ErrorKind> {
 	if m.len() == 0 {
 		return Ok(0);
 	}
-	m.parse().map_err(|_| ErrorKind::InvalidAmountString(m.to_string()))
+	m.parse()
+		.map_err(|_| ErrorKind::InvalidAmountString(m.to_string()))
 }
 
 /// Secondary currency related data
@@ -268,14 +269,18 @@ impl Context {
 	pub fn unwrap_seller(&self) -> Result<&SellerContext, ErrorKind> {
 		match &self.role_context {
 			RoleContext::Seller(c) => Ok(c),
-			RoleContext::Buyer(_) => Err(ErrorKind::UnexpectedRole("Context Fn unwrap_seller()".to_string())),
+			RoleContext::Buyer(_) => Err(ErrorKind::UnexpectedRole(
+				"Context Fn unwrap_seller()".to_string(),
+			)),
 		}
 	}
 
 	/// To Buyer Context
 	pub fn unwrap_buyer(&self) -> Result<&BuyerContext, ErrorKind> {
 		match &self.role_context {
-			RoleContext::Seller(_) => Err(ErrorKind::UnexpectedRole( "Context Fn unwrap_seller()".to_string()) ),
+			RoleContext::Seller(_) => Err(ErrorKind::UnexpectedRole(
+				"Context Fn unwrap_seller()".to_string(),
+			)),
 			RoleContext::Buyer(c) => Ok(c),
 		}
 	}
@@ -434,36 +439,56 @@ pub enum Action {
 impl fmt::Display for Action {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		let disp = match &self {
-			Action::None =>
-				"Nothing to do".to_string(),
-			Action::SendMessage(i) =>
-				format!("(msg{}) Send Message {}", i, i),
-			Action::ReceiveMessage =>
-				"Waiting for respond from other party (cmd: swap_message)".to_string(),
-			Action::PublishTx =>
-				"(publish_mwc) Publish a transaction for MWC".to_string(),
-			Action::PublishTxSecondary(currency) =>
-				format!("(publish_{}) Publish a transaction for {}", currency, currency),
-			Action::DepositSecondary{ currency, amount, address} =>
-				format!("Deposit {} {} at {}", currency.amount_to_hr_string(*amount, true), currency, address ),
-			Action::Confirmations{required, actual} =>
-				format!("Waiting for {} MWC lock confirmations, has {}", required, actual),
-			Action::ConfirmationsSecondary{currency, required, actual} =>
-				format!("Waiting for {} {} lock confirmations, has {}", required, currency, actual),
-			Action::ConfirmationRedeem =>
-				"Waiting for MWC Redeem transaction to be confirmed".to_string(),
-			Action::ConfirmationRedeemSecondary(currency, btc_address)  =>
-				format!("Waiting for {} Redeem transaction to be confirmed for {}", currency, btc_address),
-			Action::Complete =>
-				"Swap trade is complete".to_string(),
-			Action::Cancel =>
-				"(cancel) Swap trade cancelled".to_string(),
+			Action::None => "Nothing to do".to_string(),
+			Action::SendMessage(i) => format!("(msg{}) Send Message {}", i, i),
+			Action::ReceiveMessage => {
+				"Waiting for respond from other party (cmd: swap_message)".to_string()
+			}
+			Action::PublishTx => "(publish_mwc) Publish a transaction for MWC".to_string(),
+			Action::PublishTxSecondary(currency) => format!(
+				"(publish_{}) Publish a transaction for {}",
+				currency, currency
+			),
+			Action::DepositSecondary {
+				currency,
+				amount,
+				address,
+			} => format!(
+				"Deposit {} {} at {}",
+				currency.amount_to_hr_string(*amount, true),
+				currency,
+				address
+			),
+			Action::Confirmations { required, actual } => format!(
+				"Waiting for {} MWC lock confirmations, has {}",
+				required, actual
+			),
+			Action::ConfirmationsSecondary {
+				currency,
+				required,
+				actual,
+			} => format!(
+				"Waiting for {} {} lock confirmations, has {}",
+				required, currency, actual
+			),
+			Action::ConfirmationRedeem => {
+				"Waiting for MWC Redeem transaction to be confirmed".to_string()
+			}
+			Action::ConfirmationRedeemSecondary(currency, btc_address) => format!(
+				"Waiting for {} Redeem transaction to be confirmed for {}",
+				currency, btc_address
+			),
+			Action::Complete => "Swap trade is complete".to_string(),
+			Action::Cancel => "(cancel) Swap trade cancelled".to_string(),
 			// Waiting for refund to pass through
 			Action::WaitingForMwcRefund { required, height } => {
 				let blocks_left = required - height;
-				format!("Waiting for block {} to be ready to post refund slate, {} blocks are left", required, blocks_left)
-			},
-			Action::WaitingForBtcRefund{ required, current} => {
+				format!(
+					"Waiting for block {} to be ready to post refund slate, {} blocks are left",
+					required, blocks_left
+				)
+			}
+			Action::WaitingForBtcRefund { required, current } => {
 				let time_left_sec = required - current;
 				let hours = time_left_sec / 3600;
 				let minutes = (time_left_sec % 3600) / 60;
@@ -494,24 +519,27 @@ impl Action {
 	/// Action to the command string. Only action that have require some user input, has this maping
 	pub fn to_cmd(&self) -> Option<String> {
 		match &self {
-			Action::None |
-				Action::ConfirmationRedeem |
-				Action::Complete | Action::Cancel =>
-				None,
-			Action::DepositSecondary{currency: _, amount: _, address: _} => None,
+			Action::None | Action::ConfirmationRedeem | Action::Complete | Action::Cancel => None,
+			Action::DepositSecondary {
+				currency: _,
+				amount: _,
+				address: _,
+			} => None,
 			Action::ConfirmationRedeemSecondary(_currency, _btc_address) => None,
-			Action::Confirmations{required: _, actual: _} => None,
-			Action::ConfirmationsSecondary{currency: _, required: _, actual: _ } => None,
-			Action::SendMessage(i) =>
-				Some(format!("msg{}", i)),
-			Action::ReceiveMessage =>
-				Some("receive".to_string()),
-			Action::PublishTx =>
-				Some("publish_MWC".to_string()),
-			Action::PublishTxSecondary(currency) =>
-				Some(format!("publish_{}", currency)),
-			Action::Refund =>
-				Some("refund".to_string()),
+			Action::Confirmations {
+				required: _,
+				actual: _,
+			} => None,
+			Action::ConfirmationsSecondary {
+				currency: _,
+				required: _,
+				actual: _,
+			} => None,
+			Action::SendMessage(i) => Some(format!("msg{}", i)),
+			Action::ReceiveMessage => Some("receive".to_string()),
+			Action::PublishTx => Some("publish_MWC".to_string()),
+			Action::PublishTxSecondary(currency) => Some(format!("publish_{}", currency)),
+			Action::Refund => Some("refund".to_string()),
 			_ => None,
 		}
 	}

@@ -89,7 +89,8 @@ pub struct RpcClient {
 
 impl RpcClient {
 	pub fn new(address: String) -> Result<Self, ErrorKind> {
-		let inner = LineStream::new(address.clone()).map_err(|e| ErrorKind::Rpc(format!("Unable connect to {}, {}", address, e)))?;
+		let inner = LineStream::new(address.clone())
+			.map_err(|e| ErrorKind::Rpc(format!("Unable connect to {}, {}", address, e)))?;
 		Ok(Self { inner })
 	}
 
@@ -102,14 +103,14 @@ impl RpcClient {
 			.inner
 			.read_line()
 			.map_err(|e| ErrorKind::Rpc(format!("Unable to read line, {}", e)))?;
-		let result: RpcResponse =
-			serde_json::from_str(&line).map_err(|e| ErrorKind::Rpc(format!("Unable to deserialize, {}", e)))?;
+		let result: RpcResponse = serde_json::from_str(&line)
+			.map_err(|e| ErrorKind::Rpc(format!("Unable to deserialize, {}", e)))?;
 		Ok(result)
 	}
 
 	pub fn write(&mut self, request: &RpcRequest) -> Result<(), ErrorKind> {
-		let line =
-			serde_json::to_string(request).map_err(|e| ErrorKind::Rpc(format!("Unable to serialize, {}", e)))?;
+		let line = serde_json::to_string(request)
+			.map_err(|e| ErrorKind::Rpc(format!("Unable to serialize, {}", e)))?;
 		self.inner
 			.write_line(line)
 			.map_err(|e| ErrorKind::Rpc(format!("Unable to write line, {}", e)))?;

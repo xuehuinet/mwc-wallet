@@ -136,7 +136,7 @@ fn comments() -> HashMap<String, String> {
 		"
 # ElectrumX BTC Node URI needed for atomic swap that include with BTC.
 "
-			.to_string(),
+		.to_string(),
 	);
 
 	retval.insert(

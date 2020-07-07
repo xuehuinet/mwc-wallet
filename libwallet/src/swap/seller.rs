@@ -86,7 +86,9 @@ impl SellApi {
 		refund_slate.lock_height = height + mwc_lock_time_seconds / 60;
 
 		if refund_slate.lock_height - refund_slate.height > 1440 * 2 {
-			return Err(ErrorKind::Generic("MWC locking time interval exceed 2 days. Is it a scam or mistake?".to_string()));
+			return Err(ErrorKind::Generic(
+				"MWC locking time interval exceed 2 days. Is it a scam or mistake?".to_string(),
+			));
 		}
 
 		// Redeem slate
@@ -213,7 +215,10 @@ impl SellApi {
 
 		// This function should only be called once
 		if swap.adaptor_signature.is_some() {
-			return Err(ErrorKind::OneShot("Seller Fn init_redeem() multisig is empty".to_string()).into());
+			return Err(ErrorKind::OneShot(
+				"Seller Fn init_redeem() multisig is empty".to_string(),
+			)
+			.into());
 		}
 
 		let mut redeem_slate: Slate = init_redeem.redeem_slate.into();
@@ -231,7 +236,9 @@ impl SellApi {
 			Some(&pub_nonce_sum),
 			&redeem_slate.participant_data[swap.other_participant_id()].public_blind_excess,
 			Some(&pub_blind_sum),
-			Some(&swap.redeem_public.ok_or(ErrorKind::UnexpectedAction("Seller Fn init_redeem() redeem pub key is empty".to_string()))?),
+			Some(&swap.redeem_public.ok_or(ErrorKind::UnexpectedAction(
+				"Seller Fn init_redeem() redeem pub key is empty".to_string(),
+			))?),
 			true,
 		) {
 			return Err(ErrorKind::InvalidAdaptorSignature);
@@ -302,7 +309,10 @@ impl SellApi {
 		match swap.status {
 			Status::Created => Self::offer_message(swap),
 			Status::InitRedeem => Self::redeem_message(swap),
-			_ => Err(ErrorKind::UnexpectedAction(format!("Seller Fn message() unexpected status {:?}",swap.status))),
+			_ => Err(ErrorKind::UnexpectedAction(format!(
+				"Seller Fn message() unexpected status {:?}",
+				swap.status
+			))),
 		}
 	}
 
@@ -311,7 +321,12 @@ impl SellApi {
 		match swap.status {
 			Status::Created => swap.status = Status::Offered,
 			Status::InitRedeem => swap.status = Status::Redeem,
-			_ => return Err(ErrorKind::UnexpectedAction(format!("Seller Fn message_sent() unexpected status {:?}",swap.status))),
+			_ => {
+				return Err(ErrorKind::UnexpectedAction(format!(
+					"Seller Fn message_sent() unexpected status {:?}",
+					swap.status
+				)))
+			}
 		};
 
 		Ok(())
@@ -326,13 +341,18 @@ impl SellApi {
 			Status::Accepted => {
 				if swap.lock_confirmations.is_some() {
 					// Tx already published
-					return Err(ErrorKind::UnexpectedAction("Seller Fn publish_transaction() lock is not initialized".to_string()));
+					return Err(ErrorKind::UnexpectedAction(
+						"Seller Fn publish_transaction() lock is not initialized".to_string(),
+					));
 				}
 				publish_transaction(node_client, &swap.lock_slate.tx, false)?;
 				swap.lock_confirmations = Some(0);
 				Ok(())
 			}
-			_ => Err(ErrorKind::UnexpectedAction(format!("Seller Fn publish_transaction() unexpected status {:?}", swap.status))),
+			_ => Err(ErrorKind::UnexpectedAction(format!(
+				"Seller Fn publish_transaction() unexpected status {:?}",
+				swap.status
+			))),
 		}
 	}
 
@@ -547,7 +567,10 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.lock_slate;
 		if slate.participant_data.len() > 0 {
-			return Err(ErrorKind::OneShot("Seller Fn build_lock_slate() lock slate is already initialized".to_string()).into());
+			return Err(ErrorKind::OneShot(
+				"Seller Fn build_lock_slate() lock slate is already initialized".to_string(),
+			)
+			.into());
 		}
 
 		// Build lock slate
@@ -596,7 +619,10 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.lock_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot("Seller Fn finalize_lock_slate() lock slate is already initialized".to_string()).into());
+			return Err(ErrorKind::OneShot(
+				"Seller Fn finalize_lock_slate() lock slate is already initialized".to_string(),
+			)
+			.into());
 		}
 
 		// Add participant to slate
@@ -643,7 +669,9 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.refund_slate;
 		if slate.participant_data.len() > 0 {
-			return Err(ErrorKind::OneShot("Seller Fn build_refund_slate() refund slate is already initialized".to_string()));
+			return Err(ErrorKind::OneShot(
+				"Seller Fn build_refund_slate() refund slate is already initialized".to_string(),
+			));
 		}
 
 		// Build refund slate
@@ -690,7 +718,10 @@ impl SellApi {
 		// This function should only be called once
 		let slate = &mut swap.refund_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot("Seller Fn finalize_refund_slate() refund slate is already initialized".to_string()).into());
+			return Err(ErrorKind::OneShot(
+				"Seller Fn finalize_refund_slate() refund slate is already initialized".to_string(),
+			)
+			.into());
 		}
 
 		// Add participant to slate

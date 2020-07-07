@@ -43,7 +43,10 @@ impl BuyApi {
 	) -> Result<Swap, ErrorKind> {
 		let test_mode = is_test_mode();
 		if offer.version != CURRENT_VERSION {
-			return Err(ErrorKind::IncompatibleVersion(offer.version, CURRENT_VERSION));
+			return Err(ErrorKind::IncompatibleVersion(
+				offer.version,
+				CURRENT_VERSION,
+			));
 		}
 
 		context.unwrap_buyer()?;
@@ -57,7 +60,7 @@ impl BuyApi {
 		// Refund tx needs to be locked until at least 10 hours in the future
 		let refund_slate: Slate = offer.refund_slate.into();
 		// expecting at least half of the interval
-		if refund_slate.lock_height < height + offer.mwc_lock_time_seconds/2/60 {
+		if refund_slate.lock_height < height + offer.mwc_lock_time_seconds / 2 / 60 {
 			return Err(ErrorKind::InvalidLockHeightRefundTx);
 		}
 
@@ -164,7 +167,9 @@ impl BuyApi {
 				swap.status = Status::Completed;
 				Ok(())
 			}
-			_ => Err(ErrorKind::UnexpectedAction("Buyer Fn complete(), redeem_confirmations is not defined".to_string())),
+			_ => Err(ErrorKind::UnexpectedAction(
+				"Buyer Fn complete(), redeem_confirmations is not defined".to_string(),
+			)),
 		}
 	}
 
@@ -173,7 +178,10 @@ impl BuyApi {
 		match swap.status {
 			Status::Offered => Self::accept_offer_message(swap),
 			Status::Locked => Self::init_redeem_message(swap),
-			_ => Err(ErrorKind::UnexpectedAction(format!("Buyer Fn message(), unexpected status {:?}", swap.status))),
+			_ => Err(ErrorKind::UnexpectedAction(format!(
+				"Buyer Fn message(), unexpected status {:?}",
+				swap.status
+			))),
 		}
 	}
 
@@ -182,7 +190,12 @@ impl BuyApi {
 		match swap.status {
 			Status::Offered => swap.status = Status::Accepted,
 			Status::Locked => swap.status = Status::InitRedeem,
-			_ => return Err(ErrorKind::UnexpectedAction(format!("Buyer Fn message_sent(), unexpected status {:?}", swap.status))),
+			_ => {
+				return Err(ErrorKind::UnexpectedAction(format!(
+					"Buyer Fn message_sent(), unexpected status {:?}",
+					swap.status
+				)))
+			}
 		};
 
 		Ok(())
@@ -197,13 +210,19 @@ impl BuyApi {
 			Status::Redeem => {
 				if swap.redeem_confirmations.is_some() {
 					// Tx already published
-					return Err(ErrorKind::UnexpectedAction("Buyer Fn publish_transaction(), redeem_confirmations already defined".to_string()));
+					return Err(ErrorKind::UnexpectedAction(
+						"Buyer Fn publish_transaction(), redeem_confirmations already defined"
+							.to_string(),
+					));
 				}
 				publish_transaction(node_client, &swap.redeem_slate.tx, false)?;
 				swap.redeem_confirmations = Some(0);
 				Ok(())
 			}
-			_ => Err(ErrorKind::UnexpectedAction(format!("Buyer Fn publish_transaction(), unexpected status {:?}", swap.status ))),
+			_ => Err(ErrorKind::UnexpectedAction(format!(
+				"Buyer Fn publish_transaction(), unexpected status {:?}",
+				swap.status
+			))),
 		}
 	}
 
@@ -260,7 +279,9 @@ impl BuyApi {
 				swap.redeem_slate.clone(),
 				CURRENT_SLATE_VERSION,
 			),
-			adaptor_signature: swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction("Buyer Fn init_redeem_message(), multisig is empty".to_string()))?,
+			adaptor_signature: swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction(
+				"Buyer Fn init_redeem_message(), multisig is empty".to_string(),
+			))?,
 		}))
 	}
 
@@ -324,7 +345,11 @@ impl BuyApi {
 		// This function should only be called once
 		let slate = &mut swap.lock_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot("Buyer Fn sign_lock_slate(), lock slate participant data is already initialized".to_string()).into());
+			return Err(ErrorKind::OneShot(
+				"Buyer Fn sign_lock_slate(), lock slate participant data is already initialized"
+					.to_string(),
+			)
+			.into());
 		}
 
 		// Add multisig output to slate (with invalid proof)
@@ -428,7 +453,10 @@ impl BuyApi {
 		// This function should only be called once
 		let slate = &mut swap.redeem_slate;
 		if slate.participant_data.len() > 1 {
-			return Err(ErrorKind::OneShot("Buyer Fn build_redeem_slate(), redeem slate participant data is not empty".to_string()));
+			return Err(ErrorKind::OneShot(
+				"Buyer Fn build_redeem_slate(), redeem slate participant data is not empty"
+					.to_string(),
+			));
 		}
 
 		// Build slate
@@ -516,7 +544,9 @@ impl BuyApi {
 	) -> Result<(), ErrorKind> {
 		// This function should only be called once
 		if swap.adaptor_signature.is_some() {
-			return Err(ErrorKind::OneShot("Buyer calculate_adaptor_signature(), miltisig is already initialized".to_string()));
+			return Err(ErrorKind::OneShot(
+				"Buyer calculate_adaptor_signature(), miltisig is already initialized".to_string(),
+			));
 		}
 
 		let sec_key = Self::redeem_tx_secret(keychain, swap, context)?;

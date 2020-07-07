@@ -899,7 +899,10 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 	let mwc_amount = match mwc_amount {
 		Ok(a) => a,
 		Err(e) => {
-			let msg = format!("Could not parse MWC amount as a number with optional decimal point. e={}",e);
+			let msg = format!(
+				"Could not parse MWC amount as a number with optional decimal point. e={}",
+				e
+			);
 			return Err(ParseError::ArgumentError(msg));
 		}
 	};
@@ -914,7 +917,10 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 	let btc_amount = match btc_amount {
 		Ok(a) => a,
 		Err(e) => {
-			let msg = format!("Could not parse BTC amount as a number with optional decimal point. e={}",e);
+			let msg = format!(
+				"Could not parse BTC amount as a number with optional decimal point. e={}",
+				e
+			);
 			return Err(ParseError::ArgumentError(msg));
 		}
 	};
@@ -962,7 +968,9 @@ pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseErro
 	} else if args.is_present("process") {
 		command::SwapSubcommand::Process
 	} else {
-		return Err(ParseError::ArgumentError(format!("Please define some action to do")));
+		return Err(ParseError::ArgumentError(format!(
+			"Please define some action to do"
+		)));
 	};
 
 	Ok(command::SwapArgs {

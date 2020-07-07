@@ -22,12 +22,12 @@ use super::message::EncryptedMessage;
 use super::proofaddress::ProvableAddress;
 use crate::error::{Error, ErrorKind};
 use crate::Slate;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::{fs, path};
 use util::Mutex;
-use std::collections::HashMap;
 
 /// Dir name with proof files
 pub const TX_PROOF_SAVE_DIR: &'static str = "saved_proofs";
@@ -38,7 +38,7 @@ lazy_static! {
 }
 
 /// Add a txProof into the mem storage
-pub fn push_proof_for_slate( uuid: &uuid::Uuid, proof: TxProof ) {
+pub fn push_proof_for_slate(uuid: &uuid::Uuid, proof: TxProof) {
 	SLATE_PROOFS.lock().insert(uuid.clone(), proof);
 }
 

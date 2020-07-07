@@ -1332,7 +1332,7 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_api"
-version = "3.2.1"
+version = "3.2.2"
 dependencies = [
  "base64 0.9.3",
  "chrono",
@@ -1357,7 +1357,7 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_config"
-version = "3.2.1"
+version = "3.2.2"
 dependencies = [
  "dirs 1.0.5",
  "failure",
@@ -1372,7 +1372,7 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_controller"
-version = "3.2.1"
+version = "3.2.2"
 dependencies = [
  "chrono",
  "colored",
@@ -1402,7 +1402,7 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_impls"
-version = "3.2.1"
+version = "3.2.2"
 dependencies = [
  "bitcoin",
  "blake2-rfc",
@@ -1446,7 +1446,7 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_libwallet"
-version = "3.2.1"
+version = "3.2.2"
 dependencies = [
  "bitcoin",
  "bitcoin_hashes",
@@ -1486,7 +1486,7 @@ dependencies = [
 
 [[package]]
 name = "grin_wallet_util"
-version = "3.2.1"
+version = "3.2.2"
 dependencies = [
  "data-encoding",
  "ed25519-dalek",
