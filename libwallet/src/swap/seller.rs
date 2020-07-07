@@ -85,9 +85,12 @@ impl SellApi {
 		// Calculating lock height from seconds. Average mining speed is about 1 minute
 		refund_slate.lock_height = height + mwc_lock_time_seconds / 60;
 
-		if refund_slate.lock_height - refund_slate.height > 1440 * 2 {
+		// Don't lock for more than 4 weeks. 4 weeks + 1 day, because max locking is expecting 2 weeks and 1 day to do the swap
+		let max_lock_time = 1440 * (7 * 4 + 1);
+
+		if refund_slate.lock_height - refund_slate.height > max_lock_time {
 			return Err(ErrorKind::Generic(
-				"MWC locking time interval exceed 2 days. Is it a scam or mistake?".to_string(),
+				"MWC locking time interval exceed 4 weeks. Is it a scam or mistake?".to_string(),
 			));
 		}
 
