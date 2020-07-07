@@ -19,6 +19,7 @@ use crate::config::GRIN_WALLET_DIR;
 use crate::util::file::get_first_line;
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
+
 /// Argument parsing and error handling for wallet commands
 use clap::ArgMatches;
 use failure::Fail;
@@ -314,9 +315,16 @@ where
 {
 	// Checking is wallet data
 	let mut wallet_data_path = PathBuf::from(&config.data_file_dir);
-	wallet_data_path.push(config.wallet_data_dir.clone().unwrap_or(GRIN_WALLET_DIR.to_string()) );
+	wallet_data_path.push(
+		config
+			.wallet_data_dir
+			.clone()
+			.unwrap_or(GRIN_WALLET_DIR.to_string()),
+	);
 	if wallet_data_path.exists() && !test_mode {
-		return Err(ParseError::WalletExists(wallet_data_path.to_str().unwrap_or("unknown").to_string()));
+		return Err(ParseError::WalletExists(
+			wallet_data_path.to_str().unwrap_or("unknown").to_string(),
+		));
 	}
 
 	let list_length = match args.is_present("short_wordlist") {
@@ -885,6 +893,88 @@ pub fn parse_verify_proof_args(args: &ArgMatches) -> Result<command::ProofVerify
 	})
 }
 
+pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs, ParseError> {
+	let mwc_amount = parse_required(args, "mwc_amount")?;
+	let mwc_amount = core::core::amount_from_hr_string(mwc_amount);
+	let mwc_amount = match mwc_amount {
+		Ok(a) => a,
+		Err(e) => {
+			let msg = format!("Could not parse MWC amount as a number with optional decimal point. e={}",e);
+			return Err(ParseError::ArgumentError(msg));
+		}
+	};
+
+	let min_c = parse_required(args, "minimum_confirmations")?;
+	let min_c = parse_u64(min_c, "minimum_confirmations")?;
+
+	let secondary_currency = parse_required(args, "secondary_currency")?;
+
+	let btc_amount = parse_required(args, "secondary_amount")?;
+	let btc_amount = core::core::amount_from_hr_string(btc_amount);
+	let btc_amount = match btc_amount {
+		Ok(a) => a,
+		Err(e) => {
+			let msg = format!("Could not parse BTC amount as a number with optional decimal point. e={}",e);
+			return Err(ParseError::ArgumentError(msg));
+		}
+	};
+
+	let btc_address = parse_required(args, "secondary_address")?;
+
+	let mwc_lock = parse_required(args, "required_mwc_lock_confirmations")?;
+	let mwc_lock = parse_u64(mwc_lock, "required_mwc_lock_confirmations")?;
+
+	let btc_lock = parse_required(args, "required_secondary_lock_confirmations")?;
+	let btc_lock = parse_u64(btc_lock, "required_secondary_lock_confirmations")?;
+
+	let mwc_lock_time_seconds_hours = parse_required(args, "mwc_lock_time")?;
+	let mwc_lock_time_seconds_hours = parse_u64(mwc_lock_time_seconds_hours, "mwc_lock_time")?;
+
+	let seller_redeem_time_hours = parse_required(args, "seller_redeem_time")?;
+	let seller_redeem_time_hours = parse_u64(seller_redeem_time_hours, "seller_redeem_time")?;
+
+	Ok(command::SwapStartArgs {
+		mwc_amount,
+		secondary_currency: secondary_currency.to_string(),
+		secondary_amount: btc_amount,
+		secondary_redeem_address: btc_address.to_string(),
+		minimum_confirmations: Some(min_c),
+		required_mwc_lock_confirmations: mwc_lock,
+		required_secondary_lock_confirmations: btc_lock,
+		mwc_lock_time_seconds: mwc_lock_time_seconds_hours * 3600,
+		seller_redeem_time: seller_redeem_time_hours * 3600,
+	})
+}
+
+pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseError> {
+	let verbose = args.is_present("verbose");
+	let swap_id = args.value_of("swap_id").map(|s| String::from(s));
+	let action = args.value_of("action").map(|s| String::from(s));
+	let method = args.value_of("method").map(|s| String::from(s));
+	let destination = args.value_of("dest").map(|s| String::from(s));
+
+	let subcommand = if args.is_present("list") {
+		command::SwapSubcommand::List
+	} else if args.is_present("remove") {
+		command::SwapSubcommand::Delete
+	} else if args.is_present("check") {
+		command::SwapSubcommand::Check
+	} else if args.is_present("process") {
+		command::SwapSubcommand::Process
+	} else {
+		return Err(ParseError::ArgumentError(format!("Please define some action to do")));
+	};
+
+	Ok(command::SwapArgs {
+		subcommand,
+		verbose,
+		swap_id,
+		action,
+		method,
+		destination,
+	})
+}
+
 pub fn wallet_command<C, F>(
 	wallet_args: &ArgMatches,
 	mut wallet_config: WalletConfig,
@@ -1007,8 +1097,15 @@ where
 				false,
 				wallet_config.wallet_data_dir.as_deref(),
 			)?;
+
+			let wallet_inst = lc.wallet_inst()?;
+
+			grin_wallet_libwallet::swap::trades::init_swap_trade_backend(
+				wallet_inst.get_data_file_dir(),
+				wallet_config.electrum_node_addr.clone(),
+			);
+
 			if let Some(account) = wallet_args.value_of("account") {
-				let wallet_inst = lc.wallet_inst()?;
 				wallet_inst.set_parent_key_id_by_name(account)?;
 			}
 			mask
@@ -1236,6 +1333,19 @@ where
 		("close", Some(_)) => {
 			// for CLI mode only, should be handled externally
 			Ok(())
+		}
+		("swap_start", Some(args)) => {
+			let a = arg_parse!(parse_swap_start_args(&args));
+			command::swap_start(owner_api, km, a)
+		}
+		("swap", Some(args)) => {
+			let a = arg_parse!(parse_swap_args(&args));
+			command::swap(owner_api, km, a)
+		}
+		("swap_message", Some(args)) => {
+			let message_filename = parse_required(args, "file")
+				.map_err(|e| ErrorKind::ArgumentError(format!("{}", e)))?;
+			command::swap_message(owner_api, km, message_filename)
 		}
 		(cmd, _) => {
 			return Err(ErrorKind::ArgumentError(format!(

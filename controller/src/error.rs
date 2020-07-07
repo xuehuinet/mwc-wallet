@@ -135,6 +135,10 @@ pub enum ErrorKind {
 	/// Verify slate messages call failure
 	#[fail(display = "failed verifying slate messages, {}", _0)]
 	VerifySlateMessagesError(String),
+
+	/// Processing swap message failure
+	#[fail(display = "failed processing swap messages, {}", _0)]
+	ProcessSwapMessageError(String),
 }
 
 impl Fail for Error {

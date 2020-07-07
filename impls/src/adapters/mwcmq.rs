@@ -17,6 +17,7 @@ use crate::adapters::types::MWCMQSAddress;
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::proof::crypto;
 use crate::libwallet::proof::crypto::Hex;
+//use crate::swap::message::SwapMessage;
 use crate::util::Mutex;
 use crate::SlateSender;
 use grin_core::core::amount_to_hr_string;
@@ -26,6 +27,7 @@ use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::proof::tx_proof::{push_proof_for_slate, TxProof};
 use grin_wallet_libwallet::Slate;
 use grin_wallet_util::grin_util::secp::key::SecretKey;
+use grin_wallet_libwallet::swap::message::Message;
 use regex::Regex;
 use std::collections::HashMap;
 use std::io::Read;
@@ -199,6 +201,13 @@ impl Publisher for MWCMQPublisher {
 		})?;
 		Ok(slate)
 	}
+
+	fn post_take(&self, message: &Message, to: &str) -> Result<(), Error> {
+		let to_address = MWCMQSAddress::from_str(to)?;
+		self.broker
+			.post_take(message, &to_address, &self.address, &self.secret_key)?;
+		Ok(())
+	}
 }
 
 #[derive(Clone)]
@@ -276,6 +285,9 @@ struct MWCMQSBroker {
 	pub mwcmqs_port: u16,
 	pub print_to_log: bool,
 	pub handler: Arc<Mutex<Box<dyn SubscriptionHandler + Send>>>,
+	pub mwc_node_uri: Option<String>,
+	pub mwc_api_secret: Option<String>,
+	pub electrum_node_uri: Option<String>,
 }
 
 impl MWCMQSBroker {
@@ -291,6 +303,9 @@ impl MWCMQSBroker {
 			mwcmqs_port,
 			print_to_log,
 			handler: Arc::new(Mutex::new(handler)),
+			mwc_node_uri: None,
+			mwc_api_secret: None,
+			electrum_node_uri: None,
 		}
 	}
 
@@ -380,15 +395,14 @@ impl MWCMQSBroker {
 		params.insert("from", &fromstripped);
 		params.insert("signature", &signature);
 
-		let response = client
-			.post(&format!(
-				"https://{}:{}/sender?address={}",
-				self.mwcmqs_domain,
-				self.mwcmqs_port,
-				&str::replace(&to.get_stripped(), "@", "%40")
-			))
-			.form(&params)
-			.send();
+		let url = format!(
+			"https://{}:{}/sender?address={}",
+			self.mwcmqs_domain,
+			self.mwcmqs_port,
+			&str::replace(&to.get_stripped(), "@", "%40")
+		);
+		let response = client.post(&url).form(&params).send();
+		println!("post slate url = {}", url);
 
 		if !response.is_ok() {
 			return Err(ErrorKind::MqsInvalidRespose("mwcmqs connection error".to_string()).into());
@@ -416,6 +430,99 @@ impl MWCMQSBroker {
 							let seconds = last_seen / 1000;
 							self.do_log_warn(format!("\nWARNING: [{}] has not been connected to mwcmqs for {} seconds. This user might not receive the slate.",
 													 to.get_stripped(), seconds));
+						}
+					}
+				}
+			}
+		}
+
+		Ok(())
+	}
+
+	fn post_take(
+		&self,
+		swapmessage: &Message,
+		to: &MWCMQSAddress,
+		from: &MWCMQSAddress,
+		secret_key: &SecretKey,
+	) -> Result<(), Error> {
+		if !self.is_running() {
+			return Err(ErrorKind::ClosedListener("mwcmqs".to_string()).into());
+		}
+		let pkey = to.address.public_key()?;
+		let skey = secret_key.clone();
+
+		let message = EncryptedMessage::new(
+			serde_json::to_string(&swapmessage).map_err(|e| {
+				ErrorKind::MqsGenericError(format!("Unable convert Slate to Json, {}", e))
+			})?,
+			&to.address,
+			&pkey,
+			&skey,
+		)
+		.map_err(|e| ErrorKind::GenericError(format!("Unable encrypt slate, {}", e)))?;
+
+		let message_ser = &serde_json::to_string(&message).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Unable to convert Swap Message to Json, {}", e))
+		})?;
+
+		let mut challenge = String::new();
+		challenge.push_str(&message_ser);
+		let signature = crypto::sign_challenge(&challenge, secret_key);
+		let signature = signature.unwrap().to_hex();
+
+		let client = reqwest::Client::builder()
+			.timeout(Duration::from_secs(60))
+			.build()
+			.map_err(|e| {
+				ErrorKind::GenericError(format!("Failed to build a client for post_take, {}", e))
+			})?;
+
+		let mser: &str = &message_ser;
+		let fromstripped = from.get_stripped();
+
+		let mut params = HashMap::new();
+		params.insert("swapmessage", mser);
+		params.insert("from", &fromstripped);
+		params.insert("signature", &signature);
+
+		let url = format!(
+			"https://{}:{}/sender?address={}",
+			self.mwcmqs_domain,
+			self.mwcmqs_port,
+			&str::replace(&to.get_stripped(), "@", "%40")
+		);
+		let response = client.post(&url).form(&params).send();
+		println!("post take url = {}", url);
+
+		println!("error = {:?}", response);
+		if !response.is_ok() {
+			println!("error = {:?}", response);
+			return Err(ErrorKind::MqsInvalidRespose("mwcmqs connection error".to_string()).into());
+		} else {
+			let mut response = response.unwrap();
+			let mut resp_str = "".to_string();
+			let read_resp = response.read_to_string(&mut resp_str);
+
+			if !read_resp.is_ok() {
+				return Err(ErrorKind::MqsInvalidRespose("mwcmqs i/o error".to_string()).into());
+			} else {
+				let data: Vec<&str> = resp_str.split(" ").collect();
+				if data.len() <= 1 {
+					return Err(ErrorKind::MqsInvalidRespose("mwcmqs".to_string()).into());
+				} else {
+					let last_seen = data[1].parse::<i64>();
+					if !last_seen.is_ok() {
+						return Err(ErrorKind::MqsInvalidRespose("mwcmqs".to_string()).into());
+					} else {
+						let last_seen = last_seen.unwrap();
+						if last_seen > 10000000000 {
+							println!("\nWARNING: [{}] has not been connected to mwcmqs recently. This user might not receive the swap message.",
+									 to.get_stripped());
+						} else if last_seen > 150000 {
+							let seconds = last_seen / 1000;
+							println!("\nWARNING: [{}] has not been connected to mwcmqs for {} seconds. This user might not receive the swap message.",
+									 to.get_stripped(), seconds);
 						}
 					}
 				}
@@ -897,6 +1004,51 @@ impl MWCMQSBroker {
 								break;
 							}
 						}
+						// TODO  process this message and call Owner API that process swap messages
+						/*for i in 0..3 {
+							if splitxvec[i].starts_with("swapmessage=") {
+								// TODO  code duplicaiton
+								let split2 = splitxvec[i].split("=");
+								let vec2: Vec<&str> = split2.collect();
+								if vec2.len() <= 1 {
+									self.print_error(msgvec.clone(), "vec2.len <= 1", -5);
+									is_error = true;
+									continue;
+								}
+								let r1 = str::replace(vec2[1], "%22", "\"");
+								let r2 = str::replace(&r1, "%7B", "{");
+								let r3 = str::replace(&r2, "%7D", "}");
+								let r4 = str::replace(&r3, "%3A", ":");
+								let r5 = str::replace(&r4, "%2C", ",");
+								let r5 = r5.trim().to_string();
+
+								let from = MWCMQSAddress::from_str(&from);
+								let from = if !from.is_ok() {
+									self.print_error(msgvec.clone(), "error parsing from", -12);
+									is_error = true;
+									continue;
+								} else {
+									from.unwrap()
+								};
+
+								let swapmessage = match SwapMessage::from_response(
+									&from.address,
+									r5.clone(),
+									"".to_string(),
+									signature.clone(),
+									&secret_key,
+								) {
+									Ok(x) => x,
+									Err(err) => {
+										self.do_log_error(format!("{}", err));
+										continue;
+									}
+								};
+
+								self.handler.lock().on_swap_message(&from, swapmessage);
+								break;
+							}
+						}*/
 					}
 
 					if break_out {

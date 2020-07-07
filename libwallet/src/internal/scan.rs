@@ -803,7 +803,7 @@ where
 						&kernel,
 						Some(cmp::min(
 							start_height, // 1 is min supported value by API
-							tx.tx_log.kernel_lookup_min_height.unwrap_or(start_height),
+							cmp::max(1,tx.tx_log.kernel_lookup_min_height.unwrap_or(start_height)),
 						)),
 						Some(end_height),
 					)?;
