@@ -30,6 +30,7 @@ use grin_wallet_controller::{Error, ErrorKind};
 use grin_wallet_impls::tor::config::is_tor_address;
 use grin_wallet_impls::{DefaultLCProvider, DefaultWalletImpl};
 use grin_wallet_impls::{PathToSlate, SlateGetter as _};
+use grin_wallet_libwallet::swap::types::Currency;
 use grin_wallet_libwallet::Slate;
 use grin_wallet_libwallet::{IssueInvoiceTxArgs, NodeClient, WalletInst, WalletLCProvider};
 use grin_wallet_util::grin_core as core;
@@ -913,14 +914,11 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 	let secondary_currency = parse_required(args, "secondary_currency")?;
 
 	let btc_amount = parse_required(args, "secondary_amount")?;
-	let btc_amount = core::core::amount_from_hr_string(btc_amount);
+	let btc_amount = Currency::Btc.amount_from_hr_string(btc_amount);
 	let btc_amount = match btc_amount {
 		Ok(a) => a,
 		Err(e) => {
-			let msg = format!(
-				"Could not parse BTC amount as a number with optional decimal point. e={}",
-				e
-			);
+			let msg = format!("Unable to parse BTC amount, {}", e);
 			return Err(ParseError::ArgumentError(msg));
 		}
 	};

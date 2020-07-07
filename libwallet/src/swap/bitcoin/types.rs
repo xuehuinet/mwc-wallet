@@ -148,7 +148,7 @@ impl BtcData {
 	pub fn script(&mut self, secp: &Secp256k1, redeem: &PublicKey) -> Result<(), ErrorKind> {
 		if self.script.is_none() {
 			// Don't lock for more than 4 weeks. 4 weeks + 2 day, because max locking is expecting 2 weeks and 1 day to do the swap and 1 extra day for Byer
-			if self.lock_time > (Utc::now().timestamp() + 3600 * 24 * (7*4 + 2)) as u32 {
+			if self.lock_time > (Utc::now().timestamp() + 3600 * 24 * (7 * 4 + 2)) as u32 {
 				return Err( ErrorKind::Generic("BTC locking time interval is larger than 4 weeks. Rejecting, looks like a scam.".to_string()) );
 			}
 			// Locking for the past is very expected. We build this script every time when we need to calculate hash for the address.
