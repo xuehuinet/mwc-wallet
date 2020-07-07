@@ -498,6 +498,16 @@ subcommands:
             long: secondary_lock_confirmations
             takes_value: true
             default_value: "6"
+        - mwc_lock_time:
+            help: Time interval (hours) that guarantee needed to finish swap process. Seller will lock MWC funds for this time
+            long: mwc_lock_time
+            takes_value: true
+            default_value: "24"
+        - seller_redeem_time:
+            help: Time interval (hours) needed for Buyer to redeem BTC. Btc will be locked extra for that interval
+            long: seller_redeem_time
+            takes_value: true
+            default_value: "12"
   - swap_message:
       about: Process incoming swap message written in the file. Note, file base processing is not usual.
       args:

@@ -2,6 +2,7 @@
   "id": "4fc16adb-9f32-4441-b0c1-b4de076a1972",
   "inner": {
     "Offer": {
+      "start_time": "2019-09-04T21:22:32.581245Z",
       "version": 1,
       "network": "Floonet",
       "primary_amount": "100000000000",
@@ -120,7 +121,9 @@
         "message_sig": null
       },
       "required_mwc_lock_confirmations": 30,
-      "required_secondary_lock_confirmations": 6
+      "required_secondary_lock_confirmations": 6,
+      "mwc_lock_time_seconds": 43200,
+      "seller_redeem_time": 3600
     }
   },
   "inner_secondary": {

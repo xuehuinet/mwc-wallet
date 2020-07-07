@@ -28,6 +28,7 @@ use crate::libwallet::{
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
 use crate::{controller, display};
+use grin_wallet_libwallet::swap::types::Action;
 use grin_wallet_libwallet::{Slate, TxLogEntry};
 use grin_wallet_util::OnionV3Address;
 use serde_json as json;
@@ -38,7 +39,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use uuid::Uuid;
-use grin_wallet_libwallet::swap::types::Action;
 
 /// Arguments common to all wallet commands
 #[derive(Clone)]
@@ -1289,6 +1289,10 @@ pub struct SwapStartArgs {
 	pub required_mwc_lock_confirmations: u64,
 	/// Requred confirmations for BTC Locking
 	pub required_secondary_lock_confirmations: u64,
+	/// MWC lock time interval
+	pub mwc_lock_time_seconds: u64,
+	/// Time interval needed to Buyer to redeem BTC. Btc lock: mwc_lock_time_seconds + seller_redeem_time
+	pub seller_redeem_time: u64,
 }
 
 pub fn swap_start<L, C, K>(
@@ -1296,25 +1300,29 @@ pub fn swap_start<L, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	args: SwapStartArgs,
 ) -> Result<(), Error>
-	where
-		L: WalletLCProvider<'static, C, K> + 'static,
-		C: NodeClient + 'static,
-		K: keychain::Keychain + 'static,
+where
+	L: WalletLCProvider<'static, C, K> + 'static,
+	C: NodeClient + 'static,
+	K: keychain::Keychain + 'static,
 {
 	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
-		let result = api.swap_start(keychain_mask,
-									&grin_wallet_libwallet::api_impl::types::SwapStartArgs {
-										mwc_amount: args.mwc_amount,
-										secondary_currency: args.secondary_currency,
-										secondary_amount: args.secondary_amount,
-										secondary_redeem_address: args.secondary_redeem_address,
-										minimum_confirmations: args.minimum_confirmations,
-										required_mwc_lock_confirmations: args.required_mwc_lock_confirmations,
-										required_secondary_lock_confirmations: args.required_secondary_lock_confirmations,
-									} );
+		let result = api.swap_start(
+			keychain_mask,
+			&grin_wallet_libwallet::api_impl::types::SwapStartArgs {
+				mwc_amount: args.mwc_amount,
+				secondary_currency: args.secondary_currency,
+				secondary_amount: args.secondary_amount,
+				secondary_redeem_address: args.secondary_redeem_address,
+				minimum_confirmations: args.minimum_confirmations,
+				required_mwc_lock_confirmations: args.required_mwc_lock_confirmations,
+				required_secondary_lock_confirmations: args.required_secondary_lock_confirmations,
+				mwc_lock_time_seconds: args.mwc_lock_time_seconds,
+				seller_redeem_time: args.seller_redeem_time,
+			},
+		);
 		match result {
 			Ok(swap_id) => {
-				warn!("Swap trade is created: {}",swap_id);
+				warn!("Swap trade is created: {}", swap_id);
 				Ok(())
 			}
 			Err(e) => {
@@ -1331,7 +1339,7 @@ pub enum SwapSubcommand {
 	List,
 	Delete,
 	Check,
-	Process
+	Process,
 }
 
 /// Processing swap message from the file
@@ -1340,17 +1348,17 @@ pub fn swap_message<L, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	message_filename: &str,
 ) -> Result<(), Error>
-	where
-		L: WalletLCProvider<'static, C, K> + 'static,
-		C: NodeClient + 'static,
-		K: keychain::Keychain + 'static,
+where
+	L: WalletLCProvider<'static, C, K> + 'static,
+	C: NodeClient + 'static,
+	K: keychain::Keychain + 'static,
 {
 	let mut file = File::open(message_filename).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to open file {}, {}", message_filename, e)))?;
 	let mut contents = String::new();
 	file.read_to_string(&mut contents).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to read from file {}, {}", message_filename, e)))?;
 
 	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
-		api.swap_income_message(keychain_mask,contents)?;
+		api.swap_income_message(keychain_mask, contents)?;
 		Ok(())
 	})?;
 	Ok(())
@@ -1377,26 +1385,25 @@ pub fn swap<L, C, K>(
 	keychain_mask: Option<&SecretKey>,
 	args: SwapArgs,
 ) -> Result<(), Error>
-	where
-		L: WalletLCProvider<'static, C, K> + 'static,
-		C: NodeClient + 'static,
-		K: keychain::Keychain + 'static,
+where
+	L: WalletLCProvider<'static, C, K> + 'static,
+	C: NodeClient + 'static,
+	K: keychain::Keychain + 'static,
 {
 	match args.subcommand {
 		SwapSubcommand::List => {
 			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
 				let result = api.swap_list(keychain_mask);
 				match result {
-					Ok( list ) => {
+					Ok(list) => {
 						if list.is_empty() {
 							println!("You don't have any Swap trades");
-						}
-						else {
+						} else {
 							display::swap_trades(list);
 						}
 						Ok(())
 					}
-					Err (e) => {
+					Err(e) => {
 						error!("Unable to List Swap trades: {}", e);
 						Err(ErrorKind::LibWallet(format!("Unable to List Swap trades: {}", e)).into())
 					}
@@ -1448,14 +1455,14 @@ pub fn swap<L, C, K>(
 				let swap_action_str = swap_action.to_cmd().unwrap_or("none".to_string());
 
 				// Let's check the action
-				if action=="continue" {
+				if action == "continue" {
 					if swap_action_str != "none" {
 						println!("Do you want process {}? (Yes/No)", swap_action);
 						let mut input = String::new();
 						let _ = std::io::stdin().read_line(&mut input);
 						let input = input.to_lowercase().trim().to_string();
 						if !input.starts_with("y") {
-							return Ok(())
+							return Ok(());
 						}
 					}
 					action = swap_action_str.clone();
@@ -1463,7 +1470,7 @@ pub fn swap<L, C, K>(
 
 				if action == "none" {
 					println!("Nothing can be done now");
-					return Ok(())
+					return Ok(());
 				}
 
 				if action != "cancel" && action != swap_action_str {
@@ -1490,4 +1497,3 @@ pub fn swap<L, C, K>(
 		}
 	}
 }
-

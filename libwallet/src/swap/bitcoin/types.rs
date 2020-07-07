@@ -17,7 +17,7 @@ use crate::swap::message::SecondaryUpdate;
 use crate::swap::ser::*;
 use crate::swap::types::{Network, SecondaryData};
 use crate::swap::{ErrorKind, Keychain};
-use bitcoin::blockdata::opcodes::{all::*, OP_FALSE};
+use bitcoin::blockdata::opcodes::{all::*, OP_FALSE, OP_TRUE};
 use bitcoin::blockdata::script::Builder;
 use bitcoin::consensus::Encodable;
 use bitcoin::network::constants::Network as BtcNetwork;
@@ -30,11 +30,10 @@ use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::{Message, Secp256k1, Signature};
 use std::io::Cursor;
 use std::ops::Deref;
-use std::time::Duration;
 
-/// BTC transaction ready to post. Here it is a redeem tx
+/// BTC transaction ready to post (any type). Here it is a redeem tx
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BtcRedeemTx {
+pub struct BtcTtansaction {
 	pub txid: sha256d::Hash,
 	#[serde(serialize_with = "bytes_to_hex", deserialize_with = "bytes_from_hex")]
 	pub tx: Vec<u8>,
@@ -59,11 +58,11 @@ pub struct BtcData {
 	/// Will be True if BTC coins are have enough confirmations are locked at that account.
 	pub locked: bool,
 	/// BTX redeem transaction, ready to be posted
-	pub redeem_tx: Option<BtcRedeemTx>,
+	pub redeem_tx: Option<BtcTtansaction>,
 	/// Number of confirmations that redeem transaction already get.
 	pub redeem_confirmations: Option<u64>,
 	/// Script for redeem confirmation. Lock is used Used for Pay 2 Script Hash.
-	/// I think Seller suppose to redeem BTS by this address
+	/// I think Seller suppose to redeem BTS by this address. Refund will be executed to this address as well
 	#[serde(skip)]
 	pub script: Option<Script>,
 }
@@ -73,7 +72,7 @@ impl BtcData {
 	pub(crate) fn new<K>(
 		keychain: &K,               // Private key
 		context: &BtcSellerContext, // Derivarive index
-		duration: Duration,         // BTC locking duration
+		lock_time_deal: u32,        // BTC locking duration
 	) -> Result<Self, ErrorKind>
 	where
 		K: Keychain,
@@ -81,9 +80,14 @@ impl BtcData {
 		let lock_time = if crate::swap::is_test_mode() {
 			1567718553
 		} else {
-			Utc::now().timestamp() as u64 + duration.as_secs()
+			//Utc::now().timestamp() as u64 + duration.as_secs()
+			lock_time_deal
 		};
-		assert!(lock_time > 0 && lock_time < std::u32::MAX as u64);
+
+		// Don't lock for more than 3 days
+		if lock_time > (Utc::now().timestamp() + 3600*24*3) as u32 {
+			return Err( ErrorKind::Generic("BTC locking time interval is larger than 3 days. Is it a scam?".to_string()) );
+		}
 
 		let cosign = PublicKey::from_secret_key(
 			keychain.secp(),
@@ -91,7 +95,7 @@ impl BtcData {
 		)?;
 
 		Ok(Self {
-			lock_time: lock_time as u32,
+			lock_time: lock_time,
 			cosign,
 			refund: None,
 			confirmed_outputs: Vec::new(),
@@ -141,6 +145,12 @@ impl BtcData {
 	/// Generate the multisig-with-timelocked-refund script
 	pub fn script(&mut self, secp: &Secp256k1, redeem: &PublicKey) -> Result<(), ErrorKind> {
 		if self.script.is_none() {
+			// Don't lock for more than 3 days
+			if self.lock_time > (Utc::now().timestamp() + 3600 * 24 * 3) as u32 {
+				return Err( ErrorKind::Generic("BTC locking time interval is larger than 3 days. Rejecting, looks like a scam.".to_string()) );
+			}
+			// Locking for the past is very expected. We build this script every time when we need to calculate hash for the address.
+
 			let mut time = [0; 4];
 			LittleEndian::write_u32(&mut time, self.lock_time);
 
@@ -183,6 +193,37 @@ impl BtcData {
 		Ok(address)
 	}
 
+	// Build input/output for redeem or refund btc transaciton
+	fn build_input_outputs(
+		&self,
+		redeem_address: &Address,
+	) -> Result<(Vec<TxIn>, Vec<TxOut>, u64), ErrorKind> {
+		// Input(s)
+		let mut input = Vec::with_capacity(self.confirmed_outputs.len());
+		let mut total_amount = 0;
+		for o in &self.confirmed_outputs {
+			total_amount += o.value;
+			input.push(TxIn {
+				previous_output: o.out_point.clone(),
+				script_sig: Script::new(),
+				sequence: 0,
+				witness: Vec::new(),
+			});
+		}
+
+		if input.is_empty() {
+			return Err(ErrorKind::Generic("Unable to build refund transaction, no inputs are found".to_string()));
+		}
+		// Output
+		let mut output = Vec::with_capacity(1);
+		output.push(TxOut {
+			value: total_amount, // Will be overwritten later
+			script_pubkey: redeem_address.script_pubkey(),
+		});
+
+		Ok((input, output, total_amount))
+	}
+
 	/// Build BTC redeem transactions
 	/// Update self.redeem_tx  with result
 	pub(crate) fn redeem_tx(
@@ -198,25 +239,7 @@ impl BtcData {
 			.as_ref()
 			.ok_or(ErrorKind::Generic("Missing script".into()))?;
 
-		// Input(s)
-		let mut input = Vec::with_capacity(self.confirmed_outputs.len());
-		let mut total_amount = 0;
-		for o in &self.confirmed_outputs {
-			total_amount += o.value;
-			input.push(TxIn {
-				previous_output: o.out_point.clone(),
-				script_sig: Script::new(),
-				sequence: 0xFFFFFFFF,
-				witness: Vec::new(),
-			});
-		}
-
-		// Output
-		let mut output = Vec::with_capacity(1);
-		output.push(TxOut {
-			value: total_amount, // Will be overwritten later
-			script_pubkey: redeem_address.script_pubkey(),
-		});
+		let ( input, output, total_amount ) = self.build_input_outputs(redeem_address)?;
 
 		let mut tx = Transaction {
 			version: 2,
@@ -250,9 +273,9 @@ impl BtcData {
 		let mut cursor = Cursor::new(Vec::with_capacity(tx_size));
 		let actual_size = tx
 			.consensus_encode(&mut cursor)
-			.map_err(|_| ErrorKind::Generic("Unable to encode redeem tx".into()))?;
+			.map_err(|e| ErrorKind::Generic(format!("Unable to encode redeem tx, {}", e)))?;
 
-		self.redeem_tx = Some(BtcRedeemTx {
+		self.redeem_tx = Some(BtcTtansaction {
 			txid: tx.txid(),
 			tx: cursor.into_inner(),
 		});
@@ -277,6 +300,86 @@ impl BtcData {
 			.push_slice(&cosign_ser)
 			.push_slice(&redeem_ser)
 			.push_opcode(OP_FALSE) // Choose redeem path in original script
+			.push_slice(
+				&self
+					.script
+					.as_ref()
+					.ok_or(ErrorKind::Generic("Missing script".into()))?
+					.to_bytes(),
+			)
+			.into_script();
+
+		Ok(script_sig)
+	}
+
+	/// Build BTC redeem transactions
+	/// Update self.redeem_tx  with result
+	pub(crate) fn refund_tx(
+		&mut self,
+		secp: &Secp256k1,
+		refund_address: &Address,
+		fee_sat_per_byte: u64,
+		buyer_btc_secret: &SecretKey,
+	) -> Result<BtcTtansaction, ErrorKind> {
+		let input_script = self
+			.script
+			.as_ref()
+			.ok_or(ErrorKind::Generic("Missing script".into()))?;
+
+		let ( input, output, total_amount ) = self.build_input_outputs(refund_address)?;
+
+		let mut tx = Transaction {
+			version: 2,
+			lock_time: self.lock_time, // let's make the lock time equal to the script lock.
+			input,
+			output,
+		};
+
+		// Calculate tx size
+		let mut script_sig_size = input_script.len();
+		script_sig_size += VarInt(script_sig_size as u64).len();
+		script_sig_size += 1 * (1 + 72 + 1); // Signature (uno for refund)
+		script_sig_size += 1; // Opcodes
+		let tx_size = tx.get_weight() / 4 + script_sig_size * tx.input.len();
+
+		// Subtract fee from output
+		tx.output[0].value = total_amount.saturating_sub(tx_size as u64 * fee_sat_per_byte);
+
+		// Sign for inputs
+		for idx in 0..tx.input.len() {
+			let hash = tx.signature_hash(idx, &input_script, 0x01);
+			let msg = Message::from_slice(hash.deref())?;
+
+			tx.input.get_mut(idx).unwrap().script_sig =
+				self.refund_script_sig(secp, &secp.sign(&msg, buyer_btc_secret)?)?;
+		}
+
+		let mut cursor = Cursor::new(Vec::with_capacity(tx_size));
+		let actual_size = tx
+			.consensus_encode(&mut cursor)
+			.map_err(|e| ErrorKind::Generic(format!("Unable to encode redeem tx, {}", e)))?;
+
+		// By some reasons length is floating, probably encoding can do some optimization . Let'e keep an eye on it, we don't want to calcucate fee badly.
+		debug_assert!(actual_size <= tx_size);
+		debug_assert!(actual_size >= tx_size - 5);
+
+		Ok(BtcTtansaction {
+			txid: tx.txid(),
+			tx: cursor.into_inner(),
+		})
+	}
+
+	fn refund_script_sig(
+		&self,
+		secp: &Secp256k1,
+		signature: &Signature,
+	) -> Result<Script, ErrorKind> {
+		let mut sign_ser = signature.serialize_der(secp);
+		sign_ser.push(0x01); // SIGHASH_ALL
+
+		let script_sig = Builder::new()
+			.push_slice(&sign_ser)
+			.push_opcode(OP_TRUE) // Choose refund path in original script
 			.push_slice(
 				&self
 					.script

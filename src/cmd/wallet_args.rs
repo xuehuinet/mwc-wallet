@@ -894,7 +894,6 @@ pub fn parse_verify_proof_args(args: &ArgMatches) -> Result<command::ProofVerify
 }
 
 pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs, ParseError> {
-
 	let mwc_amount = parse_required(args, "mwc_amount")?;
 	let mwc_amount = core::core::amount_from_hr_string(mwc_amount);
 	let mwc_amount = match mwc_amount {
@@ -928,6 +927,12 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 	let btc_lock = parse_required(args, "required_secondary_lock_confirmations")?;
 	let btc_lock = parse_u64(btc_lock, "required_secondary_lock_confirmations")?;
 
+	let mwc_lock_time_seconds_hours = parse_required(args, "mwc_lock_time")?;
+	let mwc_lock_time_seconds_hours = parse_u64(mwc_lock_time_seconds_hours, "mwc_lock_time")?;
+
+	let seller_redeem_time_hours = parse_required(args, "seller_redeem_time")?;
+	let seller_redeem_time_hours = parse_u64(seller_redeem_time_hours, "seller_redeem_time")?;
+
 	Ok(command::SwapStartArgs {
 		mwc_amount,
 		secondary_currency: secondary_currency.to_string(),
@@ -936,6 +941,8 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 		minimum_confirmations: Some(min_c),
 		required_mwc_lock_confirmations: mwc_lock,
 		required_secondary_lock_confirmations: btc_lock,
+		mwc_lock_time_seconds: mwc_lock_time_seconds_hours * 60,
+		seller_redeem_time: seller_redeem_time_hours * 60,
 	})
 }
 
@@ -947,22 +954,18 @@ pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseErro
 	let destination = args.value_of("dest").map(|s| String::from(s));
 
 	let subcommand = if args.is_present("list") {
-			command::SwapSubcommand::List
-	}
-	else if args.is_present("remove") {
-			command::SwapSubcommand::Delete
-	}
-	else if args.is_present("check") {
-			command::SwapSubcommand::Check
-	}
-	else if args.is_present("process") {
-			command::SwapSubcommand::Process
-	}
-	else {
+		command::SwapSubcommand::List
+	} else if args.is_present("remove") {
+		command::SwapSubcommand::Delete
+	} else if args.is_present("check") {
+		command::SwapSubcommand::Check
+	} else if args.is_present("process") {
+		command::SwapSubcommand::Process
+	} else {
 		return Err(ParseError::ArgumentError(format!("Please define some action to do")));
 	};
 
-	Ok(command::SwapArgs{
+	Ok(command::SwapArgs {
 		subcommand,
 		verbose,
 		swap_id,
@@ -1097,8 +1100,10 @@ where
 
 			let wallet_inst = lc.wallet_inst()?;
 
-			grin_wallet_libwallet::swap::trades::init_swap_trade_backend( wallet_inst.get_data_file_dir(),
-													   wallet_config.electrum_node_addr.clone() );
+			grin_wallet_libwallet::swap::trades::init_swap_trade_backend(
+				wallet_inst.get_data_file_dir(),
+				wallet_config.electrum_node_addr.clone(),
+			);
 
 			if let Some(account) = wallet_args.value_of("account") {
 				wallet_inst.set_parent_key_id_by_name(account)?;
@@ -1331,27 +1336,16 @@ where
 		}
 		("swap_start", Some(args)) => {
 			let a = arg_parse!(parse_swap_start_args(&args));
-			command::swap_start(
-				owner_api,
-				km,
-				a,
-			)
+			command::swap_start(owner_api, km, a)
 		}
 		("swap", Some(args)) => {
 			let a = arg_parse!(parse_swap_args(&args));
-			command::swap(
-				owner_api,
-				km,
-				a,
-			)
+			command::swap(owner_api, km, a)
 		}
 		("swap_message", Some(args)) => {
-			let message_filename = parse_required(args, "file").map_err(|e| ErrorKind::ArgumentError(format!("{}", e)))?;
-			command::swap_message(
-				owner_api,
-				km,
-				message_filename,
-			)
+			let message_filename = parse_required(args, "file")
+				.map_err(|e| ErrorKind::ArgumentError(format!("{}", e)))?;
+			command::swap_message(owner_api, km, message_filename)
 		}
 		(cmd, _) => {
 			return Err(ErrorKind::ArgumentError(format!(

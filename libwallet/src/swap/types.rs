@@ -413,12 +413,19 @@ pub enum Action {
 	Complete,
 	/// Cancel swap
 	Cancel,
-	/// Waiting for refund to pass through
-	WaitingForRefund{
+	/// Waiting for mwc refund to pass through
+	WaitingForMwcRefund {
 		/// Required height
 		required: u64,
 		/// Actual height
 		height: u64,
+	},
+	/// Waiting for btc refund to pass through
+	WaitingForBtcRefund {
+		/// Required time (tiemstamp)
+		required: u64,
+		/// Current (tiemstamp)
+		current: u64,
 	},
 	/// Execute refund
 	Refund,
@@ -452,12 +459,18 @@ impl fmt::Display for Action {
 			Action::Cancel =>
 				"(cancel) Swap trade cancelled".to_string(),
 			// Waiting for refund to pass through
-			Action::WaitingForRefund{ required, height} => {
+			Action::WaitingForMwcRefund { required, height } => {
 				let blocks_left = required - height;
 				format!("Waiting for block {} to be ready to post refund slate, {} blocks are left", required, blocks_left)
 			},
-			Action::Refund =>
-				"(refund) Refund can be issued".to_string(),
+			Action::WaitingForBtcRefund{ required, current} => {
+				let time_left_sec = required - current;
+				let hours = time_left_sec / 3600;
+				let minutes = (time_left_sec % 3600) / 60;
+				let seconds = time_left_sec % 60;
+				format!("Please wait {} hours {} minutes and {} seconds until you will be able to redeem you BTC", hours, minutes, seconds)
+			}
+			Action::Refund => "(refund) Refund can be issued".to_string(),
 		};
 		write!(f, "{}", disp)
 	}
@@ -467,13 +480,13 @@ impl Action {
 	/// String to the
 	pub fn from_cmd(cmd: &str) -> Option<Action> {
 		match cmd {
-			"msg1" => Some( Action::SendMessage(1)),
-			"msg2" => Some( Action::SendMessage(2)),
-			"receive" => Some( Action::ReceiveMessage),
-			"publish_MWC" => Some( Action::PublishTx),
-			"refund" => Some( Action::Refund ),
+			"msg1" => Some(Action::SendMessage(1)),
+			"msg2" => Some(Action::SendMessage(2)),
+			"receive" => Some(Action::ReceiveMessage),
+			"publish_MWC" => Some(Action::PublishTx),
+			"refund" => Some(Action::Refund),
 			"publish_BTC" => Some(Action::PublishTxSecondary(Currency::Btc)),
-			"cancel" => Some( Action::Cancel ),
+			"cancel" => Some(Action::Cancel),
 			_ => None,
 		}
 	}

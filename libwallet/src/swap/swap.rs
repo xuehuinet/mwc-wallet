@@ -17,6 +17,7 @@ use super::multisig::{Builder as MultisigBuilder, Hashed};
 use super::ser::*;
 use super::types::*;
 use super::{ErrorKind, Keychain};
+use crate::{NodeClient, Slate};
 use chrono::{DateTime, Utc};
 use grin_core::core::{transaction as tx, KernelFeatures, TxKernel};
 use grin_core::libtx::secp_ser;
@@ -25,7 +26,6 @@ use grin_keychain::{Identifier, SwitchCommitmentType};
 use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::pedersen::{Commitment, RangeProof};
 use grin_util::secp::{Message as SecpMessage, Secp256k1, Signature};
-use crate::{NodeClient, Slate};
 use uuid::Uuid;
 
 /// Dummy wrapper for the hex-encoded serialized transaction.
@@ -96,6 +96,10 @@ pub struct Swap {
 	pub required_mwc_lock_confirmations: u64,
 	/// Requred confirmations for BTC Locking
 	pub required_secondary_lock_confirmations: u64,
+	/// Seller MWC funds lock time interval in seconds
+	pub mwc_lock_time_seconds: u64,
+	/// Sellet BTC redeem time interval. BTC expected to be locked for that time as well.
+	pub seller_redeem_time: u64,
 }
 
 impl Swap {
@@ -131,7 +135,7 @@ impl Swap {
 		let amount = scontext
 			.inputs
 			.iter()
-			.fold(0, |acc, (_,_, value)| acc + *value)
+			.fold(0, |acc, (_, _, value)| acc + *value)
 			.saturating_sub(self.primary_amount);
 		let commit = keychain.commit(amount, &identifier, SwitchCommitmentType::Regular)?;
 
@@ -250,7 +254,7 @@ impl Swap {
 		};
 		let message = features
 			.kernel_sig_msg()
-			.map_err(|_| ErrorKind::Generic("Unable to generate message".into()))?;
+			.map_err(|e| ErrorKind::Generic(format!("Unable to generate message, {}", e)))?;
 
 		Ok((pub_nonce_sum, pub_blind_sum, message))
 	}
