@@ -220,5 +220,7 @@
   "redeem_confirmations": null,
   "adaptor_signature": null,
   "required_mwc_lock_confirmations": 30,
-  "required_secondary_lock_confirmations": 6
+  "required_secondary_lock_confirmations": 6,
+  "mwc_lock_time_seconds": 43200,
+  "seller_redeem_time": 3600
 }

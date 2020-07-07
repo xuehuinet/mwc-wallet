@@ -17,20 +17,20 @@ use super::multisig::{Builder as MultisigBuilder, ParticipantData as MultisigPar
 use super::swap::{publish_transaction, signature_as_secret, tx_add_input, tx_add_output, Swap};
 use super::types::*;
 use super::{is_test_mode, ErrorKind, Keychain, CURRENT_SLATE_VERSION, CURRENT_VERSION};
+use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
 use chrono::{TimeZone, Utc};
+use grin_core::core::verifier_cache::LruVerifierCache;
+use grin_core::core::Weighting;
 use grin_core::libtx::{build, proof, tx_fee};
 use grin_keychain::{BlindSum, BlindingFactor};
 use grin_util::secp::aggsig;
 use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::pedersen::{Commitment, RangeProof};
-use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
+use grin_util::RwLock;
 use rand::thread_rng;
 use std::mem;
-use uuid::Uuid;
-use grin_core::core::Weighting;
 use std::sync::Arc;
-use grin_util::RwLock;
-use grin_core::core::verifier_cache::LruVerifierCache;
+use uuid::Uuid;
 
 /// Seller API. Bunch of methods that cover seller action for MWC swap
 /// This party is Selling MWC and buying BTC
@@ -52,6 +52,8 @@ impl SellApi {
 		height: u64,
 		required_mwc_lock_confirmations: u64,
 		required_secondary_lock_confirmations: u64,
+		mwc_lock_time_seconds: u64,
+		seller_redeem_time: u64,
 	) -> Result<Swap, ErrorKind> {
 		let test_mode = is_test_mode();
 		let scontext = context.unwrap_seller()?;
@@ -80,7 +82,12 @@ impl SellApi {
 		}
 		refund_slate.fee = tx_fee(1, 1, 1, None);
 		refund_slate.height = height;
-		refund_slate.lock_height = height + 12 * 60;
+		// Calculating lock height from seconds. Average mining speed is about 1 minute
+		refund_slate.lock_height = height + mwc_lock_time_seconds / 60;
+
+		if refund_slate.lock_height - refund_slate.height > 1440 * 2 {
+			return Err(ErrorKind::Generic("MWC locking time interval exceed 2 days. Is it a scam or mistake?".to_string()));
+		}
 
 		// Redeem slate
 		let mut redeem_slate = Slate::blank(2);
@@ -138,6 +145,8 @@ impl SellApi {
 			adaptor_signature: None,
 			required_mwc_lock_confirmations,
 			required_secondary_lock_confirmations,
+			mwc_lock_time_seconds,
+			seller_redeem_time,
 		};
 
 		Self::build_multisig(keychain, &mut swap, context)?;
@@ -372,26 +381,24 @@ impl SellApi {
 				} else {
 					Action::Complete
 				}
-			},
+			}
 			Status::Cancelled => {
-				if swap.lock_confirmations.is_none() { // Funds are not locked. Nothing need to be done
+				if swap.lock_confirmations.is_none() {
+					// Funds are not locked. Nothing need to be done
 					Action::None
-				}
-				else {
+				} else {
 					let height = node_client.get_chain_tip()?.0;
 					if height < swap.refund_slate.lock_height {
-						Action::WaitingForRefund{
+						Action::WaitingForMwcRefund {
 							required: swap.refund_slate.lock_height,
 							height,
 						}
-					}
-					else {
+					} else {
 						// Refund can be issued
 						Action::Refund
 					}
 				}
-
-			},
+			}
 			_ => Action::None,
 		};
 		Ok(action)
@@ -402,6 +409,7 @@ impl SellApi {
 		swap.expect_seller()?;
 		swap.expect(Status::Created)?;
 		swap.message(Update::Offer(OfferUpdate {
+			start_time: swap.started,
 			version: swap.version,
 			network: swap.network,
 			primary_amount: swap.primary_amount,
@@ -419,6 +427,8 @@ impl SellApi {
 			redeem_participant: swap.redeem_slate.participant_data[swap.participant_id].clone(),
 			required_mwc_lock_confirmations: swap.required_mwc_lock_confirmations,
 			required_secondary_lock_confirmations: swap.required_secondary_lock_confirmations,
+			mwc_lock_time_seconds: swap.mwc_lock_time_seconds,
+			seller_redeem_time: swap.seller_redeem_time,
 		}))
 	}
 
@@ -455,10 +465,9 @@ impl SellApi {
 		}
 	}
 
-
-// ----------------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------------
+	// ----------------------------------------------------------------------------------------------
+	// ----------------------------------------------------------------------------------------------
+	// ----------------------------------------------------------------------------------------------
 
 	fn build_multisig<K: Keychain>(
 		keychain: &K,

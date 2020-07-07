@@ -17,10 +17,11 @@ use super::multisig::ParticipantData as MultisigParticipant;
 use super::ser::*;
 use super::types::{Currency, Network};
 use super::ErrorKind;
+use crate::{ParticipantData as TxParticipant, VersionedSlate};
+use chrono::{DateTime, Utc};
 use grin_core::libtx::secp_ser;
 use grin_util::secp::key::PublicKey;
 use grin_util::secp::Signature;
-use crate::{ParticipantData as TxParticipant, VersionedSlate};
 use uuid::Uuid;
 
 /// Swap message that is used for Seller/Buyer interaction
@@ -95,7 +96,6 @@ impl Message {
 	pub fn from_json(s: &str) -> Result<Message, ErrorKind> {
 		Ok(serde_json::from_str(s).map_err(|e| ErrorKind::Serde(format!("Unable to parse Swap Message from {}, {}", s, e)))?)
 	}
-
 }
 
 /// Swap core data of the Seller/Buyer message
@@ -116,6 +116,8 @@ pub enum Update {
 /// Seller, Status::Created  Seller creates initial offer
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferUpdate {
+	/// Swap starting time.
+	pub start_time: DateTime<Utc>,
 	/// Version of the swap engine. Both party must match
 	pub version: u8,
 	/// The type of the network. Floonet or mainnet
@@ -140,6 +142,10 @@ pub struct OfferUpdate {
 	pub required_mwc_lock_confirmations: u64,
 	/// Requred confirmations for BTC Locking
 	pub required_secondary_lock_confirmations: u64,
+	/// Seller MWC funds lock time interval in seconds
+	pub mwc_lock_time_seconds: u64,
+	/// Sellet BTC redeem time interval. BTC expected to be locked for that time as well.
+	pub seller_redeem_time: u64,
 }
 
 /// Buyer, Status::Offered  Buyer responded for offer

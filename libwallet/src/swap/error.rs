@@ -96,7 +96,7 @@ pub enum ErrorKind {
 	Serde(String),
 	/// Rps error
 	#[fail(display = "Swap Rpc error: {}", _0)]
-	Rpc(&'static str),
+	Rpc(String),
 	/// Electrum Node client error
 	#[fail(display = "Electrum Node error, {}", _0)]
 	ElectrumNodeClient(String),

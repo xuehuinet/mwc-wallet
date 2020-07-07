@@ -22,10 +22,10 @@ use crate::swap::types::{
 use crate::swap::{BuyApi, ErrorKind, SellApi, Swap, SwapApi};
 use crate::NodeClient;
 use bitcoin::{Address, AddressType};
+use chrono::Utc;
 use grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
 use grin_util::secp::aggsig::export_secnonce_single as generate_nonce;
 use std::str::FromStr;
-use std::time::Duration;
 
 /// SwapApi trait implementaiton for BTC
 pub struct BtcSwapApi<C, B>
@@ -127,7 +127,7 @@ where
 		swap: &mut Swap,
 	) -> Result<Option<Action>, ErrorKind> {
 		//  Check if Lock slate is ready and confirmed.
-		if !swap.is_locked(swap.required_mwc_lock_confirmations ) {
+		if !swap.is_locked(swap.required_mwc_lock_confirmations) {
 			match swap.lock_confirmations {
 				None => return Ok(Some(Action::PublishTx)),
 				Some(_) => {
@@ -231,8 +231,9 @@ where
 		self.script(keychain, swap)?;
 		let cosign_id = &context.unwrap_seller()?.unwrap_btc()?.cosign;
 
-		let redeem_address = Address::from_str(&swap.unwrap_seller()?.0)
-			.map_err(|_| ErrorKind::Generic("Unable to parse BTC redeem address".into()))?;
+		let redeem_address_str = swap.unwrap_seller()?.0.clone();
+		let redeem_address = Address::from_str(&redeem_address_str)
+			.map_err(|e| ErrorKind::Generic(format!("Unable to parse BTC redeem address {}, {}", redeem_address_str, e)))?;
 
 		let cosign_secret = keychain.derive_key(0, cosign_id, SwitchCommitmentType::None)?;
 		let redeem_secret = SellApi::calculate_redeem_secret(keychain, swap)?;
@@ -371,6 +372,34 @@ where
 		BuyApi::redeem(keychain, swap, context, redeem)?;
 		Ok(())
 	}
+
+	fn buyer_refund<K: Keychain>(
+		&mut self,
+		keychain: &K,
+		context: &Context,
+		swap: &mut Swap,
+		refund_address: &Address,
+	) -> Result<(), ErrorKind> {
+		let (pending_amount, confirmed_amount, _) = self.btc_balance(keychain, swap, 0)?;
+
+		if pending_amount + confirmed_amount == 0 {
+			return Err(ErrorKind::Generic("Not found outputs to refund. May be it is not on the blockchain yet?".to_string()));
+		}
+
+		let refund_key = keychain.derive_key(0, &context.unwrap_buyer()?.unwrap_btc()?.refund, SwitchCommitmentType::None)?;
+
+		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
+		let refund_tx = btc_data.refund_tx(
+			keychain.secp(),
+			refund_address,
+			10,
+			&refund_key,
+			)?;
+
+		let tx = refund_tx.tx.clone();
+		self.btc_node_client.post_tx(tx)?;
+		Ok(())
+	}
 }
 
 impl<K, C, B> SwapApi<K> for BtcSwapApi<C, B>
@@ -449,9 +478,11 @@ where
 		secondary_redeem_address: String,
 		required_mwc_lock_confirmations: u64,
 		required_secondary_lock_confirmations: u64,
+		mwc_lock_time_seconds: u64,
+		seller_redeem_time: u64,
 	) -> Result<(Swap, Action), ErrorKind> {
 		let redeem_address = Address::from_str(&secondary_redeem_address)
-			.map_err(|_| ErrorKind::Generic("Unable to parse BTC redeem address".into()))?;
+			.map_err(|e| ErrorKind::Generic(format!("Unable to parse BTC redeem address {}, {}", secondary_redeem_address, e)))?;
 
 		match redeem_address.address_type() {
 			Some(AddressType::P2pkh) | Some(AddressType::P2sh) => {}
@@ -477,13 +508,20 @@ where
 			height,
 			required_mwc_lock_confirmations,
 			required_secondary_lock_confirmations,
-
+			mwc_lock_time_seconds,
+			seller_redeem_time,
 		)?;
+
+		// Lock time value will be checked nicely at Buyer side when script will be created
+		let lock_time: i64 = swap.started.timestamp() + mwc_lock_time_seconds as i64 + seller_redeem_time as i64;
+		if lock_time < 0 || lock_time>= std::u32::MAX as i64 {
+			return Err(ErrorKind::Generic("lock time intervals are invalid".to_string()));
+		}
 
 		let btc_data = BtcData::new(
 			keychain,
 			context.unwrap_seller()?.unwrap_btc()?,
-			Duration::from_secs(24 * 60 * 60),
+			lock_time as u32,
 		)?;
 		swap.secondary_data = btc_data.wrap();
 
@@ -536,16 +574,26 @@ where
 		Ok(action)
 	}
 
-	fn refunded(&mut self, _keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind> {
+	fn refunded(
+		&mut self,
+		keychain: &K,
+		context: &Context,
+		swap: &mut Swap,
+		refund_address: Option<String>,
+	) -> Result<(), ErrorKind> {
 		match swap.role {
 			Role::Seller(_, _) => {
-				SellApi::publish_refund( &self.node_client, swap)?;
+				SellApi::publish_refund(&self.node_client, swap)?;
 				swap.status = Status::Refunded;
 				Ok(())
-			},
+			}
 			Role::Buyer => {
-				unimplemented!();
-			},
+				let refund_address_str = refund_address.ok_or(ErrorKind::Generic("Please define BTC refund address".to_string()))?;
+				let refund_address = Address::from_str(&refund_address_str).map_err(|e| ErrorKind::Generic(format!("Unable to parse BTC address {}, {}", refund_address_str, e)))?;
+				self.buyer_refund( keychain, context, swap, &refund_address )?;
+				swap.status = Status::Refunded;
+				Ok(())
+			}
 		}
 	}
 
@@ -590,6 +638,27 @@ where
 						return Ok(action);
 					}
 				}
+				if swap.status == Status::Cancelled {
+					let (pending_amount, confirmed_amount, _) =
+						self.btc_balance(keychain, swap, 0)?;
+
+					let action = if pending_amount + confirmed_amount == 0 {
+						Action::None
+					} else {
+						let requied_time = swap.secondary_data.unwrap_btc()?.lock_time as u64;
+						let now = Utc::now().timestamp() as u64;
+						if now < requied_time {
+							Action::WaitingForBtcRefund {
+								required: requied_time,
+								current: now,
+							}
+						} else {
+							Action::Refund
+						}
+					};
+					return Ok(action);
+				}
+
 				BuyApi::required_action(&mut self.node_client, swap)?
 			}
 		};

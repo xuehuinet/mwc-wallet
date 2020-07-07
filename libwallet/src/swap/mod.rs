@@ -77,6 +77,8 @@ pub fn is_test_mode() -> bool {
 #[cfg(test)]
 
 mod tests {
+	use crate::grin_util::{Mutex, RwLock};
+	use crate::NodeClient;
 	use bitcoin_lib::network::constants::Network as BtcNetwork;
 	use bitcoin_lib::util::key::PublicKey as BtcPublicKey;
 	use bitcoin_lib::{Address, Transaction as BtcTransaction, TxOut};
@@ -87,8 +89,6 @@ mod tests {
 	use grin_util::secp::key::{PublicKey, SecretKey};
 	use grin_util::secp::pedersen::{Commitment, RangeProof};
 	use grin_util::to_hex;
-	use crate::NodeClient;
-	use crate::grin_util::{Mutex, RwLock};
 	use std::collections::HashMap;
 	use std::fs::{read_to_string, write};
 	use std::mem;
@@ -280,7 +280,7 @@ mod tests {
 				Weighting::AsTransaction,
 				Arc::new(RwLock::new(LruVerifierCache::new())),
 			)
-			.map_err(|_| crate::ErrorKind::Node("Node failure".to_string()))?;
+			.map_err(|e| crate::ErrorKind::Node(format!("Node failure, {}", e)))?;
 
 			let mut state = self.state.lock();
 			for input in tx.inputs() {
@@ -395,6 +395,8 @@ mod tests {
 				secondary_redeem_address,
 				30,
 				3,
+				3600 * 23,
+				3600,
 			)
 			.unwrap();
 		let message = api_sell.message(&kc_sell, &swap).unwrap();
@@ -403,7 +405,7 @@ mod tests {
 		let kc_buy = keychain(2);
 		let ctx_buy = context_buy(&kc_buy);
 		let mut api_buy = BtcSwapApi::new(
-			TestNodeClient::new(height + 4 * 60),
+			TestNodeClient::new(height + 12 * 60), // we can tolerate up to half lock time interval
 			TestBtcNodeClient::new(1),
 		);
 		let res = api_buy.accept_swap_offer(&kc_buy, &ctx_buy, message);
@@ -438,7 +440,9 @@ mod tests {
 				Currency::Btc,
 				secondary_redeem_address,
 				30,
-				6
+				6,
+				3600 * 12,
+				3600,
 			)
 			.unwrap();
 		assert_eq!(action, Action::SendMessage(1));
@@ -452,32 +456,32 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap/test/swap_sell_10001.json",
+				"swap/test/swap_sell_10001.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 
 			write(
-				"libwallet/swap_test/message_10001.json",
+				"swap_test/message_10001.json",
 				serde_json::to_string_pretty(&message_1).unwrap(),
 			)
 			.unwrap();
 			write(
-				"libwallet/swap_test/context_sell0001.json",
+				"swap_test/context_sell0001.json",
 				serde_json::to_string_pretty(&ctx_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_sell_1.json").unwrap(),
+				read_to_string("swap_test/swap_sell_1.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 			assert_eq!(
-				read_to_string("libwallet/swap_test/message_1.json").unwrap(),
+				read_to_string("swap_test/message_1.json").unwrap(),
 				serde_json::to_string_pretty(&message_1).unwrap()
 			);
 			assert_eq!(
-				read_to_string("libwallet/swap_test/context_sell.json").unwrap(),
+				read_to_string("swap_test/context_sell.json").unwrap(),
 				serde_json::to_string_pretty(&ctx_sell).unwrap()
 			);
 		}
@@ -601,31 +605,31 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_buy_1.json",
+				"swap_test/swap_buy_1.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
 			.unwrap();
 			write(
-				"libwallet/swap_test/message_2.json",
+				"swap_test/message_2.json",
 				serde_json::to_string_pretty(&message_2).unwrap(),
 			)
 			.unwrap();
 			write(
-				"libwallet/swap_test/context_buy.json",
+				"swap_test/context_buy.json",
 				serde_json::to_string_pretty(&ctx_buy).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_buy_1.json").unwrap(),
+				read_to_string("swap_test/swap_buy_1.json").unwrap(),
 				serde_json::to_string_pretty(&swap_buy).unwrap()
 			);
 			assert_eq!(
-				read_to_string("libwallet/swap_test/message_2.json").unwrap(),
+				read_to_string("swap_test/message_2.json").unwrap(),
 				serde_json::to_string_pretty(&message_2).unwrap()
 			);
 			assert_eq!(
-				read_to_string("libwallet/swap_test/context_buy.json").unwrap(),
+				read_to_string("swap_test/context_buy.json").unwrap(),
 				serde_json::to_string_pretty(&ctx_buy).unwrap()
 			);
 		}
@@ -649,13 +653,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_sell_2.json",
+				"swap_test/swap_sell_2.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_sell_2.json").unwrap(),
+				read_to_string("swap_test/swap_sell_2.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
@@ -708,13 +712,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_sell_3.json",
+				"swap_test/swap_sell_3.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_sell_3.json").unwrap(),
+				read_to_string("swap_test/swap_sell_3.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
@@ -732,22 +736,22 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_buy_2.json",
+				"swap_test/swap_buy_2.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
 			.unwrap();
 			write(
-				"libwallet/swap_test/message_3.json",
+				"swap_test/message_3.json",
 				serde_json::to_string_pretty(&message_3).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_buy_2.json").unwrap(),
+				read_to_string("swap_test/swap_buy_2.json").unwrap(),
 				serde_json::to_string_pretty(&swap_buy).unwrap()
 			);
 			assert_eq!(
-				read_to_string("libwallet/swap_test/message_3.json").unwrap(),
+				read_to_string("swap_test/message_3.json").unwrap(),
 				serde_json::to_string_pretty(&message_3).unwrap()
 			);
 		}
@@ -774,22 +778,22 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_sell_4.json",
+				"swap_test/swap_sell_4.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 			write(
-				"libwallet/swap_test/message_4.json",
+				"swap_test/message_4.json",
 				serde_json::to_string_pretty(&message_4).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_sell_4.json").unwrap(),
+				read_to_string("swap_test/swap_sell_4.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 			assert_eq!(
-				read_to_string("libwallet/swap_test/message_4.json").unwrap(),
+				read_to_string("swap_test/message_4.json").unwrap(),
 				serde_json::to_string_pretty(&message_4).unwrap()
 			);
 		}
@@ -823,13 +827,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_buy_3.json",
+				"swap_test/swap_buy_3.json",
 				serde_json::to_string_pretty(&swap_buy).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_buy_3.json").unwrap(),
+				read_to_string("swap_test/swap_buy_3.json").unwrap(),
 				serde_json::to_string_pretty(&swap_buy).unwrap()
 			);
 		}
@@ -843,13 +847,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_sell_5.json",
+				"swap_test/swap_sell_5.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_sell_5.json").unwrap(),
+				read_to_string("swap_test/swap_sell_5.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
@@ -877,13 +881,13 @@ mod tests {
 
 		if write_json {
 			write(
-				"libwallet/swap_test/swap_sell_6.json",
+				"swap_test/swap_sell_6.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 		} else {
 			assert_eq!(
-				read_to_string("libwallet/swap_test/swap_sell_6.json").unwrap(),
+				read_to_string("swap_test/swap_sell_6.json").unwrap(),
 				serde_json::to_string_pretty(&swap_sell).unwrap()
 			);
 		}
@@ -894,7 +898,7 @@ mod tests {
 	#[test]
 	fn test_swap_serde() {
 		// Seller context
-		let ctx_sell_str = read_to_string("libwallet/swap_test/context_sell.json").unwrap();
+		let ctx_sell_str = read_to_string("swap_test/context_sell.json").unwrap();
 		let ctx_sell: Context = serde_json::from_str(&ctx_sell_str).unwrap();
 		assert_eq!(
 			serde_json::to_string_pretty(&ctx_sell).unwrap(),
@@ -902,14 +906,14 @@ mod tests {
 		);
 
 		// Buyer context
-		let ctx_buy_str = read_to_string("libwallet/swap_test/context_buy.json").unwrap();
+		let ctx_buy_str = read_to_string("swap_test/context_buy.json").unwrap();
 		let ctx_buy: Context = serde_json::from_str(&ctx_buy_str).unwrap();
 		assert_eq!(serde_json::to_string_pretty(&ctx_buy).unwrap(), ctx_buy_str);
 
 		// Seller's swap state in different stages
 		for i in 0..6 {
 			println!("TRY SELL {}", i);
-			let swap_str = read_to_string(format!("libwallet/swap_test/swap_sell_{}.json", i + 1)).unwrap();
+			let swap_str = read_to_string(format!("swap_test/swap_sell_{}.json", i + 1)).unwrap();
 			let swap: Swap = serde_json::from_str(&swap_str).unwrap();
 			assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
 			println!("OK SELL {}", i);
@@ -918,7 +922,7 @@ mod tests {
 		// Buyer's swap state in different stages
 		for i in 0..3 {
 			println!("TRY BUY {}", i);
-			let swap_str = read_to_string(format!("libwallet/swap_test/swap_buy_{}.json", i + 1)).unwrap();
+			let swap_str = read_to_string(format!("swap_test/swap_buy_{}.json", i + 1)).unwrap();
 			let swap: Swap = serde_json::from_str(&swap_str).unwrap();
 			assert_eq!(serde_json::to_string_pretty(&swap).unwrap(), swap_str);
 			println!("OK BUY {}", i);
@@ -927,7 +931,7 @@ mod tests {
 		// Messages
 		for i in 0..4 {
 			println!("TRY MSG {}", i);
-			let message_str = read_to_string(format!("libwallet/swap_test/message_{}.json", i + 1)).unwrap();
+			let message_str = read_to_string(format!("swap_test/message_{}.json", i + 1)).unwrap();
 			let message: Message = serde_json::from_str(&message_str).unwrap();
 			assert_eq!(serde_json::to_string_pretty(&message).unwrap(), message_str);
 			println!("OK MSG {}", i);

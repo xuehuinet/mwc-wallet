@@ -17,10 +17,10 @@ use super::message::Message;
 use super::swap::Swap;
 use super::types::{Action, Context, Currency};
 use super::Keychain;
-use grin_keychain::Identifier;
 use crate::swap::bitcoin::{BtcSwapApi, ElectrumNodeClient};
 use crate::NodeClient;
 use grin_core::global;
+use grin_keychain::Identifier;
 
 /// Swap API trait that is used by both Buyer and Seller.
 /// Every currency that Swap want to support, need to implement
@@ -41,7 +41,7 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		keychain: &K,
 		secondary_currency: Currency,
 		is_seller: bool,
-		inputs: Option<Vec<(Identifier, Option<u64>, u64)>>,  // inputs with amounts that sellect is agree to use.
+		inputs: Option<Vec<(Identifier, Option<u64>, u64)>>, // inputs with amounts that sellect is agree to use.
 		change_amount: u64,
 		keys: Vec<Identifier>,
 	) -> Result<Context, ErrorKind>;
@@ -52,12 +52,14 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		&mut self,
 		keychain: &K,
 		context: &Context,
-		primary_amount: u64,     // mwc amount to sell
-		secondary_amount: u64,   // btc amount to buy
+		primary_amount: u64,   // mwc amount to sell
+		secondary_amount: u64, // btc amount to buy
 		secondary_currency: Currency,
-		secondary_redeem_address: String, // redeed address for BTC
+		secondary_redeem_address: String,     // redeed address for BTC
 		required_mwc_lock_confirmations: u64, // Needed conformation numbers for mwc & btc
 		required_secondary_lock_confirmations: u64,
+		mwc_lock_time_seconds: u64,
+		seller_redeem_time: u64,
 	) -> Result<(Swap, Action), ErrorKind>;
 
 	/// Buyer accepts a swap offer and creates the core Swap Object.
@@ -79,7 +81,13 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 
 	/// Execute refund. Refund can be executed if swap trade is cancelled. automatically or
 	/// by timeout (Waiting process must be limited to some point)
-	fn refunded(&mut self, keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind>;
+	fn refunded(
+		&mut self,
+		keychain: &K,
+		context: &Context,
+		swap: &mut Swap,
+		refund_address: Option<String>,
+	) -> Result<(), ErrorKind>;
 
 	/// Cancel the trade. Other party need to be notified with higher level channel.
 	/// It is not mwc-wallet responsibility to say nice good buy to other party.
@@ -137,23 +145,26 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 /// Create an appropriate instance for the Currency
 /// electrumx_uri - mandatory for BTC
 /// Note: Result lifetime is equal of arguments lifetime!
-pub fn create_instance<'a, C, K>(currency: &Currency, node_client: C ) -> Result<Box<dyn SwapApi<K> + 'a>, ErrorKind>
-	where
-		C: NodeClient + 'a,
-		K: Keychain + 'a,
+pub fn create_instance<'a, C, K>(
+	currency: &Currency,
+	node_client: C,
+) -> Result<Box<dyn SwapApi<K> + 'a>, ErrorKind>
+where
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
 {
 	match currency {
 		Currency::Btc => {
 			let electrumx_uri = crate::swap::trades::get_electrumx_uri();
 			if electrumx_uri.is_none() {
-				return Err( ErrorKind::UndefinedElectrumXURI );
+				return Err(ErrorKind::UndefinedElectrumXURI);
 			}
 
 			let btc_node_client = ElectrumNodeClient::new(
 				electrumx_uri.expect("BTC API requires BTC node client"),
 				!global::is_mainnet(),
 			);
-			Ok(Box::new( BtcSwapApi::new(node_client, btc_node_client) ))
+			Ok(Box::new(BtcSwapApi::new(node_client, btc_node_client)))
 		}
 	}
 }

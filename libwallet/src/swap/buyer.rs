@@ -17,13 +17,13 @@ use super::swap::{publish_transaction, tx_add_input, tx_add_output, Swap};
 use super::types::*;
 use super::{is_test_mode, ErrorKind, Keychain, CURRENT_SLATE_VERSION, CURRENT_VERSION};
 use crate::swap::multisig::{Builder as MultisigBuilder, ParticipantData as MultisigParticipant};
+use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
 use chrono::{TimeZone, Utc};
 use grin_core::libtx::{build, proof, tx_fee};
 use grin_keychain::{BlindSum, BlindingFactor, SwitchCommitmentType};
 use grin_util::secp::aggsig;
 use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::pedersen::RangeProof;
-use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
 use rand::thread_rng;
 use std::mem;
 use uuid::Uuid;
@@ -56,7 +56,8 @@ impl BuyApi {
 
 		// Refund tx needs to be locked until at least 10 hours in the future
 		let refund_slate: Slate = offer.refund_slate.into();
-		if refund_slate.lock_height < height + 10 * 60 {
+		// expecting at least half of the interval
+		if refund_slate.lock_height < height + offer.mwc_lock_time_seconds/2/60 {
 			return Err(ErrorKind::InvalidLockHeightRefundTx);
 		}
 
@@ -79,7 +80,7 @@ impl BuyApi {
 		let started = if test_mode {
 			Utc.ymd(2019, 9, 4).and_hms_micro(21, 22, 33, 386997)
 		} else {
-			Utc::now()
+			offer.start_time.clone()
 		};
 
 		let mut swap = Swap {
@@ -105,6 +106,8 @@ impl BuyApi {
 			adaptor_signature: None,
 			required_mwc_lock_confirmations: offer.required_mwc_lock_confirmations,
 			required_secondary_lock_confirmations: offer.required_secondary_lock_confirmations,
+			mwc_lock_time_seconds: offer.mwc_lock_time_seconds,
+			seller_redeem_time: offer.seller_redeem_time,
 		};
 
 		swap.redeem_public = Some(PublicKey::from_secret_key(
@@ -153,7 +156,9 @@ impl BuyApi {
 	/// Check the redeem confirmations and move to Complete state
 	pub fn completed(swap: &mut Swap) -> Result<(), ErrorKind> {
 		swap.expect_buyer()?;
-		swap.expect(Status::Redeem)?;
+		if !(swap.status == Status::Redeem || swap.status == Status::Completed) {
+			return Err(ErrorKind::UnexpectedStatus(Status::Redeem, swap.status));
+		}
 		match swap.redeem_confirmations {
 			Some(h) if h > 0 => {
 				swap.status = Status::Completed;

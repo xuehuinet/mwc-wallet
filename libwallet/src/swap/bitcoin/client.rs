@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::grin_util::Mutex;
 use crate::swap::ErrorKind;
 use bitcoin::consensus::Decodable;
 use bitcoin::{Address, OutPoint, Transaction};
 use bitcoin_hashes::sha256d;
-use crate::grin_util::Mutex;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::io::Cursor;
@@ -174,7 +174,7 @@ impl BtcNodeClient for TestBtcNodeClient {
 
 		let cursor = Cursor::new(tx);
 		let tx = Transaction::consensus_decode(cursor)
-			.map_err(|_| ErrorKind::ElectrumNodeClient("Unable to parse transaction".into()))?;
+			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to parse transaction, {}", e)))?;
 
 		let txid = tx.txid();
 		if state.pending.contains_key(&txid) {

@@ -80,14 +80,15 @@ impl ElectrumRpcClient {
 			RpcResponse::ResponseErr(e) => {
 				if e.id.map(|res_id| res_id == id).unwrap_or(true) {
 					let err: ElectrumResponseError = serde_json::from_value(e.error)
-						.map_err(|_| ErrorKind::ElectrumNodeClient("Received error".into()))?;
+						.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Received error, {}", e)))?;
 					return Err(err.into());
 				}
 			}
 			RpcResponse::ResponseOk(o) => {
+				debug!("Get a response back: {:?}", o);
 				if o.id.map(|res_id| res_id == id).unwrap_or(false) {
 					let obj: T = serde_json::from_value(o.result)
-						.map_err(|_| ErrorKind::ElectrumNodeClient("Unable to decode response".into()))?;
+						.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to decode response, {}", e)))?;
 					return Ok(obj);
 				}
 			}
@@ -127,10 +128,10 @@ impl ElectrumRpcClient {
 		self.write(&request)?;
 		let hash: String = self.wait(request.id)?;
 		let hash = from_hex(hash.as_str())
-			.map_err(|_e| ErrorKind::ElectrumNodeClient("Unable to post tx".into()))?;
+			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to post tx, wrong hash value {}, {}", hash, e)))?;
 
 		if hash.len() != 32 {
-			return Err(ErrorKind::ElectrumNodeClient("Unable to post tx".into()));
+			return Err(ErrorKind::ElectrumNodeClient(format!("Unable to post tx, wrong hash {:?}", hash)));
 		}
 
 		Ok(())
@@ -237,6 +238,7 @@ pub struct ElectrumTransaction {
 	pub hex: String,
 	pub locktime: u64,
 	pub size: u64,
+	#[serde(default)]
 	pub time: u64,
 	pub version: u64,
 }
@@ -360,11 +362,11 @@ impl BtcNodeClient for ElectrumNodeClient {
 		};
 
 		let tx_bytes = from_hex(tx.hex.as_str())
-			.map_err(|_e| ErrorKind::ElectrumNodeClient("Unable to parse hex".into()))?;
+			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to parse hex {}, {}", tx.hex, e)))?;
 
 		let cursor = Cursor::new(tx_bytes);
 		let tx = Transaction::consensus_decode(cursor)
-			.map_err(|_| ErrorKind::ElectrumNodeClient("Unable to parse transaction".into()))?;
+			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to parse transaction, {}", e)))?;
 
 		Ok(Some((height, tx)))
 	}
