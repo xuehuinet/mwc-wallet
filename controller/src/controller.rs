@@ -32,6 +32,9 @@ use serde_json;
 
 use grin_wallet_impls::{Address, CloseReason, MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber, Publisher,
 						Subscriber, SubscriptionHandler, KeybasePublisher, KeybaseSubscriber};
+//use grin_wallet_impls::swap::dealer::SwapDealer;
+//use grin_wallet_impls::swap::message::SwapConfig;
+use grin_wallet_libwallet::swap::message::Message;
 use grin_wallet_libwallet::wallet_lock;
 use grin_wallet_util::grin_core::core;
 
@@ -422,6 +425,26 @@ where
 		}
 	}
 
+	fn process_incoming_swap_message(
+		&self,
+		_from: &dyn Address,
+		_swapmessage: Message
+	) -> Result<(), Error> {
+		// TODO  - Call Owner API that will process the message
+/*		let swap_dealer = SwapDealer::new();
+		if self.swap_config.is_some() {
+			swap_dealer.process_swap_message(self.wallet.clone(),
+											 from,
+											 swapmessage,
+											 self.publisher.lock().as_ref().expect("error"),
+											 self.clone().swap_config.unwrap())
+				.map_err(|e| {
+					ErrorKind::ProcessSwapMessageError(format!("Failed to process swap messages, {}", e))
+				})?;
+		}*/
+		Ok(())
+	}
+
 	fn do_log_info(&self, message: String) {
 		if self.print_to_log {
 			info!("{}", message);
@@ -494,6 +517,15 @@ where
 		match result {
 			Ok(()) => {}
 			Err(e) => self.do_log_error(format!("Unable to process incoming slate, {}", e)),
+		}
+	}
+
+	fn on_swap_message(&self, from: &dyn Address, swap: Message) {
+		let result = self.process_incoming_swap_message(from, swap);
+
+		match result {
+			Err(e) => self.do_log_error(format!("{}", e)),
+			_ => {}
 		}
 	}
 
@@ -688,8 +720,6 @@ pub fn start_keybase_listener<L, C, K>(
 		print_to_log,
 	);
 
-
-
 	let keybase_publisher = KeybasePublisher::new(ttl, keybase_binary.clone())?;
 	// Cross reference, need to setup the secondary pointer
 	controller.set_publisher(Box::new(keybase_publisher.clone()));
@@ -718,7 +748,6 @@ pub fn start_keybase_listener<L, C, K>(
 
 	Ok((keybase_publisher, keybase_subscriber))
 }
-
 
 
 /// Listener version, providing same API but listening for requests on a

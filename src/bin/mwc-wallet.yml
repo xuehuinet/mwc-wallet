@@ -456,3 +456,126 @@ subcommands:
             short: f
             long: file
             takes_value: true
+  - swap_start:
+      about: Start MWC atomic swap trading.
+      args:
+        - mwc_amount:
+            help: MWC amount to trade
+            short: m
+            long: mwc_amount
+            takes_value: true
+        - minimum_confirmations:
+            help: Minimum confirmations number for the outputs to spend
+            short: c
+            long: min_conf
+            default_value: "10"
+            takes_value: true
+        - secondary_currency:
+            help: Secondary currency name
+            short: s
+            long: secondary_currency
+            takes_value: true
+            possible_values:
+              - btc
+            default_value: btc
+        - secondary_amount:
+            help: BTC amount expected to get before fees paid
+            short: b
+            long: secondary_amount
+            takes_value: true
+        - secondary_address:
+            help: resulting BTC address
+            short: a
+            long: secondary_address
+            takes_value: true
+        - required_mwc_lock_confirmations:
+            help: Number of confirmations required for locked MWC coins
+            long: mwc_lock_confirmations
+            takes_value: true
+            default_value: "60"
+        - required_secondary_lock_confirmations:
+            help: Number of confirmations required for locked BTC coins
+            long: secondary_lock_confirmations
+            takes_value: true
+            default_value: "6"
+        - mwc_lock_time:
+            help: Time interval (hours) that guarantee needed to finish swap process. Seller will lock MWC funds for this time
+            long: mwc_lock_time
+            takes_value: true
+            default_value: "24"
+        - seller_redeem_time:
+            help: Time interval (hours) needed for Buyer to redeem BTC. Btc will be locked extra for that interval
+            long: seller_redeem_time
+            takes_value: true
+            default_value: "12"
+  - swap_message:
+      about: Process incoming swap message written in the file. Note, file base processing is not usual.
+      args:
+        - file:
+            help: filename with a message
+            short: f
+            long: file
+            takes_value: true
+  - swap:
+      about: Trade MWC to another currency (BTC) with atomic swap
+      args:
+        - list:
+            help: List SWAP trades
+            short: l
+            long: list
+            takes_value: false
+        - verbose:
+            help: Show details for List command and print maximum details for
+            short: v
+            long: verbose
+            takes_value: false
+        - remove:
+            help: Remove SWAP trade. Note, be sure that you finish or cancel you trade before to delete it.
+            short: r
+            long: remove
+            takes_value: false
+        - check:
+            help: Check the status of the trade
+            short: c
+            long: check
+            takes_value: false
+        - process:
+            help: Process the next step of the swap trade
+            short: p
+            long: process
+            takes_value: false
+        - action:
+            help: Action step to perform. Expected match 'check' output
+            short: a
+            long: action
+            takes_value: true
+            possible_values:
+              - continue
+              - msg1
+              - msg2
+              - publish_MWC
+              - publish_BTC
+              - refund
+              - cancel
+            default_value: continue
+        - swap_id:
+            help: Id of swap trade. Required for some commands
+            short: i
+            long: swap_id
+            takes_value: true
+        - method:
+            help: Method for sending the message to other party
+            short: m
+            long: method
+            possible_values:
+              - http
+              - file
+              - keybase
+              - mwcmqs
+            default_value: file
+            takes_value: true
+        - dest:
+            help: Send message to the destination for the method above; address for the buyer BTC refund
+            short: d
+            long: dest
+            takes_value: true

@@ -1,6 +1,7 @@
 //The following is support mqs usage in mwc713
 use crate::error::{Error, ErrorKind};
 use grin_wallet_libwallet::Slate;
+use grin_wallet_libwallet::swap::message::Message;
 use std::sync::mpsc::Sender;
 use url::Url; //only for the Address::parse
 
@@ -29,6 +30,7 @@ pub trait Publisher {
 		signature: String,
 		source_address: &ProvableAddress,
 	) -> Result<String, Error>;
+	fn post_take(&self, message: &Message, to: &str) -> Result<(), Error>;
 }
 
 pub trait Subscriber {
@@ -46,6 +48,7 @@ pub trait SubscriptionHandler: Send {
 	fn on_close(&self, result: CloseReason);
 	fn on_dropped(&self);
 	fn on_reestablished(&self);
+	fn on_swap_message(&self, from: &dyn Address, swap: Message);
 
 	fn set_notification_channels(&self, slate_id: &uuid::Uuid, slate_send_channel: Sender<Slate>);
 	fn reset_notification_channels(&self, slate_id: &uuid::Uuid);

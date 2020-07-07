@@ -47,6 +47,7 @@ extern crate strum;
 extern crate strum_macros;
 
 extern crate grin_api;
+extern crate hex;
 
 pub mod address;
 pub mod api_impl;
@@ -57,6 +58,10 @@ pub mod proof;
 mod slate;
 pub mod slate_versions;
 mod types;
+/// Atomic Swap library
+pub mod swap;
+extern crate bitcoin as bitcoin_lib;
+extern crate bitcoin_hashes;
 
 pub use crate::error::{Error, ErrorKind};
 pub use crate::slate::{ParticipantData, ParticipantMessageData, ParticipantMessages, Slate};
@@ -66,10 +71,11 @@ pub use crate::slate_versions::{
 };
 pub use api_impl::foreign;
 pub use api_impl::owner;
+pub use api_impl::owner_swap;
 pub use api_impl::owner_updater::StatusMessage;
 pub use api_impl::types::{
 	BlockFees, InitTxArgs, InitTxSendArgs, IssueInvoiceTxArgs, NodeHeightResult,
-	OutputCommitMapping, PaymentProof, SendTXArgs, VersionInfo,
+	OutputCommitMapping, PaymentProof, SendTXArgs, VersionInfo, SwapStartArgs,
 };
 pub use internal::scan::scan;
 pub use proof::tx_proof::TxProof;

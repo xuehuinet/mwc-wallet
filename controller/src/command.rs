@@ -19,9 +19,7 @@ use crate::apiwallet::Owner;
 use crate::config::{MQSConfig, TorConfig, WalletConfig, WALLET_CONFIG_FILE_NAME};
 use crate::core::{core, global};
 use crate::error::{Error, ErrorKind};
-use crate::impls::{
-	create_sender, SlateGetter as _,
-};
+use crate::impls::{create_sender, SlateGetter as _};
 use crate::impls::{PathToSlate, SlatePutter};
 use crate::keychain;
 use crate::libwallet::{
@@ -30,7 +28,8 @@ use crate::libwallet::{
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
 use crate::{controller, display};
-use grin_wallet_libwallet::{TxLogEntry, Slate};
+use grin_wallet_libwallet::swap::types::Action;
+use grin_wallet_libwallet::{Slate, TxLogEntry};
 use grin_wallet_util::OnionV3Address;
 use serde_json as json;
 use std::fs::File;
@@ -231,6 +230,7 @@ where
 			mqs_config.clone(),
 			km.clone(),
 			false,
+			//None,
 		)?;
 	}
 
@@ -436,6 +436,7 @@ where
 						mqs_config_unwrapped,
 						Arc::new(Mutex::new(km)),
 						false,
+						//None,
 					)?;
 					thread::sleep(Duration::from_millis(2000));
 				}
@@ -474,13 +475,12 @@ where
 
 				method => {
 					let original_slate = slate.clone();
-					let sender =
-						create_sender(method, &args.dest, &args.apisecret, tor_config)?;
+					let sender = create_sender(method, &args.dest, &args.apisecret, tor_config)?;
 					slate = sender.send_tx(&slate)?;
 					// Restore back ttl, because it can be gone
 					slate.ttl_cutoff_height = original_slate.ttl_cutoff_height.clone();
 					// Checking is sender didn't do any harm to slate
-					Slate::compare_slates_send( &original_slate, &slate)?;
+					Slate::compare_slates_send(&original_slate, &slate)?;
 					api.verify_slate_messages(m, &slate).map_err(|e| {
 						error!("Error validating participant messages: {}", e);
 						e
@@ -494,8 +494,8 @@ where
 			let result = api.post_tx(m, &slate.tx, args.fluff);
 			match result {
 				Ok(_) => {
-					info!("slate [{}] finalized successfully",slate.id.to_string());
-					println!("slate [{}] finalized successfully",slate.id.to_string());
+					info!("slate [{}] finalized successfully", slate.id.to_string());
+					println!("slate [{}] finalized successfully", slate.id.to_string());
 					return Ok(());
 				}
 				Err(e) => {
@@ -1271,4 +1271,229 @@ where
 		}
 	})?;
 	Ok(())
+}
+
+/// Arguments for the swap command
+pub struct SwapStartArgs {
+	/// MWC to send
+	pub mwc_amount: u64,
+	/// Secondary currency
+	pub secondary_currency: String,
+	/// BTC to recieve
+	pub secondary_amount: u64,
+	/// Secondary currency redeem address
+	pub secondary_redeem_address: String,
+	/// Minimum confirmation for outputs. Default is 10
+	pub minimum_confirmations: Option<u64>,
+	/// Requred confirmations for MWC Locking
+	pub required_mwc_lock_confirmations: u64,
+	/// Requred confirmations for BTC Locking
+	pub required_secondary_lock_confirmations: u64,
+	/// MWC lock time interval
+	pub mwc_lock_time_seconds: u64,
+	/// Time interval needed to Buyer to redeem BTC. Btc lock: mwc_lock_time_seconds + seller_redeem_time
+	pub seller_redeem_time: u64,
+}
+
+pub fn swap_start<L, C, K>(
+	owner_api: &mut Owner<L, C, K>,
+	keychain_mask: Option<&SecretKey>,
+	args: SwapStartArgs,
+) -> Result<(), Error>
+where
+	L: WalletLCProvider<'static, C, K> + 'static,
+	C: NodeClient + 'static,
+	K: keychain::Keychain + 'static,
+{
+	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+		let result = api.swap_start(
+			keychain_mask,
+			&grin_wallet_libwallet::api_impl::types::SwapStartArgs {
+				mwc_amount: args.mwc_amount,
+				secondary_currency: args.secondary_currency,
+				secondary_amount: args.secondary_amount,
+				secondary_redeem_address: args.secondary_redeem_address,
+				minimum_confirmations: args.minimum_confirmations,
+				required_mwc_lock_confirmations: args.required_mwc_lock_confirmations,
+				required_secondary_lock_confirmations: args.required_secondary_lock_confirmations,
+				mwc_lock_time_seconds: args.mwc_lock_time_seconds,
+				seller_redeem_time: args.seller_redeem_time,
+			},
+		);
+		match result {
+			Ok(swap_id) => {
+				warn!("Swap trade is created: {}", swap_id);
+				Ok(())
+			}
+			Err(e) => {
+				error!("Unable to start Swap trade: {}", e);
+				Err(ErrorKind::LibWallet(format!("Unable to start Swap trade: {}", e)).into())
+			}
+		}
+	})?;
+	Ok(())
+}
+
+// Swap operation
+pub enum SwapSubcommand {
+	List,
+	Delete,
+	Check,
+	Process,
+}
+
+/// Processing swap message from the file
+pub fn swap_message<L, C, K>(
+	owner_api: &mut Owner<L, C, K>,
+	keychain_mask: Option<&SecretKey>,
+	message_filename: &str,
+) -> Result<(), Error>
+where
+	L: WalletLCProvider<'static, C, K> + 'static,
+	C: NodeClient + 'static,
+	K: keychain::Keychain + 'static,
+{
+	let mut file = File::open(message_filename).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to open file {}, {}", message_filename, e)))?;
+	let mut contents = String::new();
+	file.read_to_string(&mut contents).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to read from file {}, {}", message_filename, e)))?;
+
+	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+		api.swap_income_message(keychain_mask, contents)?;
+		Ok(())
+	})?;
+	Ok(())
+}
+
+/// Arguments for the swap command
+pub struct SwapArgs {
+	/// What we want to do with a swap
+	pub subcommand: SwapSubcommand,
+	/// Using verbose outptus/printing
+	pub verbose: bool,
+	/// Swap ID that will are working with
+	pub swap_id: Option<String>,
+	/// Action to process. Value must match expected
+	pub action: Option<String>,
+	/// Transport that can be used for interaction
+	pub method: Option<String>,
+	/// Destination is something needed to be send
+	pub destination: Option<String>,
+}
+
+pub fn swap<L, C, K>(
+	owner_api: &mut Owner<L, C, K>,
+	keychain_mask: Option<&SecretKey>,
+	args: SwapArgs,
+) -> Result<(), Error>
+where
+	L: WalletLCProvider<'static, C, K> + 'static,
+	C: NodeClient + 'static,
+	K: keychain::Keychain + 'static,
+{
+	match args.subcommand {
+		SwapSubcommand::List => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let result = api.swap_list(keychain_mask);
+				match result {
+					Ok(list) => {
+						if list.is_empty() {
+							println!("You don't have any Swap trades");
+						} else {
+							display::swap_trades(list);
+						}
+						Ok(())
+					}
+					Err(e) => {
+						error!("Unable to List Swap trades: {}", e);
+						Err(ErrorKind::LibWallet(format!("Unable to List Swap trades: {}", e)).into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+		SwapSubcommand::Delete => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
+				let result = api.swap_delete(keychain_mask, swap_id.clone() );
+				match result {
+					Ok(_) => {
+						println!("Swap trade {} was sucessfully deleted.", swap_id);
+						Ok(())
+					}
+					Err(e) => {
+						error!("Unable to delete Swap {}: {}", swap_id, e);
+						Err(ErrorKind::LibWallet(format!("Unable to delete Swap {}: {}", swap_id, e)).into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+		SwapSubcommand::Check => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
+				let result = api.swap_get(keychain_mask, swap_id.clone() );
+				match result {
+					Ok(swap) => {
+						let (status,action) = api.get_swap_status_action(keychain_mask, swap_id.clone())?;
+						display::swap_trade(swap, &status, &action);
+						Ok(())
+					}
+					Err(e) => {
+						error!("Unable to retrieve Swap {}: {}", swap_id, e);
+						Err(ErrorKind::LibWallet(format!("Unable to retrieve Swap {}: {}", swap_id, e)).into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+		SwapSubcommand::Process => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
+				let mut action = args.action.ok_or( ErrorKind::ArgumentError("Not found expected 'action' argument".to_string()))?;
+				//let swap = api.swap_get(keychain_mask, swap_id.clone() )?;
+				let (_swap_status,swap_action) = api.get_swap_status_action(keychain_mask, swap_id.clone())?;
+				let swap_action_str = swap_action.to_cmd().unwrap_or("none".to_string());
+
+				// Let's check the action
+				if action == "continue" {
+					if swap_action_str != "none" {
+						println!("Do you want process {}? (Yes/No)", swap_action);
+						let mut input = String::new();
+						let _ = std::io::stdin().read_line(&mut input);
+						let input = input.to_lowercase().trim().to_string();
+						if !input.starts_with("y") {
+							return Ok(());
+						}
+					}
+					action = swap_action_str.clone();
+				}
+
+				if action == "none" {
+					println!("Nothing can be done now");
+					return Ok(());
+				}
+
+				if action != "cancel" && action != swap_action_str {
+					println!("You can't process {}, current action is {}", action, swap_action );
+					return Ok(())
+				}
+
+				// Some action is expected, let's perform if
+
+				let result = api.swap_process(
+					keychain_mask, &swap_id,
+					Action::from_cmd(&action).ok_or(ErrorKind::ArgumentError(format!("Unable to parse {}", action)))?,
+					args.method, args.destination);
+
+				match result {
+					Ok(_) => Ok(()),
+					Err(e) => {
+						error!("Unable to process Swap {}: {}", swap_id, e);
+						Err(ErrorKind::LibWallet(format!("Unable to process Swap {}: {}", swap_id, e)).into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+	}
 }
