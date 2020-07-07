@@ -85,8 +85,10 @@ impl BtcData {
 		};
 
 		// Don't lock for more than 3 days
-		if lock_time > (Utc::now().timestamp() + 3600*24*3) as u32 {
-			return Err( ErrorKind::Generic("BTC locking time interval is larger than 3 days. Is it a scam?".to_string()) );
+		if lock_time > (Utc::now().timestamp() + 3600 * 24 * 3) as u32 {
+			return Err(ErrorKind::Generic(
+				"BTC locking time interval is larger than 3 days. Is it a scam?".to_string(),
+			));
 		}
 
 		let cosign = PublicKey::from_secret_key(
@@ -212,7 +214,9 @@ impl BtcData {
 		}
 
 		if input.is_empty() {
-			return Err(ErrorKind::Generic("Unable to build refund transaction, no inputs are found".to_string()));
+			return Err(ErrorKind::Generic(
+				"Unable to build refund transaction, no inputs are found".to_string(),
+			));
 		}
 		// Output
 		let mut output = Vec::with_capacity(1);
@@ -239,7 +243,7 @@ impl BtcData {
 			.as_ref()
 			.ok_or(ErrorKind::Generic("Missing script".into()))?;
 
-		let ( input, output, total_amount ) = self.build_input_outputs(redeem_address)?;
+		let (input, output, total_amount) = self.build_input_outputs(redeem_address)?;
 
 		let mut tx = Transaction {
 			version: 2,
@@ -326,7 +330,7 @@ impl BtcData {
 			.as_ref()
 			.ok_or(ErrorKind::Generic("Missing script".into()))?;
 
-		let ( input, output, total_amount ) = self.build_input_outputs(refund_address)?;
+		let (input, output, total_amount) = self.build_input_outputs(refund_address)?;
 
 		let mut tx = Transaction {
 			version: 2,
@@ -403,7 +407,12 @@ impl BtcData {
 	/// Seller apply respond for the Buyer.
 	pub(crate) fn accept_offer_update(&self) -> Result<BtcUpdate, ErrorKind> {
 		Ok(BtcUpdate::AcceptOffer(BtcAcceptOfferUpdate {
-			refund: self.refund.ok_or(ErrorKind::UnexpectedMessageType("BTC refund pubkey is not defined at BtcAcceptOfferUpdate payload".to_string()))?.clone(),
+			refund: self
+				.refund
+				.ok_or(ErrorKind::UnexpectedMessageType(
+					"BTC refund pubkey is not defined at BtcAcceptOfferUpdate payload".to_string(),
+				))?
+				.clone(),
 		}))
 	}
 }
@@ -436,7 +445,9 @@ impl BtcUpdate {
 	pub fn unwrap_offer(self) -> Result<BtcOfferUpdate, ErrorKind> {
 		match self {
 			BtcUpdate::Offer(u) => Ok(u),
-			_ => Err(ErrorKind::UnexpectedMessageType("Fn unwrap_offer() expecting BtcUpdate::Offer".to_string())),
+			_ => Err(ErrorKind::UnexpectedMessageType(
+				"Fn unwrap_offer() expecting BtcUpdate::Offer".to_string(),
+			)),
 		}
 	}
 
@@ -444,7 +455,9 @@ impl BtcUpdate {
 	pub fn unwrap_accept_offer(self) -> Result<BtcAcceptOfferUpdate, ErrorKind> {
 		match self {
 			BtcUpdate::AcceptOffer(u) => Ok(u),
-			_ => Err(ErrorKind::UnexpectedMessageType("Fn unwrap_accept_offer() expecting BtcUpdate::AcceptOffer".to_string())),
+			_ => Err(ErrorKind::UnexpectedMessageType(
+				"Fn unwrap_accept_offer() expecting BtcUpdate::AcceptOffer".to_string(),
+			)),
 		}
 	}
 

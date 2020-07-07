@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use super::error::ErrorKind;
-use crate::swap::ser::*;
 use crate::blake2::blake2b::blake2b;
+use crate::swap::ser::*;
 use grin_core::core::{Input as TxInput, Output as TxOutput, OutputFeatures};
 use grin_core::libtx::secp_ser;
 use grin_util::secp::constants::SECRET_KEY_SIZE;

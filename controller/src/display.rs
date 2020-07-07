@@ -14,11 +14,11 @@
 
 use crate::core::core::{self, amount_to_hr_string};
 use crate::core::global;
+use crate::libwallet::swap::swap::Swap;
+use crate::libwallet::swap::types::{Action, Role, Status};
 use crate::libwallet::{
 	AcctPathMapping, Error, OutputCommitMapping, OutputStatus, TxLogEntry, WalletInfo,
 };
-use crate::libwallet::swap::swap::Swap;
-use crate::libwallet::swap::types::{Role, Status, Action};
 
 use crate::util;
 use colored::*;
@@ -622,7 +622,7 @@ pub fn payment_proof(tx: &TxLogEntry) -> Result<(), Error> {
 }
 
 /// Display list of wallet accounts in a pretty way
-pub fn swap_trades(trades: Vec<(String,String)>) {
+pub fn swap_trades(trades: Vec<(String, String)>) {
 	println!("\n____ Swap trades ____\n",);
 	let mut table = table!();
 
@@ -641,14 +641,27 @@ pub fn swap_trades(trades: Vec<(String,String)>) {
 	println!();
 }
 
-
 /// Display list of wallet accounts in a pretty way
 pub fn swap_trade(swap: Swap, status: &Status, action: &Action) {
 	println!("Swap ID: {}", swap.id);
-	println!("MWC amount: {}", core::amount_to_hr_string(swap.primary_amount, true) );
-	println!("{} amount: {}", swap.secondary_currency, swap.secondary_currency.amount_to_hr_string(swap.secondary_amount, true) );
-	println!("Requied MWC lock confirmations: {}", swap.required_mwc_lock_confirmations);
-	println!("Requied {} lock confirmations: {}", swap.secondary_currency, swap.required_secondary_lock_confirmations);
+	println!(
+		"MWC amount: {}",
+		core::amount_to_hr_string(swap.primary_amount, true)
+	);
+	println!(
+		"{} amount: {}",
+		swap.secondary_currency,
+		swap.secondary_currency
+			.amount_to_hr_string(swap.secondary_amount, true)
+	);
+	println!(
+		"Requied MWC lock confirmations: {}",
+		swap.required_mwc_lock_confirmations
+	);
+	println!(
+		"Requied {} lock confirmations: {}",
+		swap.secondary_currency, swap.required_secondary_lock_confirmations
+	);
 
 	match swap.role {
 		Role::Seller(btc_address, _) => {
@@ -662,4 +675,3 @@ pub fn swap_trade(swap: Swap, status: &Status, action: &Action) {
 	println!("Status: {}", status);
 	println!("Action: {}", action);
 }
-

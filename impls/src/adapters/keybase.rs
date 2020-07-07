@@ -19,12 +19,12 @@ use super::types::{
 };
 use crate::adapters::SlateSender;
 use crate::error::{Error, ErrorKind};
+use crate::libwallet::swap::message::Message;
 use crate::libwallet::Slate;
 use crate::util::Mutex;
 use grin_core::core::amount_to_hr_string;
 use grin_util::RwLock;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
-use crate::libwallet::swap::message::Message;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashSet;

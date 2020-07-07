@@ -29,6 +29,7 @@ use crate::grin_util::secp::{self, pedersen, Secp256k1};
 use crate::grin_util::ZeroingString;
 use crate::slate::ParticipantMessages;
 use crate::slate_versions::ser as dalek_ser;
+use crate::Slate;
 use chrono::prelude::*;
 use ed25519_dalek::PublicKey as DalekPublicKey;
 use ed25519_dalek::Signature as DalekSignature;
@@ -37,7 +38,6 @@ use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use uuid::Uuid;
-use crate::Slate;
 
 /// Combined trait to allow dynamic wallet dispatch
 pub trait WalletInst<'a, L, C, K>: Send + Sync
@@ -659,8 +659,8 @@ impl Context {
 		input_ids: Vec<(Identifier, Option<u64>, u64)>,
 		output_ids: Vec<(Identifier, Option<u64>, u64)>,
 		parent_key_id: Identifier,
-		participant_id: usize
-	) -> Result<Context,Error> {
+		participant_id: usize,
+	) -> Result<Context, Error> {
 		Ok(Context {
 			parent_key_id,
 			sec_key: ZERO_KEY, // Not needed

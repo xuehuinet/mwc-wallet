@@ -54,7 +54,10 @@ impl Message {
 	pub fn unwrap_offer(self) -> Result<(Uuid, OfferUpdate, SecondaryUpdate), ErrorKind> {
 		match self.inner {
 			Update::Offer(u) => Ok((self.id, u, self.inner_secondary)),
-			_ => Err(ErrorKind::UnexpectedMessageType(format!("Fn unwrap_offer() expecting Update::Offer, get {:?}", self.inner))),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!(
+				"Fn unwrap_offer() expecting Update::Offer, get {:?}",
+				self.inner
+			))),
 		}
 	}
 
@@ -64,7 +67,10 @@ impl Message {
 	) -> Result<(Uuid, AcceptOfferUpdate, SecondaryUpdate), ErrorKind> {
 		match self.inner {
 			Update::AcceptOffer(u) => Ok((self.id, u, self.inner_secondary)),
-			_ => Err(ErrorKind::UnexpectedMessageType(format!("Fn unwrap_accept_offer() expecting Update::AcceptOffer, get {:?}", self.inner))),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!(
+				"Fn unwrap_accept_offer() expecting Update::AcceptOffer, get {:?}",
+				self.inner
+			))),
 		}
 	}
 
@@ -74,7 +80,10 @@ impl Message {
 	) -> Result<(Uuid, InitRedeemUpdate, SecondaryUpdate), ErrorKind> {
 		match self.inner {
 			Update::InitRedeem(u) => Ok((self.id, u, self.inner_secondary)),
-			_ => Err(ErrorKind::UnexpectedMessageType(format!("Fn unwrap_init_redeem() expecting Update::InitRedeem, get {:?}", self.inner))),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!(
+				"Fn unwrap_init_redeem() expecting Update::InitRedeem, get {:?}",
+				self.inner
+			))),
 		}
 	}
 
@@ -82,19 +91,25 @@ impl Message {
 	pub fn unwrap_redeem(self) -> Result<(Uuid, RedeemUpdate, SecondaryUpdate), ErrorKind> {
 		match self.inner {
 			Update::Redeem(u) => Ok((self.id, u, self.inner_secondary)),
-			_ => Err(ErrorKind::UnexpectedMessageType(format!("Fn unwrap_redeem() expecting Update::Redeem, get {:?}", self.inner))),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!(
+				"Fn unwrap_redeem() expecting Update::Redeem, get {:?}",
+				self.inner
+			))),
 		}
 	}
 
 	/// Message to Json String
 	pub fn to_json(&self) -> Result<String, ErrorKind> {
-		let str = serde_json::to_string(&self).map_err(|e| ErrorKind::Serde(format!("Unable to serialize a message, {}", e)))?;
+		let str = serde_json::to_string(&self)
+			.map_err(|e| ErrorKind::Serde(format!("Unable to serialize a message, {}", e)))?;
 		Ok(str)
 	}
 
 	/// Build message from Json
 	pub fn from_json(s: &str) -> Result<Message, ErrorKind> {
-		Ok(serde_json::from_str(s).map_err(|e| ErrorKind::Serde(format!("Unable to parse Swap Message from {}, {}", s, e)))?)
+		Ok(serde_json::from_str(s).map_err(|e| {
+			ErrorKind::Serde(format!("Unable to parse Swap Message from {}, {}", s, e))
+		})?)
 	}
 }
 

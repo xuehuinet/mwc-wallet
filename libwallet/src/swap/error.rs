@@ -23,7 +23,9 @@ use std::io;
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum ErrorKind {
 	/// ElectrumX connection URI is not setup
-	#[fail(display = "ElectrumX URI is not defined. Please specify at wallet config connection to ElectrumX host")]
+	#[fail(
+		display = "ElectrumX URI is not defined. Please specify at wallet config connection to ElectrumX host"
+	)]
 	UndefinedElectrumXURI,
 	/// Unexpected state or status. Business logic is broken
 	#[fail(display = "Swap Unexpected action, {}", _0)]
@@ -35,7 +37,10 @@ pub enum ErrorKind {
 	#[fail(display = "Swap Unexpected role, {}", _0)]
 	UnexpectedRole(String),
 	/// Unexpected status. Business logic is broken
-	#[fail(display = "Swap Unexpected status. Expected: {:?}, actual: {:?}", _0, _1)]
+	#[fail(
+		display = "Swap Unexpected status. Expected: {:?}, actual: {:?}",
+		_0, _1
+	)]
 	UnexpectedStatus(Status, Status),
 	/// Not enough MWC to start swap
 	#[fail(display = "Insufficient funds. Required: {}, available: {}", _0, _1)]
@@ -47,7 +52,10 @@ pub enum ErrorKind {
 	#[fail(display = "Swap Unexpected secondary coin type")]
 	UnexpectedCoinType,
 	/// Yours swap version is different from other party. Somebody need to make an upgrade
-	#[fail(display = "Swap engines version are different. Other party has version {}, you has {}. To make a deal, you need to have the same versions.", _0, _1)]
+	#[fail(
+		display = "Swap engines version are different. Other party has version {}, you has {}. To make a deal, you need to have the same versions.",
+		_0, _1
+	)]
 	IncompatibleVersion(u8, u8),
 	/// Message from different swap. Probably other party messing up with us.
 	#[fail(display = "Mismatch between swap and message IDs")]

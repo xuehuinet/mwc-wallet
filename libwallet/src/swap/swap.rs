@@ -164,21 +164,27 @@ impl Swap {
 	pub(super) fn expect_seller(&self) -> Result<(), ErrorKind> {
 		match self.role {
 			Role::Seller(_, _) => Ok(()),
-			_ => Err(ErrorKind::UnexpectedRole("Swap Fn expect_seller()".to_string())),
+			_ => Err(ErrorKind::UnexpectedRole(
+				"Swap Fn expect_seller()".to_string(),
+			)),
 		}
 	}
 
 	pub(super) fn expect_buyer(&self) -> Result<(), ErrorKind> {
 		match self.role {
 			Role::Buyer => Ok(()),
-			_ => Err(ErrorKind::UnexpectedRole("Swap Fn expect_buyer()".to_string())),
+			_ => Err(ErrorKind::UnexpectedRole(
+				"Swap Fn expect_buyer()".to_string(),
+			)),
 		}
 	}
 
 	pub(super) fn unwrap_seller(&self) -> Result<(String, u64), ErrorKind> {
 		match &self.role {
 			Role::Seller(address, change) => Ok((address.clone(), *change)),
-			_ => Err(ErrorKind::UnexpectedRole("Swap Fn unwrap_seller()".to_string())),
+			_ => Err(ErrorKind::UnexpectedRole(
+				"Swap Fn unwrap_seller()".to_string(),
+			)),
 		}
 	}
 
@@ -268,7 +274,10 @@ impl Swap {
 			.tx
 			.kernels()
 			.get(0)
-			.ok_or(ErrorKind::UnexpectedAction("Swap Fn find_redeem_kernel() redeem slate is not initialized, not found kernel".to_string()))?
+			.ok_or(ErrorKind::UnexpectedAction(
+				"Swap Fn find_redeem_kernel() redeem slate is not initialized, not found kernel"
+					.to_string(),
+			))?
 			.excess;
 
 		let res = node_client

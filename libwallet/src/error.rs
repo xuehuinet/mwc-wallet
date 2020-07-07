@@ -441,7 +441,6 @@ impl From<util::OnionV3AddressError> for Error {
 
 impl From<SwapErrorKind> for Error {
 	fn from(error: SwapErrorKind) -> Error {
-		Error::from(ErrorKind::SwapError(format!("{}",error)))
+		Error::from(ErrorKind::SwapError(format!("{}", error)))
 	}
 }
-

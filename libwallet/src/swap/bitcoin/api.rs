@@ -59,7 +59,10 @@ where
 			keychain.secp(),
 			swap.redeem_public
 				.as_ref()
-				.ok_or(ErrorKind::UnexpectedAction("swap.redeem_public value is not defined. Method BtcSwapApi::script".to_string()))?,
+				.ok_or(ErrorKind::UnexpectedAction(
+					"swap.redeem_public value is not defined. Method BtcSwapApi::script"
+						.to_string(),
+				))?,
 		)?;
 		Ok(())
 	}
@@ -182,7 +185,10 @@ where
 			Status::Accepted | Status::Locked => {
 				self.seller_init_redeem(keychain, swap, context, message)
 			}
-			_ => Err(ErrorKind::UnexpectedMessageType(format!("seller_receive_message get unexpected status {:?}", swap.status) )),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!(
+				"seller_receive_message get unexpected status {:?}",
+				swap.status
+			))),
 		}
 	}
 
@@ -232,8 +238,12 @@ where
 		let cosign_id = &context.unwrap_seller()?.unwrap_btc()?.cosign;
 
 		let redeem_address_str = swap.unwrap_seller()?.0.clone();
-		let redeem_address = Address::from_str(&redeem_address_str)
-			.map_err(|e| ErrorKind::Generic(format!("Unable to parse BTC redeem address {}, {}", redeem_address_str, e)))?;
+		let redeem_address = Address::from_str(&redeem_address_str).map_err(|e| {
+			ErrorKind::Generic(format!(
+				"Unable to parse BTC redeem address {}, {}",
+				redeem_address_str, e
+			))
+		})?;
 
 		let cosign_secret = keychain.derive_key(0, cosign_id, SwitchCommitmentType::None)?;
 		let redeem_secret = SellApi::calculate_redeem_secret(keychain, swap)?;
@@ -241,7 +251,9 @@ where
 		// This function should only be called once
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
 		if btc_data.redeem_tx.is_some() {
-			return Err(ErrorKind::OneShot("Fn: seller_build_redeem_tx, btc_data.redeem_tx is not empty".to_string()))?;
+			return Err(ErrorKind::OneShot(
+				"Fn: seller_build_redeem_tx, btc_data.redeem_tx is not empty".to_string(),
+			))?;
 		}
 
 		btc_data.redeem_tx(
@@ -316,7 +328,10 @@ where
 			}
 
 			// Enough confirmed or in mempool
-			debug!("SWAP confirmed amount: {}, swap secondary amount: {}", confirmed_amount, swap.secondary_amount );
+			debug!(
+				"SWAP confirmed amount: {}, swap secondary amount: {}",
+				confirmed_amount, swap.secondary_amount
+			);
 
 			if confirmed_amount < swap.secondary_amount {
 				// Wait for enough confirmations
@@ -356,7 +371,10 @@ where
 	) -> Result<(), ErrorKind> {
 		match swap.status {
 			Status::InitRedeem => self.buyer_redeem(keychain, swap, context, message),
-			_ => Err(ErrorKind::UnexpectedMessageType(format!("Fn buyer_receive_message, get status {:?}", swap.status))),
+			_ => Err(ErrorKind::UnexpectedMessageType(format!(
+				"Fn buyer_receive_message, get status {:?}",
+				swap.status
+			))),
 		}
 	}
 
@@ -383,18 +401,19 @@ where
 		let (pending_amount, confirmed_amount, _) = self.btc_balance(keychain, swap, 0)?;
 
 		if pending_amount + confirmed_amount == 0 {
-			return Err(ErrorKind::Generic("Not found outputs to refund. May be it is not on the blockchain yet?".to_string()));
+			return Err(ErrorKind::Generic(
+				"Not found outputs to refund. May be it is not on the blockchain yet?".to_string(),
+			));
 		}
 
-		let refund_key = keychain.derive_key(0, &context.unwrap_buyer()?.unwrap_btc()?.refund, SwitchCommitmentType::None)?;
+		let refund_key = keychain.derive_key(
+			0,
+			&context.unwrap_buyer()?.unwrap_btc()?.refund,
+			SwitchCommitmentType::None,
+		)?;
 
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
-		let refund_tx = btc_data.refund_tx(
-			keychain.secp(),
-			refund_address,
-			10,
-			&refund_key,
-			)?;
+		let refund_tx = btc_data.refund_tx(keychain.secp(), refund_address, 10, &refund_key)?;
 
 		let tx = refund_tx.tx.clone();
 		self.btc_node_client.post_tx(tx)?;
@@ -439,7 +458,9 @@ where
 
 		let role_context = if is_seller {
 			RoleContext::Seller(SellerContext {
-				inputs: inputs.ok_or(ErrorKind::UnexpectedRole("Fn create_context() for seller not found inputs".to_string()))?,
+				inputs: inputs.ok_or(ErrorKind::UnexpectedRole(
+					"Fn create_context() for seller not found inputs".to_string(),
+				))?,
 				change_output: keys.next().unwrap(),
 				change_amount,
 				refund_output: keys.next().unwrap(),
@@ -481,8 +502,12 @@ where
 		mwc_lock_time_seconds: u64,
 		seller_redeem_time: u64,
 	) -> Result<(Swap, Action), ErrorKind> {
-		let redeem_address = Address::from_str(&secondary_redeem_address)
-			.map_err(|e| ErrorKind::Generic(format!("Unable to parse BTC redeem address {}, {}", secondary_redeem_address, e)))?;
+		let redeem_address = Address::from_str(&secondary_redeem_address).map_err(|e| {
+			ErrorKind::Generic(format!(
+				"Unable to parse BTC redeem address {}, {}",
+				secondary_redeem_address, e
+			))
+		})?;
 
 		match redeem_address.address_type() {
 			Some(AddressType::P2pkh) | Some(AddressType::P2sh) => {}
@@ -513,9 +538,12 @@ where
 		)?;
 
 		// Lock time value will be checked nicely at Buyer side when script will be created
-		let lock_time: i64 = swap.started.timestamp() + mwc_lock_time_seconds as i64 + seller_redeem_time as i64;
-		if lock_time < 0 || lock_time>= std::u32::MAX as i64 {
-			return Err(ErrorKind::Generic("lock time intervals are invalid".to_string()));
+		let lock_time: i64 =
+			swap.started.timestamp() + mwc_lock_time_seconds as i64 + seller_redeem_time as i64;
+		if lock_time < 0 || lock_time >= std::u32::MAX as i64 {
+			return Err(ErrorKind::Generic(
+				"lock time intervals are invalid".to_string(),
+			));
 		}
 
 		let btc_data = BtcData::new(
@@ -588,9 +616,16 @@ where
 				Ok(())
 			}
 			Role::Buyer => {
-				let refund_address_str = refund_address.ok_or(ErrorKind::Generic("Please define BTC refund address".to_string()))?;
-				let refund_address = Address::from_str(&refund_address_str).map_err(|e| ErrorKind::Generic(format!("Unable to parse BTC address {}, {}", refund_address_str, e)))?;
-				self.buyer_refund( keychain, context, swap, &refund_address )?;
+				let refund_address_str = refund_address.ok_or(ErrorKind::Generic(
+					"Please define BTC refund address".to_string(),
+				))?;
+				let refund_address = Address::from_str(&refund_address_str).map_err(|e| {
+					ErrorKind::Generic(format!(
+						"Unable to parse BTC address {}, {}",
+						refund_address_str, e
+					))
+				})?;
+				self.buyer_refund(keychain, context, swap, &refund_address)?;
 				swap.status = Status::Refunded;
 				Ok(())
 			}
@@ -600,7 +635,9 @@ where
 	fn cancelled(&mut self, _keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind> {
 		// User by some reason want to cancel. It is fine.
 		if swap.status == Status::Completed {
-			return Err(ErrorKind::UnexpectedAction("This trade is complited, you can't cancel it".to_string()));
+			return Err(ErrorKind::UnexpectedAction(
+				"This trade is complited, you can't cancel it".to_string(),
+			));
 		}
 		swap.status = Status::Cancelled;
 		Ok(())

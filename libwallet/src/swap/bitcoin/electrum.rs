@@ -79,16 +79,19 @@ impl ElectrumRpcClient {
 		match res {
 			RpcResponse::ResponseErr(e) => {
 				if e.id.map(|res_id| res_id == id).unwrap_or(true) {
-					let err: ElectrumResponseError = serde_json::from_value(e.error)
-						.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Received error, {}", e)))?;
+					let err: ElectrumResponseError =
+						serde_json::from_value(e.error).map_err(|e| {
+							ErrorKind::ElectrumNodeClient(format!("Received error, {}", e))
+						})?;
 					return Err(err.into());
 				}
 			}
 			RpcResponse::ResponseOk(o) => {
 				debug!("Get a response back: {:?}", o);
 				if o.id.map(|res_id| res_id == id).unwrap_or(false) {
-					let obj: T = serde_json::from_value(o.result)
-						.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to decode response, {}", e)))?;
+					let obj: T = serde_json::from_value(o.result).map_err(|e| {
+						ErrorKind::ElectrumNodeClient(format!("Unable to decode response, {}", e))
+					})?;
 					return Ok(obj);
 				}
 			}
@@ -127,11 +130,18 @@ impl ElectrumRpcClient {
 		let request = RpcRequest::new(self.next_id(), "blockchain.transaction.broadcast", params)?;
 		self.write(&request)?;
 		let hash: String = self.wait(request.id)?;
-		let hash = from_hex(hash.as_str())
-			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to post tx, wrong hash value {}, {}", hash, e)))?;
+		let hash = from_hex(hash.as_str()).map_err(|e| {
+			ErrorKind::ElectrumNodeClient(format!(
+				"Unable to post tx, wrong hash value {}, {}",
+				hash, e
+			))
+		})?;
 
 		if hash.len() != 32 {
-			return Err(ErrorKind::ElectrumNodeClient(format!("Unable to post tx, wrong hash {:?}", hash)));
+			return Err(ErrorKind::ElectrumNodeClient(format!(
+				"Unable to post tx, wrong hash {:?}",
+				hash
+			)));
 		}
 
 		Ok(())
@@ -311,7 +321,9 @@ impl BtcNodeClient for ElectrumNodeClient {
 		let client = self.client()?;
 		let tx = client
 			.transaction(tx_hash)?
-			.ok_or(ErrorKind::ElectrumNodeClient("Unable to determine height".into()))?;
+			.ok_or(ErrorKind::ElectrumNodeClient(
+				"Unable to determine height".into(),
+			))?;
 		tx.confirmations.ok_or(ErrorKind::ElectrumNodeClient(
 			"Unable to determine height".into(),
 		))
@@ -361,12 +373,14 @@ impl BtcNodeClient for ElectrumNodeClient {
 			_ => None,
 		};
 
-		let tx_bytes = from_hex(tx.hex.as_str())
-			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to parse hex {}, {}", tx.hex, e)))?;
+		let tx_bytes = from_hex(tx.hex.as_str()).map_err(|e| {
+			ErrorKind::ElectrumNodeClient(format!("Unable to parse hex {}, {}", tx.hex, e))
+		})?;
 
 		let cursor = Cursor::new(tx_bytes);
-		let tx = Transaction::consensus_decode(cursor)
-			.map_err(|e| ErrorKind::ElectrumNodeClient(format!("Unable to parse transaction, {}", e)))?;
+		let tx = Transaction::consensus_decode(cursor).map_err(|e| {
+			ErrorKind::ElectrumNodeClient(format!("Unable to parse transaction, {}", e))
+		})?;
 
 		Ok(Some((height, tx)))
 	}

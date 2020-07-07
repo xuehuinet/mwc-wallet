@@ -1353,9 +1353,19 @@ where
 	C: NodeClient + 'static,
 	K: keychain::Keychain + 'static,
 {
-	let mut file = File::open(message_filename).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to open file {}, {}", message_filename, e)))?;
+	let mut file = File::open(message_filename).map_err(|e| {
+		ErrorKind::ProcessSwapMessageError(format!(
+			"Unable to open file {}, {}",
+			message_filename, e
+		))
+	})?;
 	let mut contents = String::new();
-	file.read_to_string(&mut contents).map_err(|e| ErrorKind::ProcessSwapMessageError(format!("Unable to read from file {}, {}", message_filename, e)))?;
+	file.read_to_string(&mut contents).map_err(|e| {
+		ErrorKind::ProcessSwapMessageError(format!(
+			"Unable to read from file {}, {}",
+			message_filename, e
+		))
+	})?;
 
 	controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
 		api.swap_income_message(keychain_mask, contents)?;
@@ -1405,7 +1415,10 @@ where
 					}
 					Err(e) => {
 						error!("Unable to List Swap trades: {}", e);
-						Err(ErrorKind::LibWallet(format!("Unable to List Swap trades: {}", e)).into())
+						Err(
+							ErrorKind::LibWallet(format!("Unable to List Swap trades: {}", e))
+								.into(),
+						)
 					}
 				}
 			})?;
@@ -1413,8 +1426,10 @@ where
 		}
 		SwapSubcommand::Delete => {
 			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
-				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
-				let result = api.swap_delete(keychain_mask, swap_id.clone() );
+				let swap_id = args.swap_id.ok_or(ErrorKind::ArgumentError(
+					"Not found expected 'swap_id' argument".to_string(),
+				))?;
+				let result = api.swap_delete(keychain_mask, swap_id.clone());
 				match result {
 					Ok(_) => {
 						println!("Swap trade {} was sucessfully deleted.", swap_id);
@@ -1422,7 +1437,11 @@ where
 					}
 					Err(e) => {
 						error!("Unable to delete Swap {}: {}", swap_id, e);
-						Err(ErrorKind::LibWallet(format!("Unable to delete Swap {}: {}", swap_id, e)).into())
+						Err(ErrorKind::LibWallet(format!(
+							"Unable to delete Swap {}: {}",
+							swap_id, e
+						))
+						.into())
 					}
 				}
 			})?;
@@ -1430,17 +1449,24 @@ where
 		}
 		SwapSubcommand::Check => {
 			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
-				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
-				let result = api.swap_get(keychain_mask, swap_id.clone() );
+				let swap_id = args.swap_id.ok_or(ErrorKind::ArgumentError(
+					"Not found expected 'swap_id' argument".to_string(),
+				))?;
+				let result = api.swap_get(keychain_mask, swap_id.clone());
 				match result {
 					Ok(swap) => {
-						let (status,action) = api.get_swap_status_action(keychain_mask, swap_id.clone())?;
+						let (status, action) =
+							api.get_swap_status_action(keychain_mask, swap_id.clone())?;
 						display::swap_trade(swap, &status, &action);
 						Ok(())
 					}
 					Err(e) => {
 						error!("Unable to retrieve Swap {}: {}", swap_id, e);
-						Err(ErrorKind::LibWallet(format!("Unable to retrieve Swap {}: {}", swap_id, e)).into())
+						Err(ErrorKind::LibWallet(format!(
+							"Unable to retrieve Swap {}: {}",
+							swap_id, e
+						))
+						.into())
 					}
 				}
 			})?;
@@ -1448,10 +1474,15 @@ where
 		}
 		SwapSubcommand::Process => {
 			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
-				let swap_id = args.swap_id.ok_or( ErrorKind::ArgumentError("Not found expected 'swap_id' argument".to_string()))?;
-				let mut action = args.action.ok_or( ErrorKind::ArgumentError("Not found expected 'action' argument".to_string()))?;
+				let swap_id = args.swap_id.ok_or(ErrorKind::ArgumentError(
+					"Not found expected 'swap_id' argument".to_string(),
+				))?;
+				let mut action = args.action.ok_or(ErrorKind::ArgumentError(
+					"Not found expected 'action' argument".to_string(),
+				))?;
 				//let swap = api.swap_get(keychain_mask, swap_id.clone() )?;
-				let (_swap_status,swap_action) = api.get_swap_status_action(keychain_mask, swap_id.clone())?;
+				let (_swap_status, swap_action) =
+					api.get_swap_status_action(keychain_mask, swap_id.clone())?;
 				let swap_action_str = swap_action.to_cmd().unwrap_or("none".to_string());
 
 				// Let's check the action
@@ -1474,22 +1505,35 @@ where
 				}
 
 				if action != "cancel" && action != swap_action_str {
-					println!("You can't process {}, current action is {}", action, swap_action );
-					return Ok(())
+					println!(
+						"You can't process {}, current action is {}",
+						action, swap_action
+					);
+					return Ok(());
 				}
 
 				// Some action is expected, let's perform if
 
 				let result = api.swap_process(
-					keychain_mask, &swap_id,
-					Action::from_cmd(&action).ok_or(ErrorKind::ArgumentError(format!("Unable to parse {}", action)))?,
-					args.method, args.destination);
+					keychain_mask,
+					&swap_id,
+					Action::from_cmd(&action).ok_or(ErrorKind::ArgumentError(format!(
+						"Unable to parse {}",
+						action
+					)))?,
+					args.method,
+					args.destination,
+				);
 
 				match result {
 					Ok(_) => Ok(()),
 					Err(e) => {
 						error!("Unable to process Swap {}: {}", swap_id, e);
-						Err(ErrorKind::LibWallet(format!("Unable to process Swap {}: {}", swap_id, e)).into())
+						Err(ErrorKind::LibWallet(format!(
+							"Unable to process Swap {}: {}",
+							swap_id, e
+						))
+						.into())
 					}
 				}
 			})?;

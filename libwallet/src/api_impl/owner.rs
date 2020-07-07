@@ -27,8 +27,10 @@ use crate::grin_keychain::{Identifier, Keychain};
 use crate::internal::{keys, scan, selection, tx, updater};
 use crate::slate::{PaymentInfo, Slate};
 use crate::types::{AcctPathMapping, Context, NodeClient, TxLogEntry, WalletBackend, WalletInfo};
-use crate::{address, wallet_lock, InitTxArgs, IssueInvoiceTxArgs, NodeHeightResult, OutputCommitMapping,
-			PaymentProof, ScannedBlockInfo, TxLogEntryType, WalletInst, WalletLCProvider};
+use crate::{
+	address, wallet_lock, InitTxArgs, IssueInvoiceTxArgs, NodeHeightResult, OutputCommitMapping,
+	PaymentProof, ScannedBlockInfo, TxLogEntryType, WalletInst, WalletLCProvider,
+};
 use crate::{Error, ErrorKind};
 use ed25519_dalek::PublicKey as DalekPublicKey;
 use ed25519_dalek::SecretKey as DalekSecretKey;
