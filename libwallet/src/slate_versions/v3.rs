@@ -271,18 +271,10 @@ impl From<&ParticipantDataV2> for ParticipantDataV3 {
 
 impl From<&VersionCompatInfoV2> for VersionCompatInfoV3 {
 	fn from(data: &VersionCompatInfoV2) -> VersionCompatInfoV3 {
-		let VersionCompatInfoV2 {
-			version,
-			orig_version,
-			block_header_version,
-		} = data;
-		let version = *version;
-		let orig_version = *orig_version;
-		let block_header_version = *block_header_version;
 		VersionCompatInfoV3 {
-			version,
-			orig_version,
-			block_header_version,
+			version: 3,
+			orig_version: data.orig_version,
+			block_header_version: data.block_header_version,
 		}
 	}
 }
@@ -418,18 +410,10 @@ impl From<&ParticipantDataV3> for ParticipantDataV2 {
 
 impl From<&VersionCompatInfoV3> for VersionCompatInfoV2 {
 	fn from(data: &VersionCompatInfoV3) -> VersionCompatInfoV2 {
-		let VersionCompatInfoV3 {
-			version,
-			orig_version,
-			block_header_version,
-		} = data;
-		let version = *version;
-		let orig_version = *orig_version;
-		let block_header_version = *block_header_version;
 		VersionCompatInfoV2 {
-			version,
-			orig_version,
-			block_header_version,
+			version: 2, // Conversion better to be fair. We has a lot of issue because of that on other side
+			orig_version: data.orig_version,
+			block_header_version: data.block_header_version,
 		}
 	}
 }

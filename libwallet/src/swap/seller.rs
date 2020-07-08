@@ -16,8 +16,8 @@ use super::message::*;
 use super::multisig::{Builder as MultisigBuilder, ParticipantData as MultisigParticipant};
 use super::swap::{publish_transaction, signature_as_secret, tx_add_input, tx_add_output, Swap};
 use super::types::*;
-use super::{is_test_mode, ErrorKind, Keychain, CURRENT_SLATE_VERSION, CURRENT_VERSION};
-use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
+use super::{is_test_mode, ErrorKind, Keychain, CURRENT_VERSION};
+use crate::{NodeClient, ParticipantData as TxParticipant, Slate, SlateVersion, VersionedSlate};
 use chrono::{TimeZone, Utc};
 use grin_core::core::verifier_cache::LruVerifierCache;
 use grin_core::core::Weighting;
@@ -441,11 +441,11 @@ impl SellApi {
 			multisig: swap.multisig.export()?,
 			lock_slate: VersionedSlate::into_version(
 				swap.lock_slate.clone(),
-				CURRENT_SLATE_VERSION,
+				SlateVersion::V2, // V2 should satify our needs, dont adding extra
 			),
 			refund_slate: VersionedSlate::into_version(
 				swap.refund_slate.clone(),
-				CURRENT_SLATE_VERSION,
+				SlateVersion::V2, // V2 should satify our needs, dont adding extra
 			),
 			redeem_participant: swap.redeem_slate.participant_data[swap.participant_id].clone(),
 			required_mwc_lock_confirmations: swap.required_mwc_lock_confirmations,

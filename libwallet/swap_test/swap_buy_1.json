@@ -62,8 +62,8 @@
   },
   "lock_slate": {
     "version_info": {
-      "version": 2,
-      "orig_version": 2,
+      "version": 3,
+      "orig_version": 3,
       "block_header_version": 1
     },
     "num_participants": 2,
@@ -108,6 +108,7 @@
     "fee": "7000000",
     "height": "300000",
     "lock_height": "0",
+    "ttl_cutoff_height": null,
     "participant_data": [
       {
         "id": "0",
@@ -125,13 +126,14 @@
         "message": null,
         "message_sig": null
       }
-    ]
+    ],
+    "payment_proof": null
   },
   "lock_confirmations": null,
   "refund_slate": {
     "version_info": {
-      "version": 2,
-      "orig_version": 2,
+      "version": 3,
+      "orig_version": 3,
       "block_header_version": 1
     },
     "num_participants": 2,
@@ -167,6 +169,7 @@
     "fee": "4000000",
     "height": "300000",
     "lock_height": "300720",
+    "ttl_cutoff_height": null,
     "participant_data": [
       {
         "id": "0",
@@ -184,12 +187,13 @@
         "message": null,
         "message_sig": null
       }
-    ]
+    ],
+    "payment_proof": null
   },
   "redeem_slate": {
     "version_info": {
-      "version": 2,
-      "orig_version": 2,
+      "version": 3,
+      "orig_version": 3,
       "block_header_version": 1
     },
     "num_participants": 2,
@@ -206,6 +210,7 @@
     "fee": "0",
     "height": "0",
     "lock_height": "0",
+    "ttl_cutoff_height": null,
     "participant_data": [
       {
         "id": "0",
@@ -215,7 +220,8 @@
         "message": null,
         "message_sig": null
       }
-    ]
+    ],
+    "payment_proof": null
   },
   "redeem_confirmations": null,
   "adaptor_signature": null,

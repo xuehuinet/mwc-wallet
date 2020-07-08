@@ -485,7 +485,7 @@ pub trait OwnerRpc: Sync + Send {
 				  "version_info": {
 					"block_header_version": 1,
 					"orig_version": 3,
-					"version": 2
+					"version": 3
 				  }
 				}
 			  }
@@ -562,7 +562,7 @@ pub trait OwnerRpc: Sync + Send {
 			  },
 			  "version_info": {
 				"block_header_version": 1,
-				"orig_version": 2,
+				"orig_version": 3,
 				"version": 2
 			  }
 			}
@@ -701,7 +701,7 @@ pub trait OwnerRpc: Sync + Send {
 					  },
 					  "version_info": {
 						"block_header_version": 1,
-						"orig_version": 2,
+						"orig_version": 3,
 						"version": 2
 					  }
 				},
@@ -779,7 +779,7 @@ pub trait OwnerRpc: Sync + Send {
 			  },
 			  "version_info": {
 				"block_header_version": 1,
-				"orig_version": 2,
+				"orig_version": 3,
 				"version": 2
 			  }
 			}
@@ -809,7 +809,7 @@ pub trait OwnerRpc: Sync + Send {
 		"params": [ {
 			  "version_info": {
 				"version": 2,
-				"orig_version": 2,
+				"orig_version": 3,
 				"block_header_version": 1
 			  },
 			  "num_participants": 2,
@@ -898,7 +898,7 @@ pub trait OwnerRpc: Sync + Send {
 		{
 		  "version_info": {
 			"version": 2,
-			"orig_version": 2,
+			"orig_version": 3,
 			"block_header_version": 1
 		  },
 		  "num_participants": 2,
@@ -1034,7 +1034,7 @@ pub trait OwnerRpc: Sync + Send {
 		  },
 		  "version_info": {
 			"block_header_version": 1,
-			"orig_version": 2,
+			"orig_version": 3,
 			"version": 2
 		  }
 		}
