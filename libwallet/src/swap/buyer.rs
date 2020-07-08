@@ -15,9 +15,9 @@
 use super::message::*;
 use super::swap::{publish_transaction, tx_add_input, tx_add_output, Swap};
 use super::types::*;
-use super::{is_test_mode, ErrorKind, Keychain, CURRENT_SLATE_VERSION, CURRENT_VERSION};
+use super::{is_test_mode, ErrorKind, Keychain, CURRENT_VERSION};
 use crate::swap::multisig::{Builder as MultisigBuilder, ParticipantData as MultisigParticipant};
-use crate::{NodeClient, ParticipantData as TxParticipant, Slate, VersionedSlate};
+use crate::{NodeClient, ParticipantData as TxParticipant, Slate, SlateVersion, VersionedSlate};
 use chrono::{TimeZone, Utc};
 use grin_core::libtx::{build, proof, tx_fee};
 use grin_keychain::{BlindSum, BlindingFactor, SwitchCommitmentType};
@@ -277,7 +277,7 @@ impl BuyApi {
 		swap.message(Update::InitRedeem(InitRedeemUpdate {
 			redeem_slate: VersionedSlate::into_version(
 				swap.redeem_slate.clone(),
-				CURRENT_SLATE_VERSION,
+				SlateVersion::V2, // V2 should satify our needs, dont adding extra
 			),
 			adaptor_signature: swap.adaptor_signature.ok_or(ErrorKind::UnexpectedAction(
 				"Buyer Fn init_redeem_message(), multisig is empty".to_string(),

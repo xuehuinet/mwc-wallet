@@ -48,7 +48,7 @@ use crate::slate_versions::v3::{
 	CoinbaseV3, InputV3, OutputV3, ParticipantDataV3, PaymentInfoV3, SlateV3, TransactionBodyV3,
 	TransactionV3, TxKernelV3, VersionCompatInfoV3,
 };
-// use crate::slate_versions::{CURRENT_SLATE_VERSION, GRIN_BLOCK_HEADER_VERSION};
+use crate::slate_versions::CURRENT_SLATE_VERSION;
 use crate::types::CbData;
 use crate::SlateVersion;
 
@@ -285,8 +285,8 @@ impl Slate {
 			ttl_cutoff_height: None,
 			participant_data: vec![],
 			version_info: VersionCompatInfo {
-				version: 2,              // CURRENT_SLATE_VERSION,
-				orig_version: 2,         // CURRENT_SLATE_VERSION,
+				version: CURRENT_SLATE_VERSION,
+				orig_version: CURRENT_SLATE_VERSION,
 				block_header_version: 1, // GRIN_BLOCK_HEADER_VERSION,
 			},
 			payment_proof: None,

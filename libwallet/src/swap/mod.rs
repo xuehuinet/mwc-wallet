@@ -53,11 +53,9 @@ pub(crate) use self::seller::SellApi;
 
 pub use grin_keychain::Keychain;
 
-use crate::SlateVersion;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 const CURRENT_VERSION: u8 = 1;
-const CURRENT_SLATE_VERSION: SlateVersion = SlateVersion::V2;
 
 lazy_static! {
 	/// Flag to set test mode

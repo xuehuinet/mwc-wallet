@@ -175,7 +175,7 @@ pub trait ForeignRpc {
 					"offset": "d202964900000000d302964900000000d402964900000000d502964900000000"
 				},
 				"version_info": {
-					"orig_version": 2,
+					"orig_version": 3,
 					"version": 2,
 					"block_header_version": 2
 				}
@@ -214,7 +214,7 @@ pub trait ForeignRpc {
 		{
 		  "version_info": {
 			"version": 2,
-			"orig_version": 2,
+			"orig_version": 3,
 			"block_header_version": 1
 		  },
 		  "num_participants": 2,
@@ -339,7 +339,7 @@ pub trait ForeignRpc {
 		  },
 		  "version_info": {
 			"block_header_version": 1,
-			"orig_version": 2,
+			"orig_version": 3,
 			"version": 2
 		  }
 		}
@@ -372,7 +372,7 @@ pub trait ForeignRpc {
 		"params": [{
 		  "version_info": {
 			"version": 2,
-			"orig_version": 2,
+			"orig_version": 3,
 			"block_header_version": 1
 		  },
 		  "num_participants": 2,
@@ -507,7 +507,7 @@ pub trait ForeignRpc {
 		  },
 		  "version_info": {
 			"block_header_version": 1,
-			"orig_version": 2,
+			"orig_version": 3,
 			"version": 2
 		  }
 		}
