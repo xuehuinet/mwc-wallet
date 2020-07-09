@@ -118,7 +118,7 @@ impl SellApi {
 		let id = if test_mode {
 			Uuid::parse_str("4fc16adb-9f32-4441-b0c1-b4de076a1972").unwrap()
 		} else {
-			Uuid::new_v4()
+			lock_slate.id.clone()
 		};
 
 		let started = if test_mode {
