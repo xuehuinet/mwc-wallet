@@ -1183,6 +1183,12 @@ where
 					w_out.updated = true;
 				}
 
+				// Value can be broken because of bugs. Even we fix the bugs, it is better to do the best with scan
+				if w_out.output.value != ch_out.value {
+					w_out.output.value = ch_out.value;
+					w_out.updated = true;
+				}
+
 				// Validating status of the output.
 				match w_out.output.status {
 					OutputStatus::Spent => {
