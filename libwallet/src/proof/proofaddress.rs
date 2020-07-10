@@ -30,10 +30,13 @@ pub const PROOFABLE_ADDRESS_VERSION_TESTNET: [u8; 2] = [1, 121];
 /// Address that can have a proof. Such address need to be able to convertable to
 /// the public key
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(transparent)]
 pub struct ProvableAddress {
 	/// Public key that is an address
 	pub public_key: String,
+	/// Place holder for mwc713 backcompability. Value is empty string
+	pub domain: String,
+	/// /// Place holder for mwc713 backcompability. Value is None
+	pub port: Option<u16>,
 }
 
 impl Display for ProvableAddress {
@@ -50,6 +53,8 @@ impl ProvableAddress {
 
 		Ok(Self {
 			public_key: String::from(public_key),
+			domain: String::new(),
+			port: None,
 		})
 	}
 
@@ -57,6 +62,8 @@ impl ProvableAddress {
 	pub fn from_pub_key(public_key: &PublicKey) -> Self {
 		Self {
 			public_key: public_key.to_base58_check(version_bytes()),
+			domain: String::new(),
+			port: None,
 		}
 	}
 
@@ -127,4 +134,42 @@ where
 	S: Serializer,
 {
 	serializer.serialize_str(&address.public_key)
+}
+
+/// ProvableAddress
+pub fn option_proof_address_from_string<'de, D>(
+	deserializer: D,
+) -> Result<Option<ProvableAddress>, D::Error>
+	where
+		D: Deserializer<'de>,
+{
+	use serde::de::Error;
+
+	Option::<String>::deserialize(deserializer).and_then(|res| match res {
+		Some(string) => ProvableAddress::from_str(&string)
+			.map_err(|err| {
+				Error::custom(format!(
+					"Fail to parse provable address {}, {}",
+					string, err
+				))
+			})
+			.and_then(|address: ProvableAddress| {
+				return Ok(Some(address));
+			}),
+		None => Ok(None),
+	})
+}
+
+/// Seralizes a provableAddress.
+pub fn option_as_string<S>(
+	address: &Option<ProvableAddress>,
+	serializer: S,
+) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+{
+	match address {
+		Some(address) => serializer.serialize_str(&address.public_key),
+		None => serializer.serialize_none(),
+	}
 }
