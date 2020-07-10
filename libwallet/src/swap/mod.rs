@@ -448,7 +448,7 @@ mod tests {
 
 		if write_json {
 			write(
-				"swap/test/swap_sell_10001.json",
+				"swap_test/swap_sell_10001.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
@@ -633,7 +633,7 @@ mod tests {
 		assert_eq!(action, Action::PublishTx);
 		assert_eq!(swap_sell.status, Status::Accepted);
 		let action = api_sell
-			.publish_transaction(&kc_sell, &mut swap_sell, &ctx_sell)
+			.publish_transaction(&kc_sell, &mut swap_sell, &ctx_sell, false)
 			.unwrap();
 		match action {
 			Action::Confirmations {
@@ -802,7 +802,7 @@ mod tests {
 		assert_eq!(action, Action::PublishTx);
 		assert_eq!(swap_buy.status, Status::Redeem);
 		let action = api_buy
-			.publish_transaction(&kc_buy, &mut swap_buy, &ctx_buy)
+			.publish_transaction(&kc_buy, &mut swap_buy, &ctx_buy, false)
 			.unwrap();
 		assert_eq!(action, Action::ConfirmationRedeem);
 
@@ -852,7 +852,7 @@ mod tests {
 
 		// Seller: wait for BTC confirmations
 		let action = api_sell
-			.publish_secondary_transaction(&kc_sell, &mut swap_sell, &ctx_sell)
+			.publish_secondary_transaction(&kc_sell, &mut swap_sell, &ctx_sell, false)
 			.unwrap();
 		match action {
 			Action::ConfirmationRedeemSecondary(_, _) => {}

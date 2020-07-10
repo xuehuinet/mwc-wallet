@@ -22,6 +22,7 @@ use crate::libwallet::{
 
 use crate::util;
 use colored::*;
+use grin_wallet_libwallet::swap::types::SwapTransactionsConfirmations;
 use grin_wallet_util::OnionV3Address;
 use prettytable;
 
@@ -642,7 +643,12 @@ pub fn swap_trades(trades: Vec<(String, String)>) {
 }
 
 /// Display list of wallet accounts in a pretty way
-pub fn swap_trade(swap: Swap, status: &Status, action: &Action) {
+pub fn swap_trade(
+	swap: Swap,
+	status: &Status,
+	action: &Action,
+	tx_conf: &SwapTransactionsConfirmations,
+) {
 	println!("Swap ID: {}", swap.id);
 	println!(
 		"MWC amount: {}",
@@ -663,14 +669,100 @@ pub fn swap_trade(swap: Swap, status: &Status, action: &Action) {
 		swap.secondary_currency, swap.required_secondary_lock_confirmations
 	);
 
+	let mut print_seller = false;
+	let mut print_buyer = false;
 	match swap.role {
 		Role::Seller(btc_address, _) => {
 			println!("Role: Seller, redeem address {}", btc_address);
+			print_seller = true;
 		}
 		Role::Buyer => {
 			println!("Role: Buyer");
+			print_buyer = true;
 		}
 	}
+	// Transactoins info
+	println!("--------------------------------");
+
+	println!("MWC Height:               {}", tx_conf.mwc_tip);
+	println!(
+		"MWC Lock confirmations:   {}",
+		tx_conf
+			.mwc_lock_conf
+			.map(|l| format!("{}", l))
+			.unwrap_or("None".to_string())
+	);
+	println!(
+		"MWC Redeem confirmations: {}",
+		tx_conf
+			.mwc_redeem_conf
+			.map(|l| format!("{}", l))
+			.unwrap_or("None".to_string())
+	);
+	println!(
+		"MWC Refund confirmations: {}",
+		tx_conf
+			.mwc_refund_conf
+			.map(|l| format!("{}", l))
+			.unwrap_or("None".to_string())
+	);
+	println!(
+		"{} Height:               {}",
+		swap.secondary_currency, tx_conf.secondary_tip
+	);
+	println!(
+		"{} Lock confirmations:   {}",
+		swap.secondary_currency,
+		tx_conf
+			.secondary_lock_conf
+			.map(|l| format!("{}", l))
+			.unwrap_or("None".to_string())
+	);
+	if tx_conf.secondary_lock_conf.is_some() {
+		// check the amount...
+		if tx_conf.secondary_lock_amount != swap.secondary_amount {
+			if tx_conf.secondary_lock_amount < swap.secondary_amount {
+				println!(
+					"    WARNING  The buyer need to deposit {} {}",
+					swap.secondary_currency.amount_to_hr_string(
+						swap.secondary_amount - tx_conf.secondary_lock_amount,
+						true
+					),
+					swap.secondary_currency,
+				);
+			} else {
+				let amount_str = swap.secondary_currency.amount_to_hr_string(
+					tx_conf.secondary_lock_amount - swap.secondary_amount,
+					true,
+				);
+				println!("   WARNING  The buyer has deposited more funds than needed ({} {}). The swap must be cancelled in order for the buyer to recover those funds. If the deal proceeds, seller will receive the additional {} {}.",
+							amount_str, swap.secondary_currency, amount_str, swap.secondary_currency);
+			}
+		}
+	}
+	if print_seller {
+		println!(
+			"{} Redeem confirmations: {}",
+			swap.secondary_currency,
+			tx_conf
+				.secondary_redeem_conf
+				.map(|l| format!("{}", l))
+				.unwrap_or("None".to_string())
+		);
+	}
+	if print_buyer {
+		println!(
+			"{} Refund confirmations: {}",
+			swap.secondary_currency,
+			tx_conf
+				.secondary_refund_conf
+				.map(|l| format!("{}", l))
+				.unwrap_or("None".to_string())
+		);
+	}
+
+	// Status info
+	println!("--------------------------------");
 	println!("Started: {}", swap.started);
 	println!("Status: {}", status);
 	println!("Action: {}", action);

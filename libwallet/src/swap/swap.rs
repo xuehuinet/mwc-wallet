@@ -19,13 +19,16 @@ use super::types::*;
 use super::{ErrorKind, Keychain};
 use crate::{NodeClient, Slate};
 use chrono::{DateTime, Utc};
-use grin_core::core::{transaction as tx, KernelFeatures, TxKernel};
+use grin_core::core::verifier_cache::LruVerifierCache;
+use grin_core::core::{transaction as tx, KernelFeatures, TxKernel, Weighting};
 use grin_core::libtx::secp_ser;
 use grin_core::ser;
 use grin_keychain::{Identifier, SwitchCommitmentType};
 use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::pedersen::{Commitment, RangeProof};
 use grin_util::secp::{Message as SecpMessage, Secp256k1, Signature};
+use grin_util::RwLock;
+use std::sync::Arc;
 use uuid::Uuid;
 
 /// Dummy wrapper for the hex-encoded serialized transaction.
@@ -100,6 +103,10 @@ pub struct Swap {
 	pub mwc_lock_time_seconds: u64,
 	/// Sellet BTC redeem time interval. BTC expected to be locked for that time as well.
 	pub seller_redeem_time: u64,
+	/// First message that was sent, keep for retry operations
+	pub message1: Option<String>,
+	/// Second message that was sent, keep for retry operations
+	pub message2: Option<String>,
 }
 
 impl Swap {
@@ -188,8 +195,9 @@ impl Swap {
 		}
 	}
 
-	pub(super) fn expect(&self, status: Status) -> Result<(), ErrorKind> {
-		if self.status == status {
+	pub(super) fn expect(&self, status: Status, retry: bool) -> Result<(), ErrorKind> {
+		// retry can be done for prev step, not allow for the future
+		if (retry && self.status >= status) || self.status == status {
 			Ok(())
 		} else {
 			Err(ErrorKind::UnexpectedStatus(status, self.status))
@@ -375,6 +383,12 @@ pub fn publish_transaction<C: NodeClient>(
 	tx: &tx::Transaction,
 	fluff: bool,
 ) -> Result<(), ErrorKind> {
+	tx.validate(
+		Weighting::AsTransaction,
+		Arc::new(RwLock::new(LruVerifierCache::new())),
+	)
+	.map_err(|e| ErrorKind::UnexpectedAction(format!("slate is not valid, {}", e)))?;
+
 	node_client.post_tx(tx, fluff)?;
 	Ok(())
 }

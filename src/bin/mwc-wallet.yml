@@ -558,6 +558,17 @@ subcommands:
               - refund
               - cancel
             default_value: continue
+        - retry:
+            help: Retry action action that was executed sucessfully before.
+            short: e
+            long: retry
+            takes_value: true
+            possible_values:
+              - msg1
+              - msg2
+              - publish_MWC
+              - publish_BTC
+              - refund
         - swap_id:
             help: Id of swap trade. Required for some commands
             short: i

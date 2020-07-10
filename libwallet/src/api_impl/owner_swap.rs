@@ -22,7 +22,7 @@ use crate::internal::selection;
 use crate::swap::error::ErrorKind;
 use crate::swap::message::{Message, Update};
 use crate::swap::swap::Swap;
-use crate::swap::types::{Action, Currency, Status};
+use crate::swap::types::{Action, Currency, Status, SwapTransactionsConfirmations};
 use crate::swap::{trades, Context, SwapApi};
 use crate::types::NodeClient;
 use crate::Error;
@@ -194,8 +194,44 @@ where
 
 	let mut swap_api = crate::swap::api::create_instance(&swap.secondary_currency, node_client)?;
 	let action = swap_api.required_action(&keychain, &mut swap, &context)?;
+	// Action might update the states. Need to save it
+	trades::store_swap_trade(&context, &swap)?;
 
 	Ok((swap.status, action))
+}
+
+/// Get a status of the transactions that involved into the swap.
+pub fn get_swap_tx_tstatus<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	swap_id: &str,
+) -> Result<SwapTransactionsConfirmations, Error>
+where
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let (_context, mut swap) = trades::get_swap_trade(swap_id)?;
+
+	wallet_lock!(wallet_inst, w);
+	let node_client = w.w2n_client().clone();
+	let keychain = w.keychain(keychain_mask)?;
+
+	let mut swap_api = crate::swap::api::create_instance(&swap.secondary_currency, node_client)?;
+	let res = swap_api.request_tx_confirmations(&keychain, &mut swap)?;
+
+	Ok(res)
+}
+
+fn send_message(_method: String, destination: String, message: &String) -> Result<(), Error> {
+	// Destination is allwais a file name
+	// TODO - need to support method
+	// TODO - Note, this code need to be updated !!!!
+
+	let mut file = File::create(destination.clone())?;
+	file.write_all(message.as_bytes())?;
+	println!("Message is written into the file {}", destination);
+	Ok(())
 }
 
 /// Process the action for the swap. Action has to match the expected one
@@ -223,6 +259,9 @@ where
 		crate::swap::api::create_instance(&swap.secondary_currency, node_client.clone())?;
 	let swap_action = swap_api.required_action(&keychain, &mut swap, &context)?;
 
+	// Action might update the states. Need to save it
+	trades::store_swap_trade(&context, &swap)?;
+
 	if action != Action::Cancel && action != swap_action {
 		return Err(ErrorKind::Generic(format!(
 			"Unable to process unexpected action {}, expected action is {}",
@@ -232,7 +271,7 @@ where
 	}
 
 	match action {
-		Action::SendMessage(_i) => {
+		Action::SendMessage(msg_idx) => {
 			// Destination currently if only file.
 			if method.is_none() || destination.is_none() {
 				return Err(ErrorKind::Generic(
@@ -243,17 +282,17 @@ where
 			let message = swap_api.message(&keychain, &swap)?;
 			let msg_str = message.to_json()?;
 
-			// Destination is allwais a file name
-			// TODO - need to support method
-			let destination = destination.unwrap();
-
-			// TODO - Note, this code need to be updated !!!!
-			let mut file = File::create(destination.clone())?;
-			file.write_all(msg_str.as_bytes())?;
-			println!("Message is written into the file {}", destination);
+			send_message(method.unwrap(), destination.unwrap(), &msg_str)?;
 
 			// update swap status after the send. For file it is fair enough to have the message is sent
 			swap_api.message_sent(&keychain, &mut swap, &context)?;
+
+			match msg_idx {
+				1 => swap.message1 = Some(msg_str),
+				2 => swap.message2 = Some(msg_str),
+				_ => return Err(ErrorKind::Generic("Unknown message index".to_string()).into()),
+			}
+
 			trades::store_swap_trade(&context, &swap)?;
 			return Ok(());
 		}
@@ -265,7 +304,8 @@ where
 			return Ok(());
 		}
 		Action::PublishTxSecondary(_currency) => {
-			swap_api.publish_secondary_transaction(&keychain, &mut swap, &context)?;
+			swap_api.publish_secondary_transaction(&keychain, &mut swap, &context, false)?;
+			trades::store_swap_trade(&context, &swap)?;
 			println!(
 				"{} redeem transaction is published",
 				swap.secondary_currency
@@ -306,7 +346,7 @@ where
 					Some(format!("Swap {} Lock", swap_id)),
 				)?;
 
-				swap_api.publish_transaction(&keychain, &mut swap, &context)?;
+				swap_api.publish_transaction(&keychain, &mut swap, &context, false)?;
 				trades::store_swap_trade(&context, &swap)?;
 				println!(
 					"Lock MWC slate is published at transaction {}",
@@ -323,7 +363,7 @@ where
 					.into());
 				}
 
-				swap_api.publish_transaction(&keychain, &mut swap, &context)?;
+				swap_api.publish_transaction(&keychain, &mut swap, &context, false)?;
 				trades::store_swap_trade(&context, &swap)?;
 
 				// Creating receive transaction from the slate
@@ -382,6 +422,90 @@ where
 		}
 		_ => {
 			println!("Sorry, not supported action {}", swap_action);
+			return Ok(());
+		}
+	}
+}
+
+/// Process the action for the swap. Action has to match the expected one
+pub fn swap_retry<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	swap_id: &str,
+	action: Action,
+	method: Option<String>,
+	destination: Option<String>,
+) -> Result<(), Error>
+where
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	let (context, mut swap) = trades::get_swap_trade(swap_id)?;
+
+	wallet_lock!(wallet_inst, w);
+	let node_client = w.w2n_client().clone();
+	let keychain = w.keychain(keychain_mask)?;
+
+	let mut swap_api =
+		crate::swap::api::create_instance(&swap.secondary_currency, node_client.clone())?;
+
+	match action {
+		Action::SendMessage(msg_idx) => {
+			// Destination currently if only file.
+			if method.is_none() || destination.is_none() {
+				return Err(ErrorKind::Generic(
+					"Please specify method and destination to send a message".to_string(),
+				)
+				.into());
+			}
+
+			let msg = match msg_idx {
+				1 => swap.message1.ok_or(ErrorKind::Generic(
+					"Unable to retry because this message never sent before".to_string(),
+				))?,
+				2 => swap.message2.ok_or(ErrorKind::Generic(
+					"Unable to retry because this message never sent before".to_string(),
+				))?,
+				_ => return Err(ErrorKind::Generic("Unknown message index".to_string()).into()),
+			};
+
+			send_message(method.unwrap(), destination.unwrap(), &msg)?;
+			return Ok(());
+		}
+		Action::PublishTxSecondary(_currency) => {
+			swap_api.publish_secondary_transaction(&keychain, &mut swap, &context, true)?;
+			println!(
+				"{} redeem transaction is published",
+				swap.secondary_currency
+			);
+			return Ok(());
+		}
+		Action::PublishTx => {
+			swap_api.publish_transaction(&keychain, &mut swap, &context, true)?;
+
+			if swap.is_seller() {
+				// Seller publishing Lock Transaction
+				println!(
+					"Lock MWC slate is published at transaction {}",
+					swap.lock_slate.id
+				);
+			} else {
+				println!(
+					"Redeem MWC slate is published at transaction {}",
+					swap.redeem_slate.id
+				);
+			}
+			return Ok(());
+		}
+		Action::Refund => {
+			// Refund retry is no different from the regular flow...
+			swap_api.refunded(&keychain, &context, &mut swap, destination)?;
+			trades::store_swap_trade(&context, &swap)?;
+			return Ok(());
+		}
+		_ => {
+			println!("Sorry, not supported retry action {}", action);
 			return Ok(());
 		}
 	}

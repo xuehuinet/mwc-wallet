@@ -444,7 +444,7 @@ impl fmt::Display for Action {
 			Action::ReceiveMessage => {
 				"Waiting for respond from other party (cmd: swap_message)".to_string()
 			}
-			Action::PublishTx => "(publish_mwc) Publish a transaction for MWC".to_string(),
+			Action::PublishTx => "(publish_MWC) Publish a transaction for MWC".to_string(),
 			Action::PublishTxSecondary(currency) => format!(
 				"(publish_{}) Publish a transaction for {}",
 				currency, currency
@@ -493,7 +493,7 @@ impl fmt::Display for Action {
 				let hours = time_left_sec / 3600;
 				let minutes = (time_left_sec % 3600) / 60;
 				let seconds = time_left_sec % 60;
-				format!("Please wait {} hours {} minutes and {} seconds until you will be able to redeem you BTC", hours, minutes, seconds)
+				format!("Please wait {} hours {} minutes and {} seconds until you will be able to redeem your BTC", hours, minutes, seconds)
 			}
 			Action::Refund => "(refund) Refund can be issued".to_string(),
 		};
@@ -543,6 +543,29 @@ impl Action {
 			_ => None,
 		}
 	}
+}
+
+/// Status of the transactions that can be published.
+///  None for confirmations - Unable to verify, probably Transaction data is not here.
+pub struct SwapTransactionsConfirmations {
+	/// MWC node tip
+	pub mwc_tip: u64,
+	/// Number of confirmations for the lock transaction
+	pub mwc_lock_conf: Option<u64>,
+	/// Number of confirmations for MWC redeem transaction
+	pub mwc_redeem_conf: Option<u64>,
+	/// Number of confirmations for refund transaction
+	pub mwc_refund_conf: Option<u64>,
+	/// BTC node tip
+	pub secondary_tip: u64,
+	/// BTC lock (multisug account) number of confirmations
+	pub secondary_lock_conf: Option<u64>,
+	/// How much is locked. This process is manual, so Buyer might make a mistake
+	pub secondary_lock_amount: u64,
+	/// BTC redeem number of confirmations
+	pub secondary_redeem_conf: Option<u64>,
+	/// BTC  refund transaciton number of confirmations
+	pub secondary_refund_conf: Option<u64>,
 }
 
 #[cfg(test)]
