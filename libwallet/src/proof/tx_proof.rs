@@ -20,6 +20,7 @@ use crate::grin_util::secp::{Secp256k1, Signature};
 use super::crypto;
 use super::message::EncryptedMessage;
 use super::proofaddress::ProvableAddress;
+use crate::slate_versions:: VersionedSlate;
 use crate::error::{Error, ErrorKind};
 use crate::Slate;
 use std::collections::HashMap;
