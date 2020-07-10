@@ -18,6 +18,7 @@ use super::swap::Swap;
 use super::types::{Action, Context, Currency};
 use super::Keychain;
 use crate::swap::bitcoin::{BtcSwapApi, ElectrumNodeClient};
+use crate::swap::types::SwapTransactionsConfirmations;
 use crate::NodeClient;
 use grin_core::global;
 use grin_keychain::Identifier;
@@ -102,6 +103,13 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		context: &Context,
 	) -> Result<Action, ErrorKind>;
 
+	/// Request confirmation numberss for all transactions that are known and in the in the swap
+	fn request_tx_confirmations(
+		&mut self,
+		keychain: &K,
+		swap: &mut Swap,
+	) -> Result<SwapTransactionsConfirmations, ErrorKind>;
+
 	/// Producing message for another party. Message content is vary and depend on the current state
 	fn message(&mut self, keychain: &K, swap: &Swap) -> Result<Message, ErrorKind>;
 
@@ -130,6 +138,7 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		retry: bool,
 	) -> Result<Action, ErrorKind>;
 
 	/// Publishing Secinadary (BTC) transactions
@@ -139,6 +148,7 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		retry: bool,
 	) -> Result<Action, ErrorKind>;
 }
 

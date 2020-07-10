@@ -1384,6 +1384,8 @@ pub struct SwapArgs {
 	pub swap_id: Option<String>,
 	/// Action to process. Value must match expected
 	pub action: Option<String>,
+	/// Action to retry. Caller shoudn't abuse that.
+	pub retry: Option<String>,
 	/// Transport that can be used for interaction
 	pub method: Option<String>,
 	/// Destination is something needed to be send
@@ -1455,9 +1457,12 @@ where
 				let result = api.swap_get(keychain_mask, swap_id.clone());
 				match result {
 					Ok(swap) => {
+						let conf_status =
+							api.get_swap_tx_tstatus(keychain_mask, swap_id.clone())?;
 						let (status, action) =
 							api.get_swap_status_action(keychain_mask, swap_id.clone())?;
-						display::swap_trade(swap, &status, &action);
+
+						display::swap_trade(swap, &status, &action, &conf_status);
 						Ok(())
 					}
 					Err(e) => {
@@ -1483,6 +1488,34 @@ where
 				//let swap = api.swap_get(keychain_mask, swap_id.clone() )?;
 				let (_swap_status, swap_action) =
 					api.get_swap_status_action(keychain_mask, swap_id.clone())?;
+
+				if let Some(retry_action) = args.retry {
+					// Retring with processing.
+					let retry_action = Action::from_cmd(&retry_action).ok_or(
+						ErrorKind::ArgumentError(format!("Unable to parse {}", retry_action)),
+					)?;
+
+					let result = api.swap_retry(
+						keychain_mask,
+						&swap_id,
+						retry_action,
+						args.method,
+						args.destination,
+					);
+
+					return match result {
+						Ok(_) => Ok(()),
+						Err(e) => {
+							error!("Unable to process Swap {}: {}", swap_id, e);
+							Err(ErrorKind::LibWallet(format!(
+								"Unable to process Swap {}: {}",
+								swap_id, e
+							))
+							.into())
+						}
+					};
+				}
+
 				let swap_action_str = swap_action.to_cmd().unwrap_or("none".to_string());
 
 				// Let's check the action

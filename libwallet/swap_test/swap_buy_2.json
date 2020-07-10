@@ -14,6 +14,7 @@
       "lock_time": 1567718553,
       "cosign": "03b480859d2dcf9cd66f115b685b2847bf3f52f624d069d802e1dc9362be4f5bdf",
       "refund": "03434496eb1554ad47c7ec5c267e902e1b71a03e189cc4fe9c83d9513e3a4e2e5a",
+      "refund_tx": null,
       "confirmed_outputs": [
         {
           "out_point": {
@@ -255,5 +256,7 @@
   "required_mwc_lock_confirmations": 30,
   "required_secondary_lock_confirmations": 6,
   "mwc_lock_time_seconds": 43200,
-  "seller_redeem_time": 3600
+  "seller_redeem_time": 3600,
+  "message1": null,
+  "message2": null
 }

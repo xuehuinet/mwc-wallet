@@ -14,14 +14,16 @@
 
 use super::client::BtcNodeClient;
 use super::types::{BtcBuyerContext, BtcData, BtcSellerContext};
+use crate::grin_util::secp::pedersen;
 use crate::swap::message::{Message, Update};
 use crate::swap::types::{
 	Action, BuyerContext, Context, Currency, Role, RoleContext, SecondaryBuyerContext,
-	SecondarySellerContext, SellerContext, Status,
+	SecondarySellerContext, SellerContext, Status, SwapTransactionsConfirmations,
 };
 use crate::swap::{BuyApi, ErrorKind, SellApi, Swap, SwapApi};
-use crate::NodeClient;
-use bitcoin::{Address, AddressType};
+use crate::{NodeClient, Slate};
+use bitcoin::{Address, AddressType, Script};
+use bitcoin_hashes::sha256d;
 use chrono::Utc;
 use grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
 use grin_util::secp::aggsig::export_secnonce_single as generate_nonce;
@@ -53,9 +55,9 @@ where
 	}
 
 	/// Update swap.secondary_data with a roll back script.
-	fn script<K: Keychain>(&self, keychain: &K, swap: &mut Swap) -> Result<(), ErrorKind> {
-		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
-		btc_data.script(
+	fn script<K: Keychain>(&self, keychain: &K, swap: &Swap) -> Result<Script, ErrorKind> {
+		let btc_data = swap.secondary_data.unwrap_btc()?;
+		Ok(btc_data.script(
 			keychain.secp(),
 			swap.redeem_public
 				.as_ref()
@@ -63,20 +65,19 @@ where
 					"swap.redeem_public value is not defined. Method BtcSwapApi::script"
 						.to_string(),
 				))?,
-		)?;
-		Ok(())
+		)?)
 	}
 
 	/// Check BTC amount at the chain.
 	fn btc_balance<K: Keychain>(
 		&mut self,
-		keychain: &K,
+		_keychain: &K,
 		swap: &mut Swap,
+		input_script: &Script,
 		confirmations_needed: u64,
 	) -> Result<(u64, u64, u64), ErrorKind> {
-		self.script(keychain, swap)?;
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
-		let address = btc_data.address(swap.network)?;
+		let address = btc_data.address(input_script, swap.network)?;
 		let outputs = self.btc_node_client.unspent(&address)?;
 		let height = self.btc_node_client.height()?;
 		let mut pending_amount = 0;
@@ -128,6 +129,7 @@ where
 		&mut self,
 		keychain: &K,
 		swap: &mut Swap,
+		input_script: &Script,
 	) -> Result<Option<Action>, ErrorKind> {
 		//  Check if Lock slate is ready and confirmed.
 		if !swap.is_locked(swap.required_mwc_lock_confirmations) {
@@ -149,8 +151,12 @@ where
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
 			// Waiting for Btc confirmations
-			let (pending_amount, confirmed_amount, mut least_confirmations) =
-				self.btc_balance(keychain, swap, swap.required_secondary_lock_confirmations)?;
+			let (pending_amount, confirmed_amount, mut least_confirmations) = self.btc_balance(
+				keychain,
+				swap,
+				&input_script,
+				swap.required_secondary_lock_confirmations,
+			)?;
 			if pending_amount + confirmed_amount < swap.secondary_amount {
 				least_confirmations = 0;
 			};
@@ -232,9 +238,9 @@ where
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		input_script: &Script,
 	) -> Result<(), ErrorKind> {
-		swap.expect(Status::Redeem)?;
-		self.script(keychain, swap)?;
+		swap.expect(Status::Redeem, false)?;
 		let cosign_id = &context.unwrap_seller()?.unwrap_btc()?.cosign;
 
 		let redeem_address_str = swap.unwrap_seller()?.0.clone();
@@ -259,6 +265,7 @@ where
 		btc_data.redeem_tx(
 			keychain.secp(),
 			&redeem_address,
+			&input_script,
 			10,
 			&cosign_secret,
 			&redeem_secret,
@@ -269,7 +276,7 @@ where
 	}
 
 	fn seller_update_redeem(&mut self, swap: &mut Swap) -> Result<Action, ErrorKind> {
-		swap.expect(Status::RedeemSecondary)?;
+		swap.expect(Status::RedeemSecondary, false)?;
 
 		// We have generated the BTC redeem tx..
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
@@ -308,21 +315,27 @@ where
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		input_script: &Script,
 	) -> Result<Option<Action>, ErrorKind> {
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
-			let (pending_amount, confirmed_amount, least_confirmations) =
-				self.btc_balance(keychain, swap, swap.required_secondary_lock_confirmations)?;
+			let (pending_amount, confirmed_amount, least_confirmations) = self.btc_balance(
+				keychain,
+				swap,
+				&input_script,
+				swap.required_secondary_lock_confirmations,
+			)?;
 			let chain_amount = pending_amount + confirmed_amount;
 			if chain_amount < swap.secondary_amount {
 				// At this point, user needs to deposit (more) Bitcoin
-				self.script(keychain, swap)?;
 				return Ok(Some(Action::DepositSecondary {
 					currency: swap.secondary_currency,
 					amount: swap.secondary_amount - chain_amount,
 					address: format!(
 						"{}",
-						swap.secondary_data.unwrap_btc()?.address(swap.network)?
+						swap.secondary_data
+							.unwrap_btc()?
+							.address(input_script, swap.network)?
 					),
 				}));
 			}
@@ -397,8 +410,10 @@ where
 		context: &Context,
 		swap: &mut Swap,
 		refund_address: &Address,
+		input_script: &Script,
 	) -> Result<(), ErrorKind> {
-		let (pending_amount, confirmed_amount, _) = self.btc_balance(keychain, swap, 0)?;
+		let (pending_amount, confirmed_amount, _) =
+			self.btc_balance(keychain, swap, input_script, 0)?;
 
 		if pending_amount + confirmed_amount == 0 {
 			return Err(ErrorKind::Generic(
@@ -413,11 +428,83 @@ where
 		)?;
 
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
-		let refund_tx = btc_data.refund_tx(keychain.secp(), refund_address, 10, &refund_key)?;
+		let refund_tx = btc_data.refund_tx(
+			keychain.secp(),
+			refund_address,
+			input_script,
+			10,
+			&refund_key,
+		)?;
 
 		let tx = refund_tx.tx.clone();
 		self.btc_node_client.post_tx(tx)?;
+		btc_data.refund_tx = Some(refund_tx.txid);
+
 		Ok(())
+	}
+
+	fn get_slate_confirmation_number(
+		&mut self,
+		mwc_tip: &u64,
+		slate: &Slate,
+		outputs_ok: bool,
+	) -> Result<Option<u64>, ErrorKind> {
+		let result: Option<u64> = if slate.tx.kernels().is_empty() {
+			None
+		} else {
+			debug_assert!(slate.tx.kernels().len() == 1);
+
+			let kernel = &slate.tx.kernels()[0].excess;
+			if kernel.0.to_vec().iter().any(|v| *v != 0) {
+				// kernel is non zero - we can check transaction by kernel
+				match self
+					.node_client
+					.get_kernel(kernel, Some(slate.height), None)?
+				{
+					Some((_tx_kernel, height, _mmr_index)) => {
+						Some(mwc_tip.saturating_sub(height) + 1)
+					}
+					None => Some(0),
+				}
+			} else {
+				if outputs_ok {
+					// kernel is not valid, still can use outputs.
+					let wallet_outputs: Vec<pedersen::Commitment> = slate
+						.tx
+						.outputs()
+						.iter()
+						.map(|o| o.commit.clone())
+						.collect();
+					let res = self.node_client.get_outputs_from_node(&wallet_outputs)?;
+					let height = res.values().map(|v| v.1).max();
+					match height {
+						Some(h) => Some(mwc_tip.saturating_sub(h) + 1),
+						None => Some(0),
+					}
+				} else {
+					None
+				}
+			}
+		};
+		Ok(result)
+	}
+
+	fn get_btc_confirmation_number(
+		&mut self,
+		btc_tip: &u64,
+		tx_hash: Option<sha256d::Hash>,
+	) -> Result<Option<u64>, ErrorKind> {
+		let result: Option<u64> = match tx_hash {
+			None => None,
+			Some(tx_hash) => match self.btc_node_client.transaction(&tx_hash)? {
+				None => None,
+				Some((height, _tx)) => match height {
+					None => Some(0),
+					Some(h) => Some(btc_tip.saturating_sub(h) + 1),
+				},
+			},
+		};
+		Ok(result)
 	}
 }
 
@@ -587,7 +674,7 @@ where
 	) -> Result<Action, ErrorKind> {
 		match swap.role {
 			Role::Seller(_, _) => {
-				swap.expect(Status::RedeemSecondary)?;
+				swap.expect(Status::RedeemSecondary, false)?;
 				let btc_data = swap.secondary_data.unwrap_btc()?;
 				if btc_data.redeem_confirmations.unwrap_or(0) > 0 {
 					swap.status = Status::Completed;
@@ -625,7 +712,8 @@ where
 						refund_address_str, e
 					))
 				})?;
-				self.buyer_refund(keychain, context, swap, &refund_address)?;
+				let input_script = self.script(keychain, swap)?;
+				self.buyer_refund(keychain, context, swap, &refund_address, &input_script)?;
 				swap.status = Status::Refunded;
 				Ok(())
 			}
@@ -653,7 +741,8 @@ where
 		let action = match swap.role {
 			Role::Seller(_, _) => {
 				if swap.status == Status::Accepted {
-					if let Some(action) = self.seller_check_locks(keychain, swap)? {
+					let input_script = self.script(keychain, swap)?;
+					if let Some(action) = self.seller_check_locks(keychain, swap, &input_script)? {
 						return Ok(action);
 					}
 				} else if swap.status == Status::RedeemSecondary {
@@ -663,7 +752,8 @@ where
 
 				match (swap.status, action) {
 					(Status::Redeem, Action::Complete) => {
-						self.seller_build_redeem_tx(keychain, swap, context)?;
+						let input_script = self.script(keychain, swap)?;
+						self.seller_build_redeem_tx(keychain, swap, context, &input_script)?;
 						Action::PublishTxSecondary(Currency::Btc)
 					}
 					(_, action) => action,
@@ -671,27 +761,36 @@ where
 			}
 			Role::Buyer => {
 				if swap.status == Status::Accepted {
-					if let Some(action) = self.buyer_check_locks(keychain, swap, context)? {
+					let input_script = self.script(keychain, swap)?;
+					if let Some(action) =
+						self.buyer_check_locks(keychain, swap, context, &input_script)?
+					{
 						return Ok(action);
 					}
 				}
 				if swap.status == Status::Cancelled {
-					let (pending_amount, confirmed_amount, _) =
-						self.btc_balance(keychain, swap, 0)?;
+					let action = match self.script(keychain, swap) {
+						Ok(input_script) => {
+							let (pending_amount, confirmed_amount, _) =
+								self.btc_balance(keychain, swap, &input_script, 0)?;
 
-					let action = if pending_amount + confirmed_amount == 0 {
-						Action::None
-					} else {
-						let requied_time = swap.secondary_data.unwrap_btc()?.lock_time as u64;
-						let now = Utc::now().timestamp() as u64;
-						if now < requied_time {
-							Action::WaitingForBtcRefund {
-								required: requied_time,
-								current: now,
+							if pending_amount + confirmed_amount == 0 {
+								Action::None
+							} else {
+								let requied_time =
+									swap.secondary_data.unwrap_btc()?.lock_time as u64;
+								let now = Utc::now().timestamp() as u64;
+								if now < requied_time {
+									Action::WaitingForBtcRefund {
+										required: requied_time,
+										current: now,
+									}
+								} else {
+									Action::Refund
+								}
 							}
-						} else {
-							Action::Refund
 						}
+						Err(_) => Action::None,
 					};
 					return Ok(action);
 				}
@@ -778,13 +877,18 @@ where
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		retry: bool,
 	) -> Result<Action, ErrorKind> {
 		match swap.role {
-			Role::Seller(_, _) => SellApi::publish_transaction(&self.node_client, swap),
-			Role::Buyer => BuyApi::publish_transaction(&self.node_client, swap),
+			Role::Seller(_, _) => SellApi::publish_transaction(&self.node_client, swap, retry),
+			Role::Buyer => BuyApi::publish_transaction(&self.node_client, swap, retry),
 		}?;
 
-		self.required_action(keychain, swap, context)
+		if !retry {
+			self.required_action(keychain, swap, context)
+		} else {
+			Ok(Action::None)
+		}
 	}
 
 	fn publish_secondary_transaction(
@@ -792,11 +896,14 @@ where
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		retry: bool,
 	) -> Result<Action, ErrorKind> {
 		swap.expect_seller()?;
-		swap.expect(Status::RedeemSecondary)?;
+
+		swap.expect(Status::RedeemSecondary, retry)?;
+
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
-		if btc_data.redeem_confirmations.is_some() {
+		if !retry && btc_data.redeem_confirmations.is_some() {
 			return Err(ErrorKind::UnexpectedAction("btc_data.redeem_confirmations is already defined at publish_secondary_transaction()".to_string()));
 		}
 
@@ -808,8 +915,74 @@ where
 			.clone();
 		self.btc_node_client.post_tx(tx)?;
 		btc_data.redeem_confirmations = Some(0);
-		let action = self.required_action(keychain, swap, context)?;
 
+		if retry {
+			return Ok(Action::None);
+		}
+
+		let action = self.required_action(keychain, swap, context)?;
 		Ok(action)
+	}
+
+	/// Request confirmation numberss for all transactions that are known and in the in the swap
+	fn request_tx_confirmations(
+		&mut self,
+		keychain: &K,
+		swap: &mut Swap,
+	) -> Result<SwapTransactionsConfirmations, ErrorKind> {
+		let mwc_tip = self.node_client.get_chain_tip()?.0;
+
+		let is_seller = swap.is_seller();
+
+		let mwc_lock_conf =
+			self.get_slate_confirmation_number(&mwc_tip, &swap.lock_slate, !is_seller)?;
+		let mwc_redeem_conf =
+			self.get_slate_confirmation_number(&mwc_tip, &swap.redeem_slate, is_seller)?;
+		let mwc_refund_conf =
+			self.get_slate_confirmation_number(&mwc_tip, &swap.refund_slate, !is_seller)?;
+
+		let btc_tip = self.btc_node_client.height()?;
+		let btc_data = swap.secondary_data.unwrap_btc()?;
+		let secondary_redeem_conf = self.get_btc_confirmation_number(
+			&btc_tip,
+			btc_data.redeem_tx.as_ref().map(|tx| tx.txid.clone()),
+		)?;
+		let secondary_refund_conf =
+			self.get_btc_confirmation_number(&btc_tip, btc_data.refund_tx.clone())?;
+
+		// BTC lock account...
+		// Checking Amount, it can be too hight as well
+		let mut secondary_lock_amount = 0;
+		let mut least_confirmations = None;
+
+		if let Ok(input_script) = self.script(keychain, swap) {
+			if let Ok(address) = btc_data.address(&input_script, swap.network) {
+				let outputs = self.btc_node_client.unspent(&address)?;
+				for output in outputs {
+					secondary_lock_amount += output.value;
+					if output.height == 0 {
+						// Output in mempool
+						least_confirmations = Some(0);
+					} else {
+						let confirmations = btc_tip.saturating_sub(output.height) + 1;
+						if confirmations < least_confirmations.unwrap_or(std::i32::MAX as u64) {
+							least_confirmations = Some(confirmations);
+						}
+					}
+				}
+			}
+		}
+
+		Ok(SwapTransactionsConfirmations {
+			mwc_tip,
+			mwc_lock_conf,
+			mwc_redeem_conf,
+			mwc_refund_conf,
+			secondary_tip: btc_tip,
+			secondary_lock_conf: least_confirmations,
+			secondary_lock_amount,
+			secondary_redeem_conf,
+			secondary_refund_conf,
+		})
 	}
 }

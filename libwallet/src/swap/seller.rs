@@ -84,6 +84,7 @@ impl SellApi {
 		refund_slate.height = height;
 		// Calculating lock height from seconds. Average mining speed is about 1 minute
 		refund_slate.lock_height = height + mwc_lock_time_seconds / 60;
+		refund_slate.amount = primary_amount.saturating_sub(refund_slate.fee);
 
 		// Don't lock for more than 4 weeks. 4 weeks + 1 day, because max locking is expecting 2 weeks and 1 day to do the swap
 		let max_lock_time = 1440 * (7 * 4 + 1);
@@ -99,6 +100,9 @@ impl SellApi {
 		if test_mode {
 			redeem_slate.id = Uuid::parse_str("fc750aae-035f-4c6c-bb0c-05aabc764f8e").unwrap();
 		}
+		redeem_slate.amount = refund_slate.amount;
+		redeem_slate.height = refund_slate.height;
+		redeem_slate.fee = refund_slate.fee;
 
 		// Make sure we have enough funds
 		let mut sum_in = 0;
@@ -152,6 +156,8 @@ impl SellApi {
 			required_secondary_lock_confirmations,
 			mwc_lock_time_seconds,
 			seller_redeem_time,
+			message1: None,
+			message2: None,
 		};
 
 		Self::build_multisig(keychain, &mut swap, context)?;
@@ -170,7 +176,7 @@ impl SellApi {
 		accept_offer: AcceptOfferUpdate,
 	) -> Result<(), ErrorKind> {
 		swap.expect_seller()?;
-		swap.expect(Status::Offered)?;
+		swap.expect(Status::Offered, false)?;
 
 		// Finalize multisig proof
 		let proof = Self::finalize_multisig(keychain, swap, context, accept_offer.multisig)?;
@@ -339,7 +345,14 @@ impl SellApi {
 	pub fn publish_transaction<C: NodeClient>(
 		node_client: &C,
 		swap: &mut Swap,
+		retry: bool,
 	) -> Result<(), ErrorKind> {
+		if retry {
+			publish_transaction(node_client, &swap.lock_slate.tx, false)?;
+			swap.lock_confirmations = Some(0);
+			return Ok(());
+		}
+
 		match swap.status {
 			Status::Accepted => {
 				if swap.lock_confirmations.is_some() {
@@ -405,6 +418,28 @@ impl SellApi {
 					Action::Complete
 				}
 			}
+			Status::RedeemSecondary => {
+				match swap.secondary_currency {
+					Currency::Btc => {
+						let btc_data = swap.secondary_data.unwrap_btc()?;
+						if btc_data.redeem_confirmations.is_none() {
+							Action::PublishTxSecondary(swap.secondary_currency)
+						} else {
+							// We can't update confirmations from here. Assuming that everything is fine
+							// User in any case can resubmit BTC transaction
+							if btc_data.redeem_confirmations.unwrap() < 1 {
+								Action::ConfirmationRedeemSecondary(
+									swap.secondary_currency,
+									swap.unwrap_seller()?.0,
+								)
+							} else {
+								swap.status = Status::Completed; // We are done
+								Action::Complete
+							}
+						}
+					}
+				}
+			}
 			Status::Cancelled => {
 				if swap.lock_confirmations.is_none() {
 					// Funds are not locked. Nothing need to be done
@@ -430,7 +465,7 @@ impl SellApi {
 	/// Generate Offer message
 	pub fn offer_message(swap: &Swap) -> Result<Message, ErrorKind> {
 		swap.expect_seller()?;
-		swap.expect(Status::Created)?;
+		swap.expect(Status::Created, false)?;
 		swap.message(Update::Offer(OfferUpdate {
 			start_time: swap.started,
 			version: swap.version,
@@ -458,7 +493,7 @@ impl SellApi {
 	/// Generate redeem message
 	pub fn redeem_message(swap: &Swap) -> Result<Message, ErrorKind> {
 		swap.expect_seller()?;
-		swap.expect(Status::InitRedeem)?;
+		swap.expect(Status::InitRedeem, false)?;
 		swap.message(Update::Redeem(RedeemUpdate {
 			redeem_participant: swap.redeem_slate.participant_data[swap.participant_id].clone(),
 		}))
@@ -470,7 +505,7 @@ impl SellApi {
 		swap: &mut Swap,
 	) -> Result<(), ErrorKind> {
 		match swap.status {
-			Status::Cancelled => {
+			Status::Cancelled | Status::Refunded => {
 				// check if refund slate is ready
 				swap.refund_slate.tx.validate(Weighting::AsTransaction,Arc::new(RwLock::new(LruVerifierCache::new())))
 					.map_err(|e| ErrorKind::UnexpectedAction(format!("refund_slate is not valid, {}", e)))?;

@@ -69,6 +69,10 @@ impl BuyApi {
 		if test_mode {
 			redeem_slate.id = Uuid::parse_str("78aa5af1-048e-4c49-8776-a2e66d4a460c").unwrap()
 		}
+		redeem_slate.fee = tx_fee(1, 1, 1, None);
+		redeem_slate.height = height;
+		redeem_slate.amount = offer.primary_amount.saturating_sub(redeem_slate.fee);
+
 		redeem_slate.participant_data.push(offer.redeem_participant);
 
 		let multisig = MultisigBuilder::new(
@@ -111,6 +115,8 @@ impl BuyApi {
 			required_secondary_lock_confirmations: offer.required_secondary_lock_confirmations,
 			mwc_lock_time_seconds: offer.mwc_lock_time_seconds,
 			seller_redeem_time: offer.seller_redeem_time,
+			message1: None,
+			message2: None,
 		};
 
 		swap.redeem_public = Some(PublicKey::from_secret_key(
@@ -132,7 +138,7 @@ impl BuyApi {
 		context: &Context,
 	) -> Result<(), ErrorKind> {
 		swap.expect_buyer()?;
-		swap.expect(Status::Locked)?;
+		swap.expect(Status::Locked, false)?;
 
 		Self::build_redeem_slate(keychain, swap, context)?;
 		Self::calculate_adaptor_signature(keychain, swap, context)?;
@@ -148,7 +154,7 @@ impl BuyApi {
 		redeem: RedeemUpdate,
 	) -> Result<(), ErrorKind> {
 		swap.expect_buyer()?;
-		swap.expect(Status::InitRedeem)?;
+		swap.expect(Status::InitRedeem, false)?;
 
 		Self::finalize_redeem_slate(keychain, swap, context, redeem.redeem_participant)?;
 		swap.status = Status::Redeem;
@@ -205,7 +211,14 @@ impl BuyApi {
 	pub fn publish_transaction<C: NodeClient>(
 		node_client: &C,
 		swap: &mut Swap,
+		retry: bool,
 	) -> Result<(), ErrorKind> {
+		if retry {
+			publish_transaction(node_client, &swap.redeem_slate.tx, false)?;
+			swap.redeem_confirmations = Some(0);
+			return Ok(());
+		}
+
 		match swap.status {
 			Status::Redeem => {
 				if swap.redeem_confirmations.is_some() {
@@ -259,7 +272,7 @@ impl BuyApi {
 
 	/// Generate 'Accept offer' massage
 	pub fn accept_offer_message(swap: &Swap) -> Result<Message, ErrorKind> {
-		swap.expect(Status::Offered)?;
+		swap.expect(Status::Offered, false)?;
 
 		let id = swap.participant_id;
 		swap.message(Update::AcceptOffer(AcceptOfferUpdate {
@@ -272,7 +285,7 @@ impl BuyApi {
 
 	/// Generate 'InitRedeem' slate message
 	pub fn init_redeem_message(swap: &Swap) -> Result<Message, ErrorKind> {
-		swap.expect(Status::Locked)?;
+		swap.expect(Status::Locked, false)?;
 
 		swap.message(Update::InitRedeem(InitRedeemUpdate {
 			redeem_slate: VersionedSlate::into_version(

@@ -26,7 +26,7 @@ use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::api_impl::owner_updater::{start_updater_log_thread, StatusMessage};
 use crate::libwallet::api_impl::{owner, owner_swap, owner_updater};
 use crate::libwallet::swap::swap::Swap;
-use crate::libwallet::swap::types::{Action, Status};
+use crate::libwallet::swap::types::{Action, Status, SwapTransactionsConfirmations};
 use crate::libwallet::{
 	AcctPathMapping, Error, ErrorKind, InitTxArgs, IssueInvoiceTxArgs, NodeClient,
 	NodeHeightResult, OutputCommitMapping, PaymentProof, Slate, SwapStartArgs, TxLogEntry,
@@ -2319,6 +2319,8 @@ where
 		keychain_mask: Option<&SecretKey>,
 		params: &SwapStartArgs,
 	) -> Result<String, Error> {
+		// Updating wallet state first because we need to select outputs.
+		owner::update_wallet_state(self.wallet_inst.clone(), keychain_mask, &None)?;
 		owner_swap::swap_start(self.wallet_inst.clone(), keychain_mask, params)
 	}
 
@@ -2356,6 +2358,15 @@ where
 		owner_swap::get_swap_status_action(self.wallet_inst.clone(), keychain_mask, &swap_id)
 	}
 
+	/// Get a status of the transactions that involved into the swap.
+	pub fn get_swap_tx_tstatus(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: String,
+	) -> Result<SwapTransactionsConfirmations, Error> {
+		owner_swap::get_swap_tx_tstatus(self.wallet_inst.clone(), keychain_mask, &swap_id)
+	}
+
 	pub fn swap_process(
 		&self,
 		keychain_mask: Option<&SecretKey>,
@@ -2365,6 +2376,24 @@ where
 		destination: Option<String>,
 	) -> Result<(), Error> {
 		owner_swap::swap_process(
+			self.wallet_inst.clone(),
+			keychain_mask,
+			swap_id,
+			action,
+			method,
+			destination,
+		)
+	}
+
+	pub fn swap_retry(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: &str,
+		action: Action,
+		method: Option<String>,
+		destination: Option<String>,
+	) -> Result<(), Error> {
+		owner_swap::swap_retry(
 			self.wallet_inst.clone(),
 			keychain_mask,
 			swap_id,
