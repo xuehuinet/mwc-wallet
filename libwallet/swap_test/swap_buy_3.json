@@ -4,6 +4,7 @@
   "version": 1,
   "network": "Floonet",
   "role": "Buyer",
+  "seller_lock_first": false,
   "started": "2019-09-04T21:22:33.386997Z",
   "status": "Completed",
   "primary_amount": "100000000000",

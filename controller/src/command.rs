@@ -1283,6 +1283,8 @@ pub struct SwapStartArgs {
 	pub secondary_amount: u64,
 	/// Secondary currency redeem address
 	pub secondary_redeem_address: String,
+	/// Funds locking order. true - seller lock mwc first
+	pub seller_lock_first: bool,
 	/// Minimum confirmation for outputs. Default is 10
 	pub minimum_confirmations: Option<u64>,
 	/// Requred confirmations for MWC Locking
@@ -1313,6 +1315,7 @@ where
 				secondary_currency: args.secondary_currency,
 				secondary_amount: args.secondary_amount,
 				secondary_redeem_address: args.secondary_redeem_address,
+				seller_lock_first: args.seller_lock_first,
 				minimum_confirmations: args.minimum_confirmations,
 				required_mwc_lock_confirmations: args.required_mwc_lock_confirmations,
 				required_secondary_lock_confirmations: args.required_secondary_lock_confirmations,

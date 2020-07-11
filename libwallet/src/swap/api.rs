@@ -56,7 +56,8 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		primary_amount: u64,   // mwc amount to sell
 		secondary_amount: u64, // btc amount to buy
 		secondary_currency: Currency,
-		secondary_redeem_address: String,     // redeed address for BTC
+		secondary_redeem_address: String, // redeed address for BTC
+		seller_lock_first: bool,
 		required_mwc_lock_confirmations: u64, // Needed conformation numbers for mwc & btc
 		required_secondary_lock_confirmations: u64,
 		mwc_lock_time_seconds: u64,

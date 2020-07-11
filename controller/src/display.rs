@@ -681,6 +681,16 @@ pub fn swap_trade(
 			print_buyer = true;
 		}
 	}
+
+	if swap.seller_lock_first {
+		println!("Locking order: Seller lock MWC first");
+	} else {
+		println!(
+			"Locking order: Buyer lock {} first",
+			swap.secondary_currency
+		);
+	}
+
 	// Transactoins info
 	println!("--------------------------------");
 

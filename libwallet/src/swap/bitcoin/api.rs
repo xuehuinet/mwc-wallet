@@ -132,6 +132,25 @@ where
 		input_script: &Script,
 	) -> Result<Option<Action>, ErrorKind> {
 		//  Check if Lock slate is ready and confirmed.
+		if !swap.seller_lock_first {
+			// Check first if BTC are deposited and have at least 1 or 10% of needed confirmation
+			let need_conf = std::cmp::max(1, swap.required_secondary_lock_confirmations / 10);
+
+			let (pending_amount, confirmed_amount, mut least_confirmations) =
+				self.btc_balance(keychain, swap, &input_script, need_conf)?;
+			if pending_amount + confirmed_amount < swap.secondary_amount {
+				least_confirmations = 0;
+			};
+
+			if confirmed_amount < swap.secondary_amount {
+				return Ok(Some(Action::ConfirmationsSecondary {
+					currency: swap.secondary_currency,
+					required: need_conf,
+					actual: least_confirmations,
+				}));
+			}
+		}
+
 		if !swap.is_locked(swap.required_mwc_lock_confirmations) {
 			match swap.lock_confirmations {
 				None => return Ok(Some(Action::PublishTx)),
@@ -317,8 +336,22 @@ where
 		context: &Context,
 		input_script: &Script,
 	) -> Result<Option<Action>, ErrorKind> {
+		let mut confirmations: Option<u64> = None;
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
+			if swap.seller_lock_first {
+				// Check first if MWC are there. Need at least one or 10% of confirmation
+				let conf = swap.update_lock_confirmations(keychain.secp(), &self.node_client)?;
+				confirmations = Some(conf);
+				let need_conf = std::cmp::max(1, swap.required_mwc_lock_confirmations / 10);
+				if conf < need_conf {
+					return Ok(Some(Action::Confirmations {
+						required: need_conf,
+						actual: conf,
+					}));
+				}
+			}
+
 			let (pending_amount, confirmed_amount, least_confirmations) = self.btc_balance(
 				keychain,
 				swap,
@@ -359,7 +392,8 @@ where
 		}
 
 		// Check Grin chain
-		let confirmations = swap.update_lock_confirmations(keychain.secp(), &self.node_client)?;
+		let confirmations = confirmations
+			.unwrap_or(swap.update_lock_confirmations(keychain.secp(), &self.node_client)?);
 		if !swap.is_locked(swap.required_mwc_lock_confirmations) {
 			return Ok(Some(Action::Confirmations {
 				required: swap.required_mwc_lock_confirmations,
@@ -584,6 +618,7 @@ where
 		secondary_amount: u64,
 		secondary_currency: Currency,
 		secondary_redeem_address: String,
+		seller_lock_first: bool,
 		required_mwc_lock_confirmations: u64,
 		required_secondary_lock_confirmations: u64,
 		mwc_lock_time_seconds: u64,
@@ -610,6 +645,7 @@ where
 			Currency::Btc,
 			secondary_redeem_address,
 			height,
+			seller_lock_first,
 			required_mwc_lock_confirmations,
 			required_secondary_lock_confirmations,
 			mwc_lock_time_seconds,

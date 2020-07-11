@@ -5,6 +5,7 @@
       "start_time": "2019-09-04T21:22:32.581245Z",
       "version": 1,
       "network": "Floonet",
+      "seller_lock_first": true,
       "primary_amount": "100000000000",
       "secondary_amount": "3000000",
       "secondary_currency": "Btc",
