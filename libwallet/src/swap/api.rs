@@ -89,6 +89,7 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		context: &Context,
 		swap: &mut Swap,
 		refund_address: Option<String>,
+		fee_satoshi_per_byte: Option<f32>,
 	) -> Result<(), ErrorKind>;
 
 	/// Cancel the trade. Other party need to be notified with higher level channel.
@@ -149,6 +150,7 @@ pub trait SwapApi<K: Keychain>: Sync + Send {
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		fee_satoshi_per_byte: Option<f32>,
 		retry: bool,
 	) -> Result<Action, ErrorKind>;
 }

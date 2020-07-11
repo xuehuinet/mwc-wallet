@@ -15,9 +15,10 @@
 use super::client::BtcNodeClient;
 use super::types::{BtcBuyerContext, BtcData, BtcSellerContext};
 use crate::grin_util::secp::pedersen;
+use crate::swap::bitcoin::types::BtcTtansaction;
 use crate::swap::message::{Message, Update};
 use crate::swap::types::{
-	Action, BuyerContext, Context, Currency, Role, RoleContext, SecondaryBuyerContext,
+	Action, BuyerContext, Context, Currency, Network, Role, RoleContext, SecondaryBuyerContext,
 	SecondarySellerContext, SellerContext, Status, SwapTransactionsConfirmations,
 };
 use crate::swap::{BuyApi, ErrorKind, SellApi, Swap, SwapApi};
@@ -255,11 +256,12 @@ where
 	fn seller_build_redeem_tx<K: Keychain>(
 		&self,
 		keychain: &K,
-		swap: &mut Swap,
+		swap: &Swap,
 		context: &Context,
 		input_script: &Script,
-	) -> Result<(), ErrorKind> {
-		swap.expect(Status::Redeem, false)?;
+		fee_satoshi_per_byte: Option<f32>,
+	) -> Result<BtcTtansaction, ErrorKind> {
+		swap.expect(Status::RedeemSecondary, false)?;
 		let cosign_id = &context.unwrap_seller()?.unwrap_btc()?.cosign;
 
 		let redeem_address_str = swap.unwrap_seller()?.0.clone();
@@ -274,24 +276,23 @@ where
 		let redeem_secret = SellApi::calculate_redeem_secret(keychain, swap)?;
 
 		// This function should only be called once
-		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
+		let btc_data = swap.secondary_data.unwrap_btc()?;
 		if btc_data.redeem_tx.is_some() {
 			return Err(ErrorKind::OneShot(
 				"Fn: seller_build_redeem_tx, btc_data.redeem_tx is not empty".to_string(),
 			))?;
 		}
 
-		btc_data.redeem_tx(
+		let (btc_transaction, _, _, _) = btc_data.build_redeem_tx(
 			keychain.secp(),
 			&redeem_address,
 			&input_script,
-			10,
+			fee_satoshi_per_byte.unwrap_or(self.get_default_fee_satoshi_per_byte(&swap.network)),
 			&cosign_secret,
 			&redeem_secret,
 		)?;
-		swap.status = Status::RedeemSecondary;
 
-		Ok(())
+		Ok(btc_transaction)
 	}
 
 	fn seller_update_redeem(&mut self, swap: &mut Swap) -> Result<Action, ErrorKind> {
@@ -299,31 +300,31 @@ where
 
 		// We have generated the BTC redeem tx..
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
+
+		if btc_data.redeem_tx.is_none() {
+			return Ok(Action::PublishTxSecondary(Currency::Btc));
+		}
+
+		debug_assert!(btc_data.redeem_confirmations.is_some());
+
 		let txid = &btc_data
 			.redeem_tx
-			.as_ref()
-			.ok_or(ErrorKind::Generic("Redeem transaction missing".into()))?
-			.txid;
+			.ok_or(ErrorKind::Generic("Redeem transaction missing".into()))?;
 
-		if btc_data.redeem_confirmations.is_none() {
-			// ..but we haven't published it yet
-			Ok(Action::PublishTxSecondary(Currency::Btc))
-		} else {
-			// ..we published it..
-			if let Some((Some(height), _)) = self.btc_node_client.transaction(txid)? {
-				let confirmations = self.btc_node_client.height()?.saturating_sub(height) + 1;
-				btc_data.redeem_confirmations = Some(confirmations);
-				if confirmations > 0 {
-					// ..and its been included in a block!
-					return Ok(Action::Complete);
-				}
+		// ..we published it..
+		if let Some((Some(height), _)) = self.btc_node_client.transaction(txid)? {
+			let confirmations = self.btc_node_client.height()?.saturating_sub(height) + 1;
+			btc_data.redeem_confirmations = Some(confirmations);
+			if confirmations > 0 {
+				// ..and its been included in a block!
+				return Ok(Action::Complete);
 			}
-			// ..but its not confirmed yet
-			Ok(Action::ConfirmationRedeemSecondary(
-				swap.secondary_currency,
-				format!("{}", txid),
-			))
 		}
+		// ..but its not confirmed yet
+		Ok(Action::ConfirmationRedeemSecondary(
+			swap.secondary_currency,
+			format!("{}", txid),
+		))
 	}
 
 	// Buyer specific methods
@@ -445,6 +446,7 @@ where
 		swap: &mut Swap,
 		refund_address: &Address,
 		input_script: &Script,
+		fee_satoshi_per_byte: Option<f32>,
 	) -> Result<(), ErrorKind> {
 		let (pending_amount, confirmed_amount, _) =
 			self.btc_balance(keychain, swap, input_script, 0)?;
@@ -466,7 +468,7 @@ where
 			keychain.secp(),
 			refund_address,
 			input_script,
-			10,
+			fee_satoshi_per_byte.unwrap_or(self.get_default_fee_satoshi_per_byte(&swap.network)),
 			&refund_key,
 		)?;
 
@@ -539,6 +541,14 @@ where
 			},
 		};
 		Ok(result)
+	}
+
+	fn get_default_fee_satoshi_per_byte(&self, network: &Network) -> f32 {
+		// Default values
+		match network {
+			Network::Floonet => 1.4 as f32,
+			Network::Mainnet => 26.0 as f32,
+		}
 	}
 }
 
@@ -723,6 +733,7 @@ where
 		context: &Context,
 		swap: &mut Swap,
 		refund_address: Option<String>,
+		fee_satoshi_per_byte: Option<f32>,
 	) -> Result<(), ErrorKind> {
 		match swap.role {
 			Role::Seller(_, _) => {
@@ -741,7 +752,14 @@ where
 					))
 				})?;
 				let input_script = self.script(keychain, swap)?;
-				self.buyer_refund(keychain, context, swap, &refund_address, &input_script)?;
+				self.buyer_refund(
+					keychain,
+					context,
+					swap,
+					&refund_address,
+					&input_script,
+					fee_satoshi_per_byte,
+				)?;
 				swap.status = Status::Refunded;
 				Ok(())
 			}
@@ -780,8 +798,7 @@ where
 
 				match (swap.status, action) {
 					(Status::Redeem, Action::Complete) => {
-						let input_script = self.script(keychain, swap)?;
-						self.seller_build_redeem_tx(keychain, swap, context, &input_script)?;
+						swap.status = Status::RedeemSecondary;
 						Action::PublishTxSecondary(Currency::Btc)
 					}
 					(_, action) => action,
@@ -924,25 +941,31 @@ where
 		keychain: &K,
 		swap: &mut Swap,
 		context: &Context,
+		fee_satoshi_per_byte: Option<f32>,
 		retry: bool,
 	) -> Result<Action, ErrorKind> {
 		swap.expect_seller()?;
 
 		swap.expect(Status::RedeemSecondary, retry)?;
 
+		let input_script = self.script(keychain, swap)?;
+
+		let btc_tx = self.seller_build_redeem_tx(
+			keychain,
+			swap,
+			context,
+			&input_script,
+			fee_satoshi_per_byte,
+		)?;
+
+		self.btc_node_client.post_tx(btc_tx.tx)?;
+
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
 		if !retry && btc_data.redeem_confirmations.is_some() {
 			return Err(ErrorKind::UnexpectedAction("btc_data.redeem_confirmations is already defined at publish_secondary_transaction()".to_string()));
 		}
-
-		let tx = btc_data
-			.redeem_tx
-			.as_ref()
-			.ok_or(ErrorKind::UnexpectedAction("Fn publish_secondary_transaction() called with not prepared data for BTC Redeem Tx".to_string()))?
-			.tx
-			.clone();
-		self.btc_node_client.post_tx(tx)?;
 		btc_data.redeem_confirmations = Some(0);
+		btc_data.redeem_tx = Some(btc_tx.txid);
 
 		if retry {
 			return Ok(Action::None);
@@ -971,10 +994,8 @@ where
 
 		let btc_tip = self.btc_node_client.height()?;
 		let btc_data = swap.secondary_data.unwrap_btc()?;
-		let secondary_redeem_conf = self.get_btc_confirmation_number(
-			&btc_tip,
-			btc_data.redeem_tx.as_ref().map(|tx| tx.txid.clone()),
-		)?;
+		let secondary_redeem_conf =
+			self.get_btc_confirmation_number(&btc_tip, btc_data.redeem_tx.clone())?;
 		let secondary_refund_conf =
 			self.get_btc_confirmation_number(&btc_tip, btc_data.refund_tx.clone())?;
 

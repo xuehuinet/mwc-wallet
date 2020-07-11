@@ -604,3 +604,8 @@ subcommands:
             short: d
             long: dest
             takes_value: true
+        - secondary_fee_per_byte:
+            help: Optional secondary fee per byte. For BTC default 26 sat/byte.
+            long: secondary_fee_per_byte
+            takes_value: true
+

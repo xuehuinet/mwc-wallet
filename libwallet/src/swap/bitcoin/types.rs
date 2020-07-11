@@ -59,8 +59,8 @@ pub struct BtcData {
 	pub confirmed_outputs: Vec<Output>,
 	/// Will be True if BTC coins are have enough confirmations are locked at that account.
 	pub locked: bool,
-	/// BTX redeem transaction, ready to be posted
-	pub redeem_tx: Option<BtcTtansaction>,
+	/// BTX redeem transaction hash, needed for checking if it is posted
+	pub redeem_tx: Option<sha256d::Hash>,
 	/// Number of confirmations that redeem transaction already get.
 	pub redeem_confirmations: Option<u64>,
 }
@@ -222,15 +222,15 @@ impl BtcData {
 
 	/// Build BTC redeem transactions
 	/// Update self.redeem_tx  with result
-	pub(crate) fn redeem_tx(
-		&mut self,
+	pub(crate) fn build_redeem_tx(
+		&self,
 		secp: &Secp256k1,
 		redeem_address: &Address,
 		input_script: &Script,
-		fee_sat_per_byte: u64,
+		fee_sat_per_byte: f32,
 		cosign_secret: &SecretKey,
 		redeem_secret: &SecretKey,
-	) -> Result<(Transaction, usize, usize), ErrorKind> {
+	) -> Result<(BtcTtansaction, Transaction, usize, usize), ErrorKind> {
 		let (input, output, total_amount) = self.build_input_outputs(redeem_address)?;
 
 		let mut tx = Transaction {
@@ -248,7 +248,8 @@ impl BtcData {
 		let tx_size = tx.get_weight() / 4 + script_sig_size * tx.input.len();
 
 		// Subtract fee from output
-		tx.output[0].value = total_amount.saturating_sub(tx_size as u64 * fee_sat_per_byte);
+		tx.output[0].value =
+			total_amount.saturating_sub((tx_size as f32 * fee_sat_per_byte + 0.5) as u64);
 
 		// Sign for inputs
 		for idx in 0..tx.input.len() {
@@ -268,12 +269,15 @@ impl BtcData {
 			.consensus_encode(&mut cursor)
 			.map_err(|e| ErrorKind::Generic(format!("Unable to encode redeem tx, {}", e)))?;
 
-		self.redeem_tx = Some(BtcTtansaction {
-			txid: tx.txid(),
-			tx: cursor.into_inner(),
-		});
-
-		Ok((tx, tx_size, actual_size))
+		Ok((
+			BtcTtansaction {
+				txid: tx.txid(),
+				tx: cursor.into_inner(),
+			},
+			tx,
+			tx_size,
+			actual_size,
+		))
 	}
 
 	fn redeem_script_sig(
@@ -307,11 +311,10 @@ impl BtcData {
 		secp: &Secp256k1,
 		refund_address: &Address,
 		input_script: &Script,
-		fee_sat_per_byte: u64,
+		fee_sat_per_byte: f32,
 		buyer_btc_secret: &SecretKey,
 	) -> Result<BtcTtansaction, ErrorKind> {
 		let (input, output, total_amount) = self.build_input_outputs(refund_address)?;
-
 		let mut tx = Transaction {
 			version: 2,
 			lock_time: self.lock_time, // let's make the lock time equal to the script lock.
@@ -327,7 +330,8 @@ impl BtcData {
 		let tx_size = tx.get_weight() / 4 + script_sig_size * tx.input.len();
 
 		// Subtract fee from output
-		tx.output[0].value = total_amount.saturating_sub(tx_size as u64 * fee_sat_per_byte);
+		tx.output[0].value =
+			total_amount.saturating_sub((tx_size as f32 * fee_sat_per_byte + 0.5) as u64);
 
 		// Sign for inputs
 		for idx in 0..tx.input.len() {
@@ -618,8 +622,15 @@ mod tests {
 		);
 
 		// Generate redeem transaction
-		let (tx, est_size, actual_size) = data
-			.redeem_tx(&secp, &redeem_address, &input_script, 10, &cosign, &redeem)
+		let (_btc_tx, tx, est_size, actual_size) = data
+			.build_redeem_tx(
+				&secp,
+				&redeem_address,
+				&input_script,
+				10.0,
+				&cosign,
+				&redeem,
+			)
 			.unwrap();
 		let diff = (est_size as i64 - actual_size as i64).abs() as usize;
 		assert!(diff <= count); // Our size estimation should be very close to the real size

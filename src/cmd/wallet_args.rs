@@ -240,6 +240,18 @@ fn parse_u64(arg: &str, name: &str) -> Result<u64, ParseError> {
 	}
 }
 
+// parses a number, or throws error with message otherwise
+fn parse_f32(arg: &str, name: &str) -> Result<f32, ParseError> {
+	let val = arg.parse::<f32>();
+	match val {
+		Ok(v) => Ok(v),
+		Err(e) => {
+			let msg = format!("Could not parse {} as a decimal number. e={}", name, e);
+			Err(ParseError::ArgumentError(msg))
+		}
+	}
+}
+
 // As above, but optional
 fn parse_u64_or_none(arg: Option<&str>) -> Option<u64> {
 	let val = match arg {
@@ -966,6 +978,10 @@ pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseErro
 	let retry = args.value_of("retry").map(|s| String::from(s));
 	let method = args.value_of("method").map(|s| String::from(s));
 	let destination = args.value_of("dest").map(|s| String::from(s));
+	let secondary_fee_per_byte = match args.value_of("secondary_fee_per_byte") {
+		Some(s) => Some(parse_f32(s, "secondary_fee_per_byte")?),
+		None => None,
+	};
 
 	let subcommand = if args.is_present("list") {
 		command::SwapSubcommand::List
@@ -991,6 +1007,7 @@ pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseErro
 		retry,
 		method,
 		destination,
+		fee_satoshi_per_byte: secondary_fee_per_byte,
 	})
 }
 

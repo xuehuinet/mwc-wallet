@@ -271,6 +271,7 @@ pub fn swap_process<'a, L, C, K>(
 	action: Action,
 	method: Option<String>,
 	destination: Option<String>,
+	fee_satoshi_per_byte: Option<f32>,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'a, C, K>,
@@ -334,7 +335,13 @@ where
 			return Ok(());
 		}
 		Action::PublishTxSecondary(_currency) => {
-			swap_api.publish_secondary_transaction(&keychain, &mut swap, &context, false)?;
+			swap_api.publish_secondary_transaction(
+				&keychain,
+				&mut swap,
+				&context,
+				fee_satoshi_per_byte,
+				false
+			)?;
 			trades::store_swap_trade(&context, &swap, &skey)?;
 			println!(
 				"{} redeem transaction is published",
@@ -434,7 +441,13 @@ where
 		Action::Refund => {
 			// Posting refund slate
 			// first let's check if we can post it
-			swap_api.refunded(&keychain, &context, &mut swap, destination)?;
+			swap_api.refunded(
+				&keychain,
+				&context,
+				&mut swap,
+				destination,
+				fee_satoshi_per_byte,
+			)?;
 			trades::store_swap_trade(&context, &swap, &skey)?;
 
 			if swap.is_seller() {
@@ -465,6 +478,7 @@ pub fn swap_retry<'a, L, C, K>(
 	action: Action,
 	method: Option<String>,
 	destination: Option<String>,
+	fee_satoshi_per_byte: Option<f32>,
 ) -> Result<(), Error>
 where
 	L: WalletLCProvider<'a, C, K>,
@@ -505,7 +519,13 @@ where
 			return Ok(());
 		}
 		Action::PublishTxSecondary(_currency) => {
-			swap_api.publish_secondary_transaction(&keychain, &mut swap, &context, true)?;
+			swap_api.publish_secondary_transaction(
+				&keychain,
+				&mut swap,
+				&context,
+				fee_satoshi_per_byte,
+				true,
+			)?;
 			println!(
 				"{} redeem transaction is published",
 				swap.secondary_currency
@@ -531,7 +551,13 @@ where
 		}
 		Action::Refund => {
 			// Refund retry is no different from the regular flow...
-			swap_api.refunded(&keychain, &context, &mut swap, destination)?;
+			swap_api.refunded(
+				&keychain,
+				&context,
+				&mut swap,
+				destination,
+				fee_satoshi_per_byte,
+			)?;
 			trades::store_swap_trade(&context, &swap, &skey)?;
 			return Ok(());
 		}
