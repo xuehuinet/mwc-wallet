@@ -22,7 +22,7 @@ use crate::swap::types::{
 };
 use crate::swap::{BuyApi, ErrorKind, SellApi, Swap, SwapApi};
 use crate::{NodeClient, Slate};
-use bitcoin::{Address, AddressType, Script};
+use bitcoin::{Address, Script};
 use bitcoin_hashes::sha256d;
 use chrono::Utc;
 use grin_keychain::{Identifier, Keychain, SwitchCommitmentType};
@@ -589,21 +589,13 @@ where
 		mwc_lock_time_seconds: u64,
 		seller_redeem_time: u64,
 	) -> Result<(Swap, Action), ErrorKind> {
-		let redeem_address = Address::from_str(&secondary_redeem_address).map_err(|e| {
+		// Checking if address is valid
+		let _redeem_address = Address::from_str(&secondary_redeem_address).map_err(|e| {
 			ErrorKind::Generic(format!(
 				"Unable to parse BTC redeem address {}, {}",
 				secondary_redeem_address, e
 			))
 		})?;
-
-		match redeem_address.address_type() {
-			Some(AddressType::P2pkh) | Some(AddressType::P2sh) => {}
-			_ => {
-				return Err(ErrorKind::Generic(
-					"Only P2PKH and P2SH BTC redeem addresses are supported".into(),
-				))
-			}
-		};
 
 		if secondary_currency != Currency::Btc {
 			return Err(ErrorKind::UnexpectedCoinType);
