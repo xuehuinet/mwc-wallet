@@ -871,7 +871,7 @@ mod tests {
 
 		// Seller: wait for BTC confirmations
 		let action = api_sell
-			.publish_secondary_transaction(&kc_sell, &mut swap_sell, &ctx_sell, false)
+			.publish_secondary_transaction(&kc_sell, &mut swap_sell, &ctx_sell, Some(10.0), false)
 			.unwrap();
 		match action {
 			Action::ConfirmationRedeemSecondary(_, _) => {}

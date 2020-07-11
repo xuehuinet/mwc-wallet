@@ -1394,6 +1394,8 @@ pub struct SwapArgs {
 	pub method: Option<String>,
 	/// Destination is something needed to be send
 	pub destination: Option<String>,
+	/// Secondary currency fee. Satoshi per byte.
+	pub fee_satoshi_per_byte: Option<f32>,
 }
 
 pub fn swap<L, C, K>(
@@ -1505,6 +1507,7 @@ where
 						retry_action,
 						args.method,
 						args.destination,
+						args.fee_satoshi_per_byte,
 					);
 
 					return match result {
@@ -1560,6 +1563,7 @@ where
 					)))?,
 					args.method,
 					args.destination,
+					args.fee_satoshi_per_byte,
 				);
 
 				match result {

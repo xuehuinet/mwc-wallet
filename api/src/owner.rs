@@ -2383,6 +2383,7 @@ where
 		action: Action,
 		method: Option<String>,
 		destination: Option<String>,
+		fee_satoshi_per_byte: Option<f32>,
 	) -> Result<(), Error> {
 		owner_swap::swap_process(
 			self.wallet_inst.clone(),
@@ -2391,6 +2392,7 @@ where
 			action,
 			method,
 			destination,
+			fee_satoshi_per_byte,
 		)
 	}
 
@@ -2401,6 +2403,7 @@ where
 		action: Action,
 		method: Option<String>,
 		destination: Option<String>,
+		fee_satoshi_per_byte: Option<f32>,
 	) -> Result<(), Error> {
 		owner_swap::swap_retry(
 			self.wallet_inst.clone(),
@@ -2409,6 +2412,7 @@ where
 			action,
 			method,
 			destination,
+			fee_satoshi_per_byte,
 		)
 	}
 
