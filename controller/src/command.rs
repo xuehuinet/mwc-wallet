@@ -1343,6 +1343,7 @@ pub enum SwapSubcommand {
 	Delete,
 	Check,
 	Process,
+	Dump,
 }
 
 /// Processing swap message from the file
@@ -1567,6 +1568,32 @@ where
 						error!("Unable to process Swap {}: {}", swap_id, e);
 						Err(ErrorKind::LibWallet(format!(
 							"Unable to process Swap {}: {}",
+							swap_id, e
+						))
+						.into())
+					}
+				}
+			})?;
+			Ok(())
+		}
+		SwapSubcommand::Dump => {
+			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
+				let swap_id = args.swap_id.ok_or(ErrorKind::ArgumentError(
+					"Not found expected 'swap_id' argument".to_string(),
+				))?;
+				let result = api.swap_dump(keychain_mask, swap_id.clone());
+				match result {
+					Ok(dump_str) => {
+						println!("{}", dump_str);
+						Ok(())
+					}
+					Err(e) => {
+						error!(
+							"Unable to dump the content of the swap file {}.swap: {}",
+							swap_id, e
+						);
+						Err(ErrorKind::LibWallet(format!(
+							"Unable to dump the content of the swap file {}.swap: {}",
 							swap_id, e
 						))
 						.into())

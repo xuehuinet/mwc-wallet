@@ -1448,6 +1448,7 @@ dependencies = [
 name = "grin_wallet_libwallet"
 version = "3.2.2"
 dependencies = [
+ "base64 0.9.3",
  "bitcoin",
  "bitcoin_hashes",
  "blake2-rfc",

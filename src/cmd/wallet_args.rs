@@ -975,6 +975,8 @@ pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseErro
 		command::SwapSubcommand::Check
 	} else if args.is_present("process") {
 		command::SwapSubcommand::Process
+	} else if args.is_present("dump") {
+		command::SwapSubcommand::Dump
 	} else {
 		return Err(ParseError::ArgumentError(format!(
 			"Please define some action to do"

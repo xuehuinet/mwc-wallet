@@ -2349,6 +2349,15 @@ where
 		owner_swap::swap_get(self.wallet_inst.clone(), keychain_mask, &swap_id)
 	}
 
+	/// Dump swap file content
+	pub fn swap_dump(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: String,
+	) -> Result<String, Error> {
+		owner_swap::swap_dump(self.wallet_inst.clone(), keychain_mask, &swap_id)
+	}
+
 	/// Get swap state and action
 	pub fn get_swap_status_action(
 		&self,
