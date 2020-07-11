@@ -166,7 +166,7 @@
         ]
       }
     },
-    "amount": "0",
+    "amount": "99996000000",
     "fee": "4000000",
     "height": "300000",
     "lock_height": "300720",
@@ -207,9 +207,9 @@
         "kernels": []
       }
     },
-    "amount": "0",
-    "fee": "0",
-    "height": "0",
+    "amount": "99996000000",
+    "fee": "4000000",
+    "height": "300002",
     "lock_height": "0",
     "ttl_cutoff_height": null,
     "participant_data": [
