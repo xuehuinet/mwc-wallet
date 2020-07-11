@@ -15,7 +15,12 @@
 use super::ErrorKind;
 use crate::swap::types::Context;
 use crate::swap::Swap;
+use base64;
+use grin_util::secp::key::SecretKey;
 use grin_util::RwLock;
+use grin_util::{from_hex, to_hex};
+use rand::{thread_rng, Rng};
+use ring::aead;
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -86,7 +91,7 @@ pub fn delete_swap_trade(swap_id: &str) -> Result<(), ErrorKind> {
 
 // TODO -  Swap data contain bunch of secrets
 /// Get swap trade from the storage.
-pub fn get_swap_trade(swap_id: &str) -> Result<(Context, Swap), ErrorKind> {
+pub fn get_swap_trade(swap_id: &str, dec_key: &SecretKey) -> Result<(Context, Swap), ErrorKind> {
 	let path = TRADE_DEALS_PATH
 		.read()
 		.clone()
@@ -108,8 +113,10 @@ pub fn get_swap_trade(swap_id: &str) -> Result<(Context, Swap), ErrorKind> {
 			format!("Unable to read data from {}, {}", path.to_str().unwrap(), e),
 		)
 	})?;
+	let enc_swap_content: EncryptedSwap = serde_json::from_str(&content).unwrap();
+	let dec_swap_content = enc_swap_content.decrypt(&dec_key)?;
 
-	let mut split = content.split("<#>");
+	let mut split = dec_swap_content.split("<#>");
 
 	let context_str = split.next();
 	let swap_str = split.next();
@@ -140,7 +147,11 @@ pub fn get_swap_trade(swap_id: &str) -> Result<(Context, Swap), ErrorKind> {
 // TODO - move swap storage to separate file. It is bigger problem, the data need to be encrypted because
 // Swap data contain bunch of secrets
 /// Store swap deal to a file
-pub fn store_swap_trade(context: &Context, swap: &Swap) -> Result<(), ErrorKind> {
+pub fn store_swap_trade(
+	context: &Context,
+	swap: &Swap,
+	enc_key: &SecretKey,
+) -> Result<(), ErrorKind> {
 	// Writing to bak file. We don't want to loose the data in case of failure. It least the prev step will be left
 	let swap_id = swap.id.to_string();
 	let path = TRADE_DEALS_PATH
@@ -173,17 +184,23 @@ pub fn store_swap_trade(context: &Context, swap: &Swap) -> Result<(), ErrorKind>
 			)
 		})?;
 		let res_str = context_ser + "<#>" + swap_ser.as_str();
-
-		stored_swap.write_all(&res_str.as_bytes()).map_err(|e| {
-			ErrorKind::TradeIoError(
-				swap_id.clone(),
-				format!(
-					"Unable to write swap deal to file {}, {}",
-					path.to_str().unwrap(),
-					e
-				),
-			)
+		let encrypted_swap = EncryptedSwap::from_json(&res_str, enc_key).unwrap();
+		let enc_swap_ser = serde_json::to_string(&encrypted_swap).map_err(|e| {
+			ErrorKind::TradeEncDecError(format!("Unable to serialize encrypted swap, {}", e))
 		})?;
+
+		stored_swap
+			.write_all(&enc_swap_ser.as_bytes())
+			.map_err(|e| {
+				ErrorKind::TradeIoError(
+					swap_id.clone(),
+					format!(
+						"Unable to write swap deal to file {}, {}",
+						path.to_str().unwrap(),
+						e
+					),
+				)
+			})?;
 		stored_swap.sync_all().map_err(|e| {
 			ErrorKind::TradeIoError(
 				swap_id.clone(),
@@ -209,4 +226,126 @@ pub fn store_swap_trade(context: &Context, swap: &Swap) -> Result<(), ErrorKind>
 	})?;
 
 	Ok(())
+}
+
+/// Dump the content of swap file
+pub fn dump_swap_trade(swap_id: &str, dec_key: &SecretKey) -> Result<String, ErrorKind> {
+	let path = TRADE_DEALS_PATH
+		.read()
+		.clone()
+		.unwrap()
+		.join(format!("{}.swap", swap_id));
+	if !path.exists() {
+		return Err(ErrorKind::TradeNotFound(swap_id.to_string()));
+	}
+	let mut swap_deal_f = File::open(path.clone()).map_err(|e| {
+		ErrorKind::TradeIoError(
+			swap_id.to_string(),
+			format!("Unable to open file {}, {}", path.to_str().unwrap(), e),
+		)
+	})?;
+	let mut content = String::new();
+	swap_deal_f.read_to_string(&mut content).map_err(|e| {
+		ErrorKind::TradeIoError(
+			swap_id.to_string(),
+			format!("Unable to read data from {}, {}", path.to_str().unwrap(), e),
+		)
+	})?;
+	let enc_swap_content: EncryptedSwap = serde_json::from_str(&content).unwrap();
+	let dec_swap_content = enc_swap_content.decrypt(&dec_key)?;
+
+	Ok(dec_swap_content)
+}
+
+/// Encrypt and decrypt swap files
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct EncryptedSwap {
+	/// nonce used for encryption
+	pub nonce: String,
+	/// Encrypted base64 body swap + context
+	pub body_enc: String,
+}
+
+impl EncryptedSwap {
+	/// Encrypts and encodes json as base 64
+	pub fn from_json(json_in: &String, enc_key: &SecretKey) -> Result<Self, ErrorKind> {
+		let mut to_encrypt = serde_json::to_string(&json_in)
+			.map_err(|e| {
+				ErrorKind::TradeEncDecError(format!(
+					"EncryptSwap Enc: unable to encode Json, {}",
+					e
+				))
+			})?
+			.as_bytes()
+			.to_vec();
+
+		let nonce: [u8; 12] = thread_rng().gen();
+		let unbound_key = aead::UnboundKey::new(&aead::AES_256_GCM, &enc_key.0).unwrap();
+		let sealing_key: aead::LessSafeKey = aead::LessSafeKey::new(unbound_key);
+		let aad = aead::Aad::from(&[]);
+		let res = sealing_key.seal_in_place_append_tag(
+			aead::Nonce::assume_unique_for_key(nonce),
+			aad,
+			&mut to_encrypt,
+		);
+		if let Err(e) = res {
+			return Err(ErrorKind::TradeEncDecError(format!(
+				"EncryptedSwap Enc: Encryption failed, {}",
+				e
+			))
+			.into());
+		}
+
+		Ok(EncryptedSwap {
+			nonce: to_hex(nonce.to_vec()),
+			body_enc: base64::encode(&to_encrypt),
+		})
+	}
+
+	/// Decrypts and returns the original swap+context
+	pub fn decrypt(&self, dec_key: &SecretKey) -> Result<String, ErrorKind> {
+		let mut to_decrypt = base64::decode(&self.body_enc).map_err(|e| {
+			ErrorKind::TradeEncDecError(format!(
+				"EncryptedSwap Dec: Encrypted swap contains invalid Base64, {}",
+				e
+			))
+		})?;
+
+		let nonce = from_hex(&self.nonce).map_err(|e| {
+			ErrorKind::TradeEncDecError(format!(
+				"EncryptedSwap Dec: Encrypted request contains invalid nonce, {}",
+				e
+			))
+		})?;
+		if nonce.len() < 12 {
+			return Err(ErrorKind::TradeEncDecError(
+				"EncryptedSwap Dec: Invalid Nonce length".to_string(),
+			)
+			.into());
+		}
+
+		let mut n = [0u8; 12];
+		n.copy_from_slice(&nonce[0..12]);
+		let unbound_key = aead::UnboundKey::new(&aead::AES_256_GCM, &dec_key.0).unwrap();
+		let opening_key: aead::LessSafeKey = aead::LessSafeKey::new(unbound_key);
+		let aad = aead::Aad::from(&[]);
+
+		opening_key
+			.open_in_place(aead::Nonce::assume_unique_for_key(n), aad, &mut to_decrypt)
+			.map_err(|e| {
+				ErrorKind::TradeEncDecError(format!("EncryptedSwap Dec: Decryption failed, {}", e))
+			})?;
+
+		for _ in 0..aead::AES_256_GCM.tag_len() {
+			to_decrypt.pop();
+		}
+
+		let decrypted = String::from_utf8(to_decrypt).map_err(|_| {
+			ErrorKind::TradeEncDecError("EncryptedSwap Dec: Invalid UTF-8".to_string())
+		})?;
+
+		Ok(serde_json::from_str(&decrypted).map_err(|e| {
+			ErrorKind::TradeEncDecError(format!("EncryptedSwap Dec: Invalid JSON, {}", e))
+		})?)
+	}
 }

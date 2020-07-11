@@ -114,6 +114,9 @@ pub enum ErrorKind {
 	/// swap trade IO error
 	#[fail(display = "Swap trade {} IO error, {}", _0, _1)]
 	TradeIoError(String, String),
+	/// swap trade encryption/decryption error
+	#[fail(display = "Swap trade {} encryption/decryption error", _0)]
+	TradeEncDecError(String),
 	/// Generic error
 	#[fail(display = "Swap generic error, {}", _0)]
 	Generic(String),

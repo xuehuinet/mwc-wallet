@@ -553,6 +553,11 @@ subcommands:
             short: p
             long: process
             takes_value: false
+        - dump:
+            help: Dump the content of the swap file decrypted on screen
+            short: u
+            long: dump
+            takes_value: false
         - action:
             help: Action step to perform. Expected match 'check' output
             short: a
