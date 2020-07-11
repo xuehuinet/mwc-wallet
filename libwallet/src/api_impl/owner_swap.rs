@@ -102,6 +102,7 @@ where
 		params.secondary_amount, // btc amount to buy
 		secondary_currency,
 		params.secondary_redeem_address.clone(),
+		params.seller_lock_first,
 		params.required_mwc_lock_confirmations,
 		params.required_secondary_lock_confirmations,
 		params.mwc_lock_time_seconds,

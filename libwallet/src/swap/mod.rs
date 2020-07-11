@@ -385,6 +385,7 @@ mod tests {
 				3_000_000,
 				Currency::Btc,
 				secondary_redeem_address,
+				true, // mwc should be publisher first
 				30,
 				3,
 				3600 * 23,
@@ -431,6 +432,7 @@ mod tests {
 				btc_amount,
 				Currency::Btc,
 				secondary_redeem_address,
+				true, // lock MWC first
 				30,
 				6,
 				3600 * 12,
@@ -448,18 +450,18 @@ mod tests {
 
 		if write_json {
 			write(
-				"swap_test/swap_sell_10001.json",
+				"swap_test/swap_sell_1.json",
 				serde_json::to_string_pretty(&swap_sell).unwrap(),
 			)
 			.unwrap();
 
 			write(
-				"swap_test/message_10001.json",
+				"swap_test/message_1.json",
 				serde_json::to_string_pretty(&message_1).unwrap(),
 			)
 			.unwrap();
 			write(
-				"swap_test/context_sell0001.json",
+				"swap_test/context_sell.json",
 				serde_json::to_string_pretty(&ctx_sell).unwrap(),
 			)
 			.unwrap();
@@ -497,6 +499,23 @@ mod tests {
 		let message_2 = api_buy.message(&kc_buy, &swap_buy).unwrap();
 		let action = api_buy
 			.message_sent(&kc_buy, &mut swap_buy, &ctx_buy)
+			.unwrap();
+
+		// Expected to wait for the Seller to deposit MWC and wait for 3 blocks ( 30/10 = 3 )
+		match action {
+			Action::Confirmations { required, actual } => {
+				assert_eq!(required, 3);
+				assert_eq!(actual, 0);
+			}
+			_ => panic!("Invalid action"),
+		}
+
+		// !!!!!!!!!!!!!!!!!!!!!!
+		// Here we are changing lock order because we want to keep tests original. Waitinmg case is covered, can go normally
+		swap_buy.seller_lock_first = false;
+		swap_sell.seller_lock_first = false;
+		let action = api_buy
+			.required_action(&kc_buy, &mut swap_buy, &ctx_buy)
 			.unwrap();
 
 		// Buyer: should deposit bitcoin

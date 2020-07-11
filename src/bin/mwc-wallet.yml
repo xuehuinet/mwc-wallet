@@ -488,6 +488,15 @@ subcommands:
             short: a
             long: secondary_address
             takes_value: true
+        - who_lock_first:
+            help: Coins locking order. Another party will wait until transaction will be published
+            short: l
+            long: who_lock_first
+            takes_value: true
+            possible_values:
+              - buyer
+              - seller
+            default_value: buyer
         - required_mwc_lock_confirmations:
             help: Number of confirmations required for locked MWC coins
             long: mwc_lock_confirmations

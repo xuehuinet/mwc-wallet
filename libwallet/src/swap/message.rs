@@ -137,6 +137,10 @@ pub struct OfferUpdate {
 	pub version: u8,
 	/// The type of the network. Floonet or mainnet
 	pub network: Network,
+	/// Flag that specify the Locking fund order (Will wait for the fact that transaction is publishing, not for all confirmations).
+	///    true: Seller lock MWC first, then Buyer BTC.
+	///    false: Buyer lock BTC first, then Seller does lock.
+	pub seller_lock_first: bool,
 	/// Number of MWC to offer
 	#[serde(with = "secp_ser::string_or_u64")]
 	pub primary_amount: u64,

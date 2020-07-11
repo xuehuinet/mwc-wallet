@@ -96,6 +96,7 @@ impl BuyApi {
 			version: CURRENT_VERSION,
 			network: offer.network,
 			role: Role::Buyer,
+			seller_lock_first: offer.seller_lock_first,
 			started,
 			status: Status::Offered,
 			primary_amount: offer.primary_amount,
