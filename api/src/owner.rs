@@ -195,6 +195,7 @@ where
 	pub fn new(
 		wallet_inst: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K>>>>,
 		custom_channel: Option<Sender<StatusMessage>>,
+		tor_config: Option<TorConfig>,
 	) -> Self {
 		let updater_running = Arc::new(AtomicBool::new(false));
 		let updater = Arc::new(Mutex::new(owner_updater::Updater::new(
@@ -223,7 +224,7 @@ where
 			updater_running,
 			status_tx: Mutex::new(Some(tx)),
 			updater_messages,
-			tor_config: Mutex::new(None),
+			tor_config: Mutex::new(tor_config),
 			updater_log_thread: handle,
 			updater_log_running_state: running,
 		}
