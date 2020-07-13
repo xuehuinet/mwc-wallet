@@ -75,8 +75,8 @@ impl BtcData {
 	where
 		K: Keychain,
 	{
-		// Don't lock for more than 12 days. 12 Days is enough to do a swap with 5000 confirmations.
-		if lock_time > (Utc::now().timestamp() + 3600 * 24 * 12) as u32 {
+		// Don't lock for more than 30 days. Even 12 Days is enough to do a swap with 5000 confirmations.
+		if lock_time > (Utc::now().timestamp() + 3600 * 24 * 30) as u32 {
 			return Err(ErrorKind::Generic(
 				"BTC locking time interval is larger than 12 days. Is it a scam?".to_string(),
 			));
