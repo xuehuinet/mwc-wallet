@@ -21,6 +21,7 @@ use crate::libwallet::{
 };
 
 use crate::util;
+use chrono::prelude::*;
 use colored::*;
 use grin_wallet_libwallet::swap::types::SwapTransactionsConfirmations;
 use grin_wallet_util::OnionV3Address;
@@ -648,7 +649,7 @@ pub fn swap_trade(
 	status: &Status,
 	action: &Action,
 	tx_conf: &SwapTransactionsConfirmations,
-) {
+) -> Result<(), Error> {
 	println!("Swap ID: {}", swap.id);
 	println!(
 		"MWC amount: {}",
@@ -667,6 +668,24 @@ pub fn swap_trade(
 	println!(
 		"Requied {} lock confirmations: {}",
 		swap.secondary_currency, swap.required_secondary_lock_confirmations
+	);
+
+	let sel_lock_h = swap.mwc_lock_time_seconds / 3600;
+	let sel_lock_m = (swap.mwc_lock_time_seconds % 3600) / 60;
+	println!(
+		"Seller locking time for MWC: {} hours, {} minutes at block {}",
+		sel_lock_h, sel_lock_m, swap.lock_slate.lock_height
+	);
+
+	let buyer_lock_time = swap.mwc_lock_time_seconds + swap.seller_redeem_time;
+	let buy_lock_h = buyer_lock_time / 3600;
+	let buy_lock_m = (buyer_lock_time % 3600) / 60;
+	let naive_lock_datetime =
+		NaiveDateTime::from_timestamp(swap.secondary_data.unwrap_btc()?.lock_time as i64, 0);
+	let naive_lock_datetime: DateTime<Utc> = DateTime::from_utc(naive_lock_datetime, Utc);
+	println!(
+		"Buyer locking time for {}: {} hours, {} minutes at {}",
+		swap.secondary_currency, buy_lock_h, buy_lock_m, naive_lock_datetime
 	);
 
 	let mut print_seller = false;
@@ -776,4 +795,6 @@ pub fn swap_trade(
 	println!("Started: {}", swap.started);
 	println!("Status: {}", status);
 	println!("Action: {}", action);
+
+	Ok(())
 }
