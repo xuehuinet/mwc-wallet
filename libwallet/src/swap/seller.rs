@@ -87,8 +87,8 @@ impl SellApi {
 		refund_slate.lock_height = height + mwc_lock_time_seconds / 60;
 		refund_slate.amount = primary_amount.saturating_sub(refund_slate.fee);
 
-		// Don't lock for more than 12 days.
-		let max_lock_time = 1440 * 12;
+		// Don't lock for more than 30 days.
+		let max_lock_time = 1440 * 30;
 
 		if refund_slate.lock_height - refund_slate.height > max_lock_time {
 			return Err(ErrorKind::Generic(
