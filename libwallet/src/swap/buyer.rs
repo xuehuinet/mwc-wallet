@@ -16,9 +16,11 @@ use super::message::*;
 use super::swap::{publish_transaction, tx_add_input, tx_add_output, Swap};
 use super::types::*;
 use super::{is_test_mode, ErrorKind, Keychain, CURRENT_VERSION};
+use crate::swap::bitcoin::BtcData;
 use crate::swap::multisig::{Builder as MultisigBuilder, ParticipantData as MultisigParticipant};
 use crate::{NodeClient, ParticipantData as TxParticipant, Slate, SlateVersion, VersionedSlate};
 use chrono::{TimeZone, Utc};
+use grin_core::core::KernelFeatures;
 use grin_core::libtx::{build, proof, tx_fee};
 use grin_keychain::{BlindSum, BlindingFactor, SwitchCommitmentType};
 use grin_util::secp::aggsig;
@@ -34,12 +36,13 @@ pub struct BuyApi {}
 
 impl BuyApi {
 	/// Accepting Seller offer and create Swap instance
-	pub fn accept_swap_offer<K: Keychain>(
+	pub fn accept_swap_offer<C: NodeClient, K: Keychain>(
 		keychain: &K,
 		context: &Context,
 		id: Uuid,
 		offer: OfferUpdate,
-		height: u64,
+		secondary_update: SecondaryUpdate,
+		node_client: &C,
 	) -> Result<Swap, ErrorKind> {
 		let test_mode = is_test_mode();
 		if offer.version != CURRENT_VERSION {
@@ -49,19 +52,183 @@ impl BuyApi {
 			));
 		}
 
+		// Checking if the network match expected value
+		if offer.network != Network::current_network()? {
+			return Err(ErrorKind::UnexpectedNetwork(format!(
+				", get offer for wrong network {:?}",
+				offer.network
+			)));
+		}
+
 		context.unwrap_buyer()?;
 
-		// Multisig tx needs to be unlocked
+		let now_ts = if test_mode {
+			Utc.ymd(2019, 9, 4)
+				.and_hms_micro(21, 22, 32, 581245)
+				.timestamp()
+		} else {
+			Utc::now().timestamp()
+		};
+
+		// Tolerating 15 seconds clock difference. We don't want surprises with clocks.
+		if offer.start_time.timestamp() > now_ts + 15 {
+			return Err(ErrorKind::InvalidMessageData(
+				"Buyer/Seller clock are out of sync".to_string(),
+			));
+		}
+
+		// Multisig tx needs to be unlocked and valid. Let's take a look at what we get.
 		let lock_slate: Slate = offer.lock_slate.into();
 		if lock_slate.lock_height > 0 {
 			return Err(ErrorKind::InvalidLockHeightLockTx);
 		}
+		if lock_slate.amount != offer.primary_amount {
+			return Err(ErrorKind::InvalidMessageData(
+				"Lock Slate amount doesn't match offer".to_string(),
+			));
+		}
+		if lock_slate.fee
+			!= tx_fee(
+				lock_slate.tx.body.inputs.len(),
+				lock_slate.tx.body.outputs.len() + 1,
+				1,
+				None,
+			) {
+			return Err(ErrorKind::InvalidMessageData(
+				"Lock Slate fee doesn't match expected value".to_string(),
+			));
+		}
+		if lock_slate.num_participants != 2 {
+			return Err(ErrorKind::InvalidMessageData(
+				"Lock Slate participans doesn't match expected value".to_string(),
+			));
+		}
 
-		// Refund tx needs to be locked until at least 10 hours in the future
+		if lock_slate.tx.body.kernels.len() != 1 {
+			return Err(ErrorKind::InvalidMessageData(
+				"Lock Slate invalid kernels".to_string(),
+			));
+		}
+		match lock_slate.tx.body.kernels[0].features {
+			KernelFeatures::Plain { fee } => {
+				if fee != lock_slate.fee {
+					return Err(ErrorKind::InvalidMessageData(
+						"Lock Slate invalid kernel fee".to_string(),
+					));
+				}
+			}
+			_ => {
+				return Err(ErrorKind::InvalidMessageData(
+					"Lock Slate invalid kernel feature".to_string(),
+				))
+			}
+		}
+
+		// Let's check inputs. They must exist, we want real inspent coins. We can't check amount, that will be later when we cound validate the sum.
+		// Height of the inputs is not important, we are relaying on locking transaction confirmations that is weaker.
+		if lock_slate.tx.body.inputs.is_empty() {
+			return Err(ErrorKind::InvalidMessageData(
+				"Lock Slate empty inputs".to_string(),
+			));
+		}
+		let res = node_client
+			.get_outputs_from_node(&lock_slate.tx.body.inputs.iter().map(|i| i.commit).collect())?;
+		if res.len() != lock_slate.tx.body.inputs.len() {
+			return Err(ErrorKind::InvalidMessageData(
+				"Lock Slate inputs are not found at the chain".to_string(),
+			));
+		}
+		let height = node_client.get_chain_tip()?.0;
+		if lock_slate.height > height {
+			return Err(ErrorKind::InvalidMessageData(
+				"Lock Slate height is invalid".to_string(),
+			));
+		}
+
+		// Checking Refund slate.
+		// Refund tx needs to be locked until exactly as offer specify. For MWC we are expecting one block every 1 minute.
+		// So numbers should match with accuracy of few blocks.
+		// Note!!! We can't valiry exact number because we don't know what height seller get when he created the offer
 		let refund_slate: Slate = offer.refund_slate.into();
 		// expecting at least half of the interval
-		if refund_slate.lock_height < height + offer.mwc_lock_time_seconds / 2 / 60 {
-			return Err(ErrorKind::InvalidLockHeightRefundTx);
+
+		// Minimum mwc heights
+		let min_block_height =
+			offer.required_mwc_lock_confirmations + offer.required_mwc_lock_confirmations + 10;
+		if refund_slate.lock_height < height + min_block_height {
+			return Err(ErrorKind::InvalidMessageData(
+				"Refund lock slate doesn't meet required number of confirmations".to_string(),
+			));
+		}
+		// Checking if there is enough time. Expecting that Seller didn't create offer ahead. Let's allow 10 minutes (blocks) for processing
+		let min_block_height = std::cmp::max(
+			offer.mwc_lock_time_seconds / 2 / 60,
+			offer.mwc_lock_time_seconds / 60 - 10,
+		);
+		if refund_slate.lock_height < height + min_block_height {
+			return Err(ErrorKind::InvalidMessageData(
+				"Refund lock slate doesn't meet required mwc_lock_time".to_string(),
+			));
+		}
+		if refund_slate.tx.body.kernels.len() != 1 {
+			return Err(ErrorKind::InvalidMessageData(
+				"Refund Slate invalid kernel".to_string(),
+			));
+		}
+		match refund_slate.tx.body.kernels[0].features {
+			KernelFeatures::HeightLocked { fee, lock_height } => {
+				if fee != refund_slate.fee || lock_height != refund_slate.lock_height {
+					return Err(ErrorKind::InvalidMessageData(
+						"Refund Slate invalid kernel fee or height".to_string(),
+					));
+				}
+			}
+			_ => {
+				return Err(ErrorKind::InvalidMessageData(
+					"Refund Slate invalid kernel feature".to_string(),
+				))
+			}
+		}
+		if refund_slate.num_participants != 2 {
+			return Err(ErrorKind::InvalidMessageData(
+				"Refund Slate participans doesn't match expected value".to_string(),
+			));
+		}
+		if refund_slate.amount + refund_slate.fee != lock_slate.amount {
+			return Err(ErrorKind::InvalidMessageData(
+				"Refund Slate amount doesn't match offer".to_string(),
+			));
+		}
+		if refund_slate.fee != tx_fee(1, 1, 1, None) {
+			return Err(ErrorKind::InvalidMessageData(
+				"Refund Slate fee doesn't match expected value".to_string(),
+			));
+		}
+
+		// Checking Secondary data. Focus on timing issues
+		if offer.secondary_currency != Currency::Btc {
+			return Err(ErrorKind::InvalidMessageData(
+				"Unexpected currency value".to_string(),
+			));
+		}
+		// Comparing BTC lock time with expected
+		let btc_data = BtcData::from_offer(
+			keychain,
+			secondary_update.unwrap_btc()?.unwrap_offer()?,
+			context.unwrap_buyer()?.unwrap_btc()?,
+		)?;
+
+		// Let's compare MWC and BTC lock time. It should match the seller_redeem_time. At this step.
+		// We can sacrifice to mining instability 5% at this step
+		let mwc_lock_time = now_ts + (refund_slate.lock_height - height) as i64 * 60;
+		let expected_secondary_lock_time = mwc_lock_time + offer.seller_redeem_time as i64;
+		// 5% will tolerate
+		if (btc_data.lock_time as i64 - expected_secondary_lock_time as i64).abs()
+			> (offer.seller_redeem_time / 20) as i64
+		{
+			return Err(ErrorKind::InvalidMessageData(
+				"Secondary lock time is different from the expected".to_string(),
+			));
 		}
 
 		// Start redeem slate
@@ -77,7 +244,7 @@ impl BuyApi {
 
 		let multisig = MultisigBuilder::new(
 			2,
-			offer.primary_amount,
+			offer.primary_amount, // !!! It is amount that will be put into transactions. It is primary what need to be validated
 			false,
 			1,
 			context.multisig_nonce.clone(),
@@ -102,7 +269,7 @@ impl BuyApi {
 			primary_amount: offer.primary_amount,
 			secondary_amount: offer.secondary_amount,
 			secondary_currency: offer.secondary_currency,
-			secondary_data: SecondaryData::Empty,
+			secondary_data: SecondaryData::Btc(btc_data),
 			redeem_public: None,
 			participant_id: 1,
 			multisig,

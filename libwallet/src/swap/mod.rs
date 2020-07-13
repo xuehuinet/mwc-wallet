@@ -97,6 +97,8 @@ mod tests {
 	use super::message::Message;
 	use super::types::*;
 	use super::*;
+	use grin_core::global;
+	use grin_core::global::ChainTypes;
 
 	const GRIN_UNIT: u64 = 1_000_000_000;
 
@@ -402,12 +404,18 @@ mod tests {
 			TestBtcNodeClient::new(1),
 		);
 		let res = api_buy.accept_swap_offer(&kc_buy, &ctx_buy, message);
-		assert_eq!(res.err().unwrap(), ErrorKind::InvalidLockHeightRefundTx); // Swap cannot be accepted
+		assert_eq!(
+			res.err().unwrap(),
+			ErrorKind::InvalidMessageData(
+				"Lock Slate inputs are not found at the chain".to_string()
+			)
+		); // Swap cannot be accepted
 	}
 
 	#[test]
 	fn test_btc_swap() {
 		set_test_mode(true);
+		global::set_mining_mode(ChainTypes::Floonet);
 		let write_json = false;
 
 		let kc_sell = keychain(1);

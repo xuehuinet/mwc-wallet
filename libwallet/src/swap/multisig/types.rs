@@ -32,7 +32,7 @@ pub struct Builder {
 	num_participants: usize,
 	#[serde(with = "secp_ser::string_or_u64")]
 	/// MWC amount that are used for swap
-	amount: u64,
+	pub amount: u64,
 	/// False: use comitment Hash
 	/// True:  use comitment data
 	commit_reveal: bool,

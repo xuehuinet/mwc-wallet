@@ -1468,7 +1468,7 @@ where
 						let (status, action) =
 							api.get_swap_status_action(keychain_mask, swap_id.clone())?;
 
-						display::swap_trade(swap, &status, &action, &conf_status);
+						display::swap_trade(swap, &status, &action, &conf_status)?;
 						Ok(())
 					}
 					Err(e) => {

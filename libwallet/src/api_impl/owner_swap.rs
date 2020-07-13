@@ -340,7 +340,7 @@ where
 				&mut swap,
 				&context,
 				fee_satoshi_per_byte,
-				false
+				false,
 			)?;
 			trades::store_swap_trade(&context, &swap, &skey)?;
 			println!(

@@ -17,26 +17,26 @@
   "secondary_currency": "Btc",
   "secondary_data": {
     "Btc": {
-      "lock_time": 1567718553,
+      "lock_time": 1567678952,
       "cosign": "03b480859d2dcf9cd66f115b685b2847bf3f52f624d069d802e1dc9362be4f5bdf",
       "refund": "03434496eb1554ad47c7ec5c267e902e1b71a03e189cc4fe9c83d9513e3a4e2e5a",
       "refund_tx": null,
       "confirmed_outputs": [
         {
           "out_point": {
-            "txid": "10680559dfda56f7118f970c276069316a5df3c4609cfe2b0a6dcd6d58f15f49",
-            "vout": 0
-          },
-          "value": 2000000,
-          "height": 500000
-        },
-        {
-          "out_point": {
-            "txid": "2a97b5c3ba148a25701334e809b518287e6dad586e8aeac153a2bd11bc9a6bef",
+            "txid": "aff0f714cd046948240bc29358ae167c9e80bb939175db7265ea096c73a0a33e",
             "vout": 0
           },
           "value": 1000000,
           "height": 500002
+        },
+        {
+          "out_point": {
+            "txid": "0b3e71bbba0607f012ff9dfbced995427ddb32955326aa641aa69bf9c1e5cbe9",
+            "vout": 0
+          },
+          "value": 2000000,
+          "height": 500000
         }
       ],
       "locked": false,
