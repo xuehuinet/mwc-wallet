@@ -25,8 +25,8 @@ use crate::impls::create_sender;
 use crate::keychain::{Identifier, Keychain};
 use crate::libwallet::api_impl::owner_updater::{start_updater_log_thread, StatusMessage};
 use crate::libwallet::api_impl::{owner, owner_swap, owner_updater};
-use crate::libwallet::swap::swap::Swap;
 use crate::libwallet::swap::types::{Action, Status, SwapTransactionsConfirmations};
+use crate::libwallet::swap::{message::Message, swap::Swap};
 use crate::libwallet::{
 	AcctPathMapping, Error, ErrorKind, InitTxArgs, IssueInvoiceTxArgs, NodeClient,
 	NodeHeightResult, OutputCommitMapping, PaymentProof, Slate, SwapStartArgs, TxLogEntry,
@@ -2374,6 +2374,15 @@ where
 		swap_id: String,
 	) -> Result<SwapTransactionsConfirmations, Error> {
 		owner_swap::get_swap_tx_tstatus(self.wallet_inst.clone(), keychain_mask, &swap_id)
+	}
+
+	/// Fetch swap message to send to the other party
+	pub fn fetch_swap_message(
+		&self,
+		keychain_mask: Option<&SecretKey>,
+		swap_id: String,
+	) -> Result<Message, Error> {
+		owner_swap::fetch_swap_message(self.wallet_inst.clone(), keychain_mask, &swap_id)
 	}
 
 	pub fn swap_process(

@@ -53,6 +53,7 @@ pub use crate::adapters::{
 	HttpSlateSender, HttpsAddress, KeybaseAddress, KeybasePublisher, KeybaseSubscriber,
 	MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber, MwcMqsChannel, PathToSlate, Publisher,
 	SlateGetter, SlatePutter, SlateReceiver, SlateSender, Subscriber, SubscriptionHandler,
+	SwapMessageSender,
 };
 pub use crate::backends::{wallet_db_exists, LMDBBackend};
 pub use crate::error::{Error, ErrorKind};

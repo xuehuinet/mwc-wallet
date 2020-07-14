@@ -32,10 +32,8 @@ use serde_json;
 
 use grin_wallet_impls::{Address, CloseReason, MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber, Publisher,
 						Subscriber, SubscriptionHandler, KeybasePublisher, KeybaseSubscriber};
-//use grin_wallet_impls::swap::dealer::SwapDealer;
-//use grin_wallet_impls::swap::message::SwapConfig;
-use grin_wallet_libwallet::swap::message::Message;
 use grin_wallet_libwallet::wallet_lock;
+use grin_wallet_libwallet::swap::message::Message;
 use grin_wallet_util::grin_core::core;
 
 use crate::apiwallet::{
@@ -427,21 +425,18 @@ where
 
 	fn process_incoming_swap_message(
 		&self,
-		_from: &dyn Address,
-		_swapmessage: Message
+		swapmessage: Message
 	) -> Result<(), Error> {
-		// TODO  - Call Owner API that will process the message
-/*		let swap_dealer = SwapDealer::new();
-		if self.swap_config.is_some() {
-			swap_dealer.process_swap_message(self.wallet.clone(),
-											 from,
-											 swapmessage,
-											 self.publisher.lock().as_ref().expect("error"),
-											 self.clone().swap_config.unwrap())
-				.map_err(|e| {
-					ErrorKind::ProcessSwapMessageError(format!("Failed to process swap messages, {}", e))
-				})?;
-		}*/
+		let owner_api = Owner::new(self.wallet.clone(), None);
+		let mask = self.keychain_mask.lock().clone();
+
+		let msg_str = serde_json::to_string(&swapmessage).map_err(|e| {
+			ErrorKind::ProcessSwapMessageError(format!(
+				"Error in processing incoming swap message from mqs, {}", e
+			))
+		})?;
+		owner_api.swap_income_message((&mask).as_ref(), msg_str)?;
+
 		Ok(())
 	}
 
@@ -520,12 +515,12 @@ where
 		}
 	}
 
-	fn on_swap_message(&self, from: &dyn Address, swap: Message) {
-		let result = self.process_incoming_swap_message(from, swap);
+	fn on_swap_message(&self, swap: Message) {
+		let result = self.process_incoming_swap_message(swap);
 
 		match result {
+			Ok(()) => {}
 			Err(e) => self.do_log_error(format!("{}", e)),
-			_ => {}
 		}
 	}
 

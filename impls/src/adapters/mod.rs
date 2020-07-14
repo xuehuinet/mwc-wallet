@@ -27,6 +27,7 @@ pub use self::keybase::{
 
 use crate::config::{TorConfig, WalletConfig};
 use crate::error::{Error, ErrorKind};
+use crate::libwallet::swap::message::Message;
 use crate::libwallet::Slate;
 use crate::tor::config::complete_tor_address;
 use crate::util::ZeroingString;
@@ -70,6 +71,11 @@ pub trait SlateGetter {
 	fn get_tx(&self) -> Result<Slate, Error>;
 }
 
+/// Swap Message Sender
+pub trait SwapMessageSender {
+	fn send_swap_message(&self, swap_message: &Message) -> Result<(), Error>;
+}
+
 /// select a SlateSender based on method and dest fields from, e.g., SendArgs
 pub fn create_sender(
 	method: &str,
@@ -84,19 +90,9 @@ pub fn create_sender(
 		))
 	};
 
-	let mut method = method;
+	let (method, dest) = validate_tor_address(method, dest)?;
 
-	// will test if this is a tor address and fill out
-	// the http://[].onion if missing
-	let dest = match complete_tor_address(dest) {
-		Ok(d) => {
-			method = "tor";
-			d
-		}
-		Err(_) => dest.into(),
-	};
-
-	Ok(match method {
+	Ok(match method.as_str() {
 		"http" => Box::new(
 			HttpSlateSender::new(&dest, apisecret.clone(), None, false).map_err(|e| invalid(e))?,
 		),
@@ -119,24 +115,75 @@ pub fn create_sender(
 		},
 		"keybase" => Box::new(KeybaseChannel::new(dest)),
 		"mwcmqs" => Box::new(MwcMqsChannel::new(dest)),
-		"self" => {
-			return Err(ErrorKind::WalletComms(
-				"No sender implementation for \"self\".".to_string(),
-			)
-			.into());
+		_ => {
+			return Err(handle_unsupported_types(method.as_str()));
 		}
+	})
+}
+
+/// create a Swap Message Sender
+pub fn create_swap_message_sender(
+	method: &str,
+	dest: &str,
+	_apisecret: &Option<String>,
+	_tor_config: Option<TorConfig>,
+) -> Result<Box<dyn SwapMessageSender>, Error> {
+	/*let invalid = |e| {
+		ErrorKind::WalletComms(format!(
+			"Invalid wallet comm type and destination. method: {}, dest: {}, error: {}",
+			method, dest, e
+		))
+	}; */
+
+	let (method, dest) = validate_tor_address(method, dest)?;
+
+	Ok(match method.as_str() {
+		//"http" => Box::new(),
+		//"tor" => Box::new(),
+		//"keybase" => Box::new(),
+		"mwcmqs" => Box::new(MwcMqsChannel::new(dest)),
+		_ => {
+			return Err(handle_unsupported_types(method.as_str()));
+		}
+	})
+}
+
+/// create sender common
+pub fn validate_tor_address(method: &str, dest: &str) -> Result<(String, String), Error> {
+	let mut method = method;
+
+	// will test if this is a tor address and fill out
+	// the http://[].onion if missing
+	let dest = match complete_tor_address(dest) {
+		Ok(d) => {
+			method = "tor";
+			d
+		}
+		Err(_) => dest.into(),
+	};
+
+	Ok((method.to_string(), dest))
+}
+
+/// create sender not-supported types
+pub fn handle_unsupported_types(method: &str) -> Error {
+	match method {
 		"file" => {
-			return Err(ErrorKind::WalletComms(
+			return ErrorKind::WalletComms(
 				"File based transactions must be performed asynchronously.".to_string(),
 			)
-			.into());
+			.into();
+		}
+		"self" => {
+			return ErrorKind::WalletComms("No sender implementation for \"self\".".to_string())
+				.into();
 		}
 		_ => {
-			return Err(ErrorKind::WalletComms(format!(
+			return ErrorKind::WalletComms(format!(
 				"Wallet comm method \"{}\" does not exist.",
 				method
 			))
-			.into());
+			.into();
 		}
-	})
+	}
 }

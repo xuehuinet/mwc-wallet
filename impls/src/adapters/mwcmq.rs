@@ -17,15 +17,16 @@ use crate::adapters::types::MWCMQSAddress;
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::proof::crypto;
 use crate::libwallet::proof::crypto::Hex;
-//use crate::swap::message::SwapMessage;
 use crate::util::Mutex;
 use crate::SlateSender;
+use crate::SwapMessageSender;
 use grin_core::core::amount_to_hr_string;
 use grin_util::RwLock;
 use grin_wallet_libwallet::proof::message::EncryptedMessage;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
 use grin_wallet_libwallet::proof::tx_proof::{push_proof_for_slate, TxProof};
 use grin_wallet_libwallet::swap::message::Message;
+use grin_wallet_libwallet::swap::message::SwapMessage;
 use grin_wallet_libwallet::Slate;
 use grin_wallet_util::grin_util::secp::key::SecretKey;
 use regex::Regex;
@@ -106,6 +107,26 @@ impl MwcMqsChannel {
 			})?;
 		return Ok(slate_returned);
 	}
+
+	fn send_swap_to_mqs(
+		&self,
+		swap_message: &Message,
+		mwcmqs_publisher: MWCMQPublisher,
+		_rs_message: Receiver<Message>,
+	) -> Result<(), Error> {
+		let des_address = MWCMQSAddress::from_str(self.des_address.as_ref()).map_err(|e| {
+			ErrorKind::MqsGenericError(format!("Invalid destination address, {}", e))
+		})?;
+		mwcmqs_publisher
+			.post_take(swap_message, &des_address)
+			.map_err(|e| {
+				ErrorKind::MqsGenericError(format!(
+					"MQS unable to transfer swap message {} to the worker, {}",
+					swap_message.id, e
+				))
+			})?;
+		Ok(())
+	}
 }
 
 impl SlateSender for MwcMqsChannel {
@@ -122,6 +143,23 @@ impl SlateSender for MwcMqsChannel {
 			return Err(ErrorKind::MqsGenericError(format!(
 				"MQS is not started, not able to send the slate {}",
 				slate.id
+			))
+			.into());
+		}
+	}
+}
+
+impl SwapMessageSender for MwcMqsChannel {
+	fn send_swap_message(&self, message: &Message) -> Result<(), Error> {
+		if let Some((mwcmqs_publisher, _mwcmqs_subscriber)) = get_mwcmqs_brocker() {
+			let (_ts_message, rs_message) = channel();
+
+			let res = self.send_swap_to_mqs(message, mwcmqs_publisher, rs_message);
+			res
+		} else {
+			return Err(ErrorKind::MqsGenericError(format!(
+				"MQS is not started, not able to send the swap message {}",
+				message.id
 			))
 			.into());
 		}
@@ -202,8 +240,9 @@ impl Publisher for MWCMQPublisher {
 		Ok(slate)
 	}
 
-	fn post_take(&self, message: &Message, to: &str) -> Result<(), Error> {
-		let to_address = MWCMQSAddress::from_str(to)?;
+	fn post_take(&self, message: &Message, to: &dyn Address) -> Result<(), Error> {
+		let to_address_raw = format!("mwcmqs://{}", to.get_stripped());
+		let to_address = MWCMQSAddress::from_str(&to_address_raw)?;
 		self.broker
 			.post_take(message, &to_address, &self.address, &self.secret_key)?;
 		Ok(())
@@ -952,7 +991,15 @@ impl MWCMQSBroker {
 						}
 
 						for i in 0..3 {
-							if splitxvec[i].starts_with("mapmessage=") {
+							if splitxvec[i].starts_with("mapmessage=")
+								|| splitxvec[i].starts_with("swapmessage=")
+							{
+								let slate_or_swap = if splitxvec[i].starts_with("mapmessage") {
+									"slate"
+								} else {
+									"swap"
+								};
+
 								let split2 = splitxvec[i].split("=");
 								let vec2: Vec<&str> = split2.collect();
 								if vec2.len() <= 1 {
@@ -983,72 +1030,43 @@ impl MWCMQSBroker {
 									from.unwrap()
 								};
 
-								let (mut slate, tx_proof) = match TxProof::from_response(
-									&from.address,
-									r5.clone(),
-									"".to_string(),
-									signature.clone(),
-									&secret_key,
-									&source_address,
-								) {
-									Ok(x) => x,
-									Err(err) => {
-										self.do_log_error(format!("{}", err));
-										continue;
-									}
-								};
+								if slate_or_swap == "slate" {
+									let (mut slate, tx_proof) = match TxProof::from_response(
+										&from.address,
+										r5.clone(),
+										"".to_string(),
+										signature.clone(),
+										&secret_key,
+										&source_address,
+									) {
+										Ok(x) => x,
+										Err(err) => {
+											self.do_log_error(format!("{}", err));
+											continue;
+										}
+									};
+									push_proof_for_slate(&slate.id, tx_proof);
+									self.handler.lock().on_slate(&from, &mut slate);
+								} else if slate_or_swap == "swap" {
+									let swap_message = match SwapMessage::from_received(
+										&from.address,
+										r5.clone(),
+										"".to_string(),
+										signature.clone(),
+										&secret_key,
+									) {
+										Ok(x) => x,
+										Err(err) => {
+											self.do_log_error(format!("{}", err));
+											continue;
+										}
+									};
+									self.handler.lock().on_swap_message(swap_message);
+								}
 
-								push_proof_for_slate(&slate.id, tx_proof);
-
-								self.handler.lock().on_slate(&from, &mut slate);
 								break;
 							}
 						}
-						// TODO  process this message and call Owner API that process swap messages
-						/*for i in 0..3 {
-							if splitxvec[i].starts_with("swapmessage=") {
-								// TODO  code duplicaiton
-								let split2 = splitxvec[i].split("=");
-								let vec2: Vec<&str> = split2.collect();
-								if vec2.len() <= 1 {
-									self.print_error(msgvec.clone(), "vec2.len <= 1", -5);
-									is_error = true;
-									continue;
-								}
-								let r1 = str::replace(vec2[1], "%22", "\"");
-								let r2 = str::replace(&r1, "%7B", "{");
-								let r3 = str::replace(&r2, "%7D", "}");
-								let r4 = str::replace(&r3, "%3A", ":");
-								let r5 = str::replace(&r4, "%2C", ",");
-								let r5 = r5.trim().to_string();
-
-								let from = MWCMQSAddress::from_str(&from);
-								let from = if !from.is_ok() {
-									self.print_error(msgvec.clone(), "error parsing from", -12);
-									is_error = true;
-									continue;
-								} else {
-									from.unwrap()
-								};
-
-								let swapmessage = match SwapMessage::from_response(
-									&from.address,
-									r5.clone(),
-									"".to_string(),
-									signature.clone(),
-									&secret_key,
-								) {
-									Ok(x) => x,
-									Err(err) => {
-										self.do_log_error(format!("{}", err));
-										continue;
-									}
-								};
-
-								self.handler.lock().on_swap_message(&from, swapmessage);
-								break;
-							}
-						}*/
 					}
 
 					if break_out {

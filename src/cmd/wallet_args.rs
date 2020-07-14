@@ -978,6 +978,7 @@ pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseErro
 	let retry = args.value_of("retry").map(|s| String::from(s));
 	let method = args.value_of("method").map(|s| String::from(s));
 	let destination = args.value_of("dest").map(|s| String::from(s));
+	let apisecret = args.value_of("apisecret").map(|s| String::from(s));
 	let secondary_fee_per_byte = match args.value_of("secondary_fee_per_byte") {
 		Some(s) => Some(parse_f32(s, "secondary_fee_per_byte")?),
 		None => None,
@@ -1007,6 +1008,7 @@ pub fn parse_swap_args(args: &ArgMatches) -> Result<command::SwapArgs, ParseErro
 		retry,
 		method,
 		destination,
+		apisecret,
 		fee_satoshi_per_byte: secondary_fee_per_byte,
 	})
 }
@@ -1376,7 +1378,15 @@ where
 		}
 		("swap", Some(args)) => {
 			let a = arg_parse!(parse_swap_args(&args));
-			command::swap(owner_api, km, a)
+			command::swap(
+				owner_api,
+				km,
+				&wallet_config,
+				Some(mqs_config.clone()),
+				Some(tor_config.clone()),
+				&global_wallet_args.clone(),
+				a,
+			)
 		}
 		("swap_message", Some(args)) => {
 			let message_filename = parse_required(args, "file")
