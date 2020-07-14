@@ -205,7 +205,7 @@ impl Publisher for KeybasePublisher {
 		unimplemented!();
 	}
 
-	fn post_take(&self, _message: &Message, _to: &str) -> Result<(), Error> {
+	fn post_take(&self, _message: &Message, _to: &dyn Address) -> Result<(), Error> {
 		unimplemented!();
 	}
 }

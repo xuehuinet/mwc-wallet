@@ -28,6 +28,7 @@ use crate::libwallet::{
 use crate::util::secp::key::SecretKey;
 use crate::util::{Mutex, ZeroingString};
 use crate::{controller, display};
+use grin_wallet_impls::adapters::create_swap_message_sender;
 use grin_wallet_libwallet::swap::types::Action;
 use grin_wallet_libwallet::{Slate, TxLogEntry};
 use grin_wallet_util::OnionV3Address;
@@ -1394,6 +1395,8 @@ pub struct SwapArgs {
 	pub method: Option<String>,
 	/// Destination is something needed to be send
 	pub destination: Option<String>,
+	/// Apisecret of the other party of the swap
+	pub apisecret: Option<String>,
 	/// Secondary currency fee. Satoshi per byte.
 	pub fee_satoshi_per_byte: Option<f32>,
 }
@@ -1401,6 +1404,10 @@ pub struct SwapArgs {
 pub fn swap<L, C, K>(
 	owner_api: &mut Owner<L, C, K>,
 	keychain_mask: Option<&SecretKey>,
+	config: &WalletConfig,
+	mqs_config: Option<MQSConfig>,
+	tor_config: Option<TorConfig>,
+	g_args: &GlobalArgs,
 	args: SwapArgs,
 ) -> Result<(), Error>
 where
@@ -1408,6 +1415,11 @@ where
 	C: NodeClient + 'static,
 	K: keychain::Keychain + 'static,
 {
+	let wallet_inst = owner_api.wallet_inst.clone();
+	let km = match keychain_mask.as_ref() {
+		None => None,
+		Some(&m) => Some(m.to_owned()),
+	};
 	match args.subcommand {
 		SwapSubcommand::List => {
 			controller::owner_single_use(None, keychain_mask, Some(owner_api), |api, _m| {
@@ -1495,6 +1507,52 @@ where
 				let (_swap_status, swap_action) =
 					api.get_swap_status_action(keychain_mask, swap_id.clone())?;
 
+				let method = args.method.clone().unwrap_or("file".to_string());
+				match method.as_str() {
+					"keybase" => {
+						let _ = controller::init_start_keybase_listener(
+							config.clone(),
+							wallet_inst.clone(),
+							Arc::new(Mutex::new(km)),
+							false,
+						)?;
+						thread::sleep(Duration::from_millis(2000));
+					}
+					"mwcmqs" => {
+						//start the listener finalize tx
+						let _ = controller::init_start_mwcmqs_listener(
+							config.clone(),
+							wallet_inst.clone(),
+							mqs_config.expect("No MQS config found!").clone(),
+							Arc::new(Mutex::new(km)),
+							false,
+							//None,
+						)?;
+						thread::sleep(Duration::from_millis(2000));
+					}
+					"http" => {
+						let config = config.clone();
+						let g_args = g_args.clone();
+						let tor_config = tor_config.clone();
+						let _api_thread = thread::Builder::new()
+							.name("wallet-http-listener".to_string())
+							.spawn(move || {
+								let res = controller::foreign_listener(
+									wallet_inst,
+									Arc::new(Mutex::new(km)),
+									&config.api_listen_addr(),
+									g_args.tls_conf.clone(),
+									tor_config.unwrap().use_tor_listener,
+								);
+								if let Err(e) = res {
+									error!("Error starting http listener: {}", e);
+								}
+							});
+						thread::sleep(Duration::from_millis(2000));
+					}
+					_ => {}
+				}
+
 				if let Some(retry_action) = args.retry {
 					// Retring with processing.
 					let retry_action = Action::from_cmd(&retry_action).ok_or(
@@ -1526,22 +1584,23 @@ where
 				let swap_action_str = swap_action.to_cmd().unwrap_or("none".to_string());
 
 				// Let's check the action
-				if action == "continue" {
-					if swap_action_str != "none" {
-						println!("Do you want process {}? (Yes/No)", swap_action);
-						let mut input = String::new();
-						let _ = std::io::stdin().read_line(&mut input);
-						let input = input.to_lowercase().trim().to_string();
-						if !input.starts_with("y") {
-							return Ok(());
+				match action.as_str() {
+					"continue" => {
+						if swap_action_str != "none" {
+							println!("Do you want process {}? (Yes/No)", swap_action);
+							let mut input = String::new();
+							let _ = std::io::stdin().read_line(&mut input);
+							let input = input.to_lowercase().trim().to_string();
+							if !input.starts_with("y") {
+								return Ok(());
+							}
 						}
+						action = swap_action_str.clone();
 					}
-					action = swap_action_str.clone();
-				}
-
-				if action == "none" {
-					println!("Nothing can be done now");
-					return Ok(());
+					_ => {
+						println!("Nothing can be done now");
+						return Ok(());
+					}
 				}
 
 				if action != "cancel" && action != swap_action_str {
@@ -1553,6 +1612,28 @@ where
 				}
 
 				// Some action is expected, let's perform if
+				if (action == "msg1" || action == "msg2")
+					&& (method == "keybase" || method == "mwcmqs" || method == "http")
+				{
+					let destination = args.destination.clone();
+					let dest = destination.ok_or(ErrorKind::ArgumentError(
+						"Expected 'destination' argument is not found".to_string(),
+					))?;
+
+					let swap_message = api.fetch_swap_message(keychain_mask, swap_id.clone())?;
+					let sender = create_swap_message_sender(
+						method.as_str(),
+						dest.as_str(),
+						&args.apisecret,
+						tor_config,
+					)?;
+					sender.send_swap_message(&swap_message).map_err(|e| {
+						ErrorKind::LibWallet(format!(
+							"Failure in sending swap message {} by {}: {}",
+							swap_id, method, e
+						))
+					})?;
+				}
 
 				let result = api.swap_process(
 					keychain_mask,

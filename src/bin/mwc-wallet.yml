@@ -604,6 +604,11 @@ subcommands:
             short: d
             long: dest
             takes_value: true
+        - apisecret:
+            help: swapping counterpart apisecret. Applicable to http/https address only. Default is none
+            short: s
+            long: apisecret
+            takes_value: true
         - secondary_fee_per_byte:
             help: Optional secondary fee per byte. For BTC default 26 sat/byte.
             long: secondary_fee_per_byte

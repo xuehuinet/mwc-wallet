@@ -252,6 +252,28 @@ where
 	Ok(res)
 }
 
+/// Fetch the swap message for methods of transport other than file
+pub fn fetch_swap_message<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	swap_id: &str,
+) -> Result<Message, Error>
+where
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	wallet_lock!(wallet_inst, w);
+	let node_client = w.w2n_client().clone();
+	let keychain = w.keychain(keychain_mask)?;
+	let skey = keychain.derive_key(0, &w.parent_key_id(), SwitchCommitmentType::None)?;
+	let (_context, swap) = trades::get_swap_trade(swap_id, &skey)?;
+	let mut swap_api = crate::swap::api::create_instance(&swap.secondary_currency, node_client)?;
+	let res = swap_api.message(&keychain, &swap)?;
+
+	Ok(res)
+}
+
 fn send_message(_method: String, destination: String, message: &String) -> Result<(), Error> {
 	// Destination is allwais a file name
 	// TODO - need to support method
@@ -310,10 +332,14 @@ where
 				)
 				.into());
 			}
+
 			let message = swap_api.message(&keychain, &swap)?;
 			let msg_str = message.to_json()?;
 
-			send_message(method.unwrap(), destination.unwrap(), &msg_str)?;
+			let method = method.unwrap();
+			if method == "file" {
+				send_message(method, destination.unwrap(), &msg_str)?;
+			}
 
 			// update swap status after the send. For file it is fair enough to have the message is sent
 			swap_api.message_sent(&keychain, &mut swap, &context)?;
@@ -340,7 +366,7 @@ where
 				&mut swap,
 				&context,
 				fee_satoshi_per_byte,
-				false
+				false,
 			)?;
 			trades::store_swap_trade(&context, &swap, &skey)?;
 			println!(

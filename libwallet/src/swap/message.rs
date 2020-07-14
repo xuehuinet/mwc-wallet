@@ -17,10 +17,12 @@ use super::multisig::ParticipantData as MultisigParticipant;
 use super::ser::*;
 use super::types::{Currency, Network};
 use super::ErrorKind;
+use crate::proof::message::EncryptedMessage;
+use crate::proof::proofaddress::ProvableAddress;
 use crate::{ParticipantData as TxParticipant, VersionedSlate};
 use chrono::{DateTime, Utc};
 use grin_core::libtx::secp_ser;
-use grin_util::secp::key::PublicKey;
+use grin_util::secp::key::{PublicKey, SecretKey};
 use grin_util::secp::Signature;
 use uuid::Uuid;
 
@@ -214,5 +216,56 @@ impl SecondaryUpdate {
 			SecondaryUpdate::BTC(d) => Ok(d),
 			_ => Err(ErrorKind::UnexpectedCoinType),
 		}
+	}
+}
+
+/// encryption/decryption of swap message
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SwapMessage {
+	/// key to decrypt the message
+	pub key: [u8; 32],
+}
+
+impl SwapMessage {
+	/// decrypt a received message
+	pub fn from_received(
+		from: &ProvableAddress,
+		message: String,
+		_challenge: String,
+		_signature: String,
+		secret_key: &SecretKey,
+	) -> Result<Message, ErrorKind> {
+		let public_key = from.public_key().map_err(|e| {
+			ErrorKind::TradeEncDecError(format!(
+				"Unable to build public key for address {}, {}",
+				from, e
+			))
+		})?;
+
+		let encrypted_message: EncryptedMessage = serde_json::from_str(&message).map_err(|e| {
+			ErrorKind::TradeEncDecError(format!(
+				"Failed to extract the encrypted message from the received message {}, {}",
+				message, e
+			))
+		})?;
+
+		let key = encrypted_message
+			.key(&public_key, secret_key)
+			.map_err(|e| {
+				ErrorKind::TradeEncDecError(format!("Unable to build the signature, {}", e))
+			})?;
+
+		let decrypted_message = encrypted_message.decrypt_with_key(&key).map_err(|e| {
+			ErrorKind::TradeEncDecError(format!("Unable to decrypt the swap message, {}", e))
+		})?;
+
+		let swap = serde_json::from_str(&decrypted_message).map_err(|e| {
+			ErrorKind::TradeEncDecError(format!(
+				"Unable to build the swap message from the received message, {}",
+				e
+			))
+		})?;
+
+		Ok(swap)
 	}
 }
