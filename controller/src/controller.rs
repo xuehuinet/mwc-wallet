@@ -427,7 +427,7 @@ where
 		&self,
 		swapmessage: Message
 	) -> Result<(), Error> {
-		let owner_api = Owner::new(self.wallet.clone(), None);
+		let owner_api = Owner::new(self.wallet.clone(), None, None);
 		let mask = self.keychain_mask.lock().clone();
 
 		let msg_str = serde_json::to_string(&swapmessage).map_err(|e| {
