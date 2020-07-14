@@ -1778,7 +1778,7 @@ pub fn run_doctest_owner(
 		);
 	}
 
-	let mut api_owner = Owner::new(wallet1, None);
+	let mut api_owner = Owner::new(wallet1, None, None);
 	api_owner.doctest_mode = true;
 	let res = if use_token {
 		let owner_api = &api_owner as &dyn OwnerRpcS;

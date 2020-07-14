@@ -28,7 +28,7 @@ use crate::util::secp::key::SecretKey;
 use crate::util::secp::pedersen;
 use crate::util::Mutex;
 use chrono::Duration;
-use grin_core::core::hash::Hashed;
+use grin_core::core::hash::{Hash, Hashed};
 use std::sync::Arc;
 use std::thread;
 
@@ -151,7 +151,9 @@ pub fn add_block_with_reward(
 		global::min_edge_bits(),
 	)
 	.unwrap();
-	chain.process_block(b, chain::Options::MINE).unwrap();
+	chain
+		.process_block(b, chain::Options::MINE, Vec::<Hash>::new())
+		.unwrap();
 	chain.validate(false).unwrap();
 }
 

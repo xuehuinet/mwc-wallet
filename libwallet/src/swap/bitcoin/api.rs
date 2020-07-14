@@ -690,15 +690,15 @@ where
 		message: Message,
 	) -> Result<(Swap, Action), ErrorKind> {
 		let (id, offer, secondary_update) = message.unwrap_offer()?;
-		let btc_data = BtcData::from_offer(
-			keychain,
-			secondary_update.unwrap_btc()?.unwrap_offer()?,
-			context.unwrap_buyer()?.unwrap_btc()?,
-		)?;
 
-		let height = self.node_client.get_chain_tip()?.0;
-		let mut swap = BuyApi::accept_swap_offer(keychain, context, id, offer, height)?;
-		swap.secondary_data = btc_data.wrap();
+		let mut swap = BuyApi::accept_swap_offer(
+			keychain,
+			context,
+			id,
+			offer,
+			secondary_update,
+			&self.node_client,
+		)?;
 
 		let action = self.required_action(keychain, &mut swap, context)?;
 		Ok((swap, action))

@@ -189,7 +189,7 @@ where
 					.into())
 				}
 			};
-			f(&mut Owner::new(wallet, None), keychain_mask)?
+			f(&mut Owner::new(wallet, None, None), keychain_mask)?
 		}
 	}
 	Ok(())
@@ -313,7 +313,7 @@ where
 		slate: &mut Slate,
 		dest_acct_name: Option<&str>,
 	) -> Result<(), Error> {
-		let owner_api = Owner::new(self.wallet.clone(), None);
+		let owner_api = Owner::new(self.wallet.clone(), None, None);
 		let foreign_api = Foreign::new(self.wallet.clone(), None, None);
 		let mask = self.keychain_mask.lock().clone();
 
@@ -781,7 +781,7 @@ where
 		running_foreign = true;
 	}
 
-	let api_handler_v2 = OwnerAPIHandlerV2::new(wallet.clone());
+	let api_handler_v2 = OwnerAPIHandlerV2::new(wallet.clone(), tor_config.clone());
 	let api_handler_v3 = OwnerAPIHandlerV3::new(
 		wallet.clone(),
 		keychain_mask.clone(),
@@ -890,6 +890,7 @@ where
 {
 	/// Wallet instance
 	pub wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K> + 'static>>>,
+	pub tor_config: Option<TorConfig>,
 }
 
 impl<L, C, K> OwnerAPIHandlerV2<L, C, K>
@@ -901,8 +902,9 @@ where
 	/// Create a new owner API handler for GET methods
 	pub fn new(
 		wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K> + 'static>>>,
+		tor_config: Option<TorConfig>,
 	) -> OwnerAPIHandlerV2<L, C, K> {
-		OwnerAPIHandlerV2 { wallet }
+		OwnerAPIHandlerV2 { wallet, tor_config }
 	}
 
 	async fn call_api(req: Request<Body>, api: Owner<L, C, K>) -> Result<serde_json::Value, Error> {
@@ -920,8 +922,9 @@ where
 	async fn handle_post_request(
 		req: Request<Body>,
 		wallet: Arc<Mutex<Box<dyn WalletInst<'static, L, C, K> + 'static>>>,
+		tor_config: Option<TorConfig>,
 	) -> Result<Response<Body>, Error> {
-		let api = Owner::new(wallet, None);
+		let api = Owner::new(wallet, None, tor_config);
 
 		//Here is a wrapper to call future from that.
 		// Issue that we can't call future form future
@@ -943,8 +946,9 @@ where
 {
 	fn post(&self, req: Request<Body>) -> ResponseFuture {
 		let wallet = self.wallet.clone();
+		let tor_config = self.tor_config.clone();
 		Box::pin(async move {
-			match Self::handle_post_request(req, wallet).await {
+			match Self::handle_post_request(req, wallet, tor_config).await {
 				Ok(r) => Ok(r),
 				Err(e) => {
 					error!("Request Error: {:?}", e);
@@ -1220,7 +1224,7 @@ where
 		tor_config: Option<TorConfig>,
 		running_foreign: bool,
 	) -> OwnerAPIHandlerV3<L, C, K> {
-		let owner_api = Owner::new(wallet.clone(), None);
+		let owner_api = Owner::new(wallet.clone(), None, tor_config.clone());
 		owner_api.set_tor_config(tor_config);
 		let owner_api = Arc::new(owner_api);
 		OwnerAPIHandlerV3 {

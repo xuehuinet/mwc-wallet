@@ -16,7 +16,7 @@ use super::bitcoin::{BtcBuyerContext, BtcData, BtcSellerContext};
 use super::ser::*;
 use super::ErrorKind;
 use grin_core::global::ChainTypes;
-use grin_core::ser;
+use grin_core::{global, ser};
 use grin_keychain::Identifier;
 use grin_util::secp::key::SecretKey;
 use std::convert::TryFrom;
@@ -32,6 +32,11 @@ pub enum Network {
 }
 
 impl Network {
+	/// Construct from current chaintype
+	pub fn current_network() -> Result<Self, ErrorKind> {
+		Ok(Self::from_chain_type(global::get_chain_type())?)
+	}
+
 	/// Constructor from mwc-node ChainTypes
 	pub fn from_chain_type(chain_type: ChainTypes) -> Result<Self, ErrorKind> {
 		match chain_type {
