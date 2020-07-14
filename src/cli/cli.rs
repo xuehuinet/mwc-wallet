@@ -128,7 +128,7 @@ where
 
 	// catch updater messages
 	// mwc updater thread is better, it will be created for None
-	let mut owner_api = Owner::new(wallet_inst, None);
+	let mut owner_api = Owner::new(wallet_inst, None, None);
 
 	// start the automatic updater
 	owner_api.start_updater((&keychain_mask).as_ref(), Duration::from_secs(30))?;

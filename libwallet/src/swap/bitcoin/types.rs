@@ -70,22 +70,15 @@ impl BtcData {
 	pub(crate) fn new<K>(
 		keychain: &K,               // Private key
 		context: &BtcSellerContext, // Derivarive index
-		lock_time_deal: u32,        // BTC locking duration
+		lock_time: u32,             // BTC locking duration
 	) -> Result<Self, ErrorKind>
 	where
 		K: Keychain,
 	{
-		let lock_time = if crate::swap::is_test_mode() {
-			1567718553
-		} else {
-			//Utc::now().timestamp() as u64 + duration.as_secs()
-			lock_time_deal
-		};
-
-		// Don't lock for more than 3 days
-		if lock_time > (Utc::now().timestamp() + 3600 * 24 * 3) as u32 {
+		// Don't lock for more than 30 days. Even 12 Days is enough to do a swap with 5000 confirmations.
+		if lock_time > (Utc::now().timestamp() + 3600 * 24 * 30) as u32 {
 			return Err(ErrorKind::Generic(
-				"BTC locking time interval is larger than 3 days. Is it a scam?".to_string(),
+				"BTC locking time interval is larger than 12 days. Is it a scam?".to_string(),
 			));
 		}
 

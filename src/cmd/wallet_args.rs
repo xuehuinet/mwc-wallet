@@ -1162,7 +1162,7 @@ where
 			test_mode,
 		),
 		_ => {
-			let mut owner_api = Owner::new(wallet, None);
+			let mut owner_api = Owner::new(wallet, None, Some(tor_config.clone()));
 			parse_and_execute(
 				&mut owner_api,
 				keychain_mask,

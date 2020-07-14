@@ -69,9 +69,6 @@ pub enum ErrorKind {
 	/// Lock slate can't be locked
 	#[fail(display = "Invalid lock height for Swap lock tx")]
 	InvalidLockHeightLockTx,
-	/// Refund slate lock is below expected value
-	#[fail(display = "Invalid lock height for Swap refund tx")]
-	InvalidLockHeightRefundTx,
 	/// Schnorr signature is invalid
 	#[fail(display = "Swap Invalid adaptor signature (Schnorr signature)")]
 	InvalidAdaptorSignature,
@@ -117,6 +114,9 @@ pub enum ErrorKind {
 	/// swap trade encryption/decryption error
 	#[fail(display = "Swap trade {} encryption/decryption error", _0)]
 	TradeEncDecError(String),
+	/// Message validation error. Likely somebody trying to cheat with as
+	#[fail(display = "Invalid Message data, {}", _0)]
+	InvalidMessageData(String),
 	/// Generic error
 	#[fail(display = "Swap generic error, {}", _0)]
 	Generic(String),

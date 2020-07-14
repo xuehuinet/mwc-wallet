@@ -87,8 +87,8 @@ impl SellApi {
 		refund_slate.lock_height = height + mwc_lock_time_seconds / 60;
 		refund_slate.amount = primary_amount.saturating_sub(refund_slate.fee);
 
-		// Don't lock for more than 4 weeks. 4 weeks + 1 day, because max locking is expecting 2 weeks and 1 day to do the swap
-		let max_lock_time = 1440 * (7 * 4 + 1);
+		// Don't lock for more than 30 days.
+		let max_lock_time = 1440 * 30;
 
 		if refund_slate.lock_height - refund_slate.height > max_lock_time {
 			return Err(ErrorKind::Generic(
@@ -136,7 +136,7 @@ impl SellApi {
 			id,
 			idx: 0,
 			version: CURRENT_VERSION,
-			network: Network::Floonet,
+			network: Network::current_network()?,
 			role: Role::Seller(secondary_redeem_address, change),
 			seller_lock_first,
 			started,

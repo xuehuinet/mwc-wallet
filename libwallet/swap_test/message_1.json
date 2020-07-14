@@ -130,7 +130,7 @@
   "inner_secondary": {
     "BTC": {
       "Offer": {
-        "lock_time": 1567718553,
+        "lock_time": 1567678952,
         "cosign": "03b480859d2dcf9cd66f115b685b2847bf3f52f624d069d802e1dc9362be4f5bdf"
       }
     }
