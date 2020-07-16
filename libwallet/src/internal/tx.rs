@@ -651,7 +651,7 @@ where
 					e
 				))
 			})?;
-		println!("tx_proof = {:?}", tx_proof);
+		debug!("tx_proof = {:?}", tx_proof);
 		push_proof_for_slate(&slate.id, tx_proof);
 	}
 	Ok(())

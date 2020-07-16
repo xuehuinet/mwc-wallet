@@ -446,7 +446,6 @@ impl MWCMQSBroker {
 			&str::replace(&to.get_stripped(), "@", "%40")
 		);
 		let response = client.post(&url).form(&params).send();
-		println!("post slate url = {}", url);
 
 		if !response.is_ok() {
 			return Err(ErrorKind::MqsInvalidRespose("mwcmqs connection error".to_string()).into());
