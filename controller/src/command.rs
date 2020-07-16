@@ -1289,13 +1289,13 @@ pub struct SwapStartArgs {
 	/// Minimum confirmation for outputs. Default is 10
 	pub minimum_confirmations: Option<u64>,
 	/// Requred confirmations for MWC Locking
-	pub required_mwc_lock_confirmations: u64,
+	pub mwc_confirmations: u64,
 	/// Requred confirmations for BTC Locking
-	pub required_secondary_lock_confirmations: u64,
-	/// MWC lock time interval
-	pub mwc_lock_time_seconds: u64,
-	/// Time interval needed to Buyer to redeem BTC. Btc lock: mwc_lock_time_seconds + seller_redeem_time
-	pub seller_redeem_time: u64,
+	pub secondary_confirmations: u64,
+	/// Time interval for message exchange session.
+	pub message_exchange_time_sec: u64,
+	/// Time interval needed to redeem or execute a refund transaction.
+	pub redeem_time_sec: u64,
 }
 
 pub fn swap_start<L, C, K>(
@@ -1318,10 +1318,10 @@ where
 				secondary_redeem_address: args.secondary_redeem_address,
 				seller_lock_first: args.seller_lock_first,
 				minimum_confirmations: args.minimum_confirmations,
-				required_mwc_lock_confirmations: args.required_mwc_lock_confirmations,
-				required_secondary_lock_confirmations: args.required_secondary_lock_confirmations,
-				mwc_lock_time_seconds: args.mwc_lock_time_seconds,
-				seller_redeem_time: args.seller_redeem_time,
+				mwc_confirmations: args.mwc_confirmations,
+				secondary_confirmations: args.secondary_confirmations,
+				message_exchange_time_sec: args.message_exchange_time_sec,
+				redeem_time_sec: args.redeem_time_sec,
 			},
 		);
 		match result {

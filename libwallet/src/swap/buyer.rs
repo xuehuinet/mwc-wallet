@@ -152,24 +152,7 @@ impl BuyApi {
 		let refund_slate: Slate = offer.refund_slate.into();
 		// expecting at least half of the interval
 
-		// Minimum mwc heights
-		let min_block_height =
-			offer.required_mwc_lock_confirmations + offer.required_mwc_lock_confirmations + 10;
-		if refund_slate.lock_height < height + min_block_height {
-			return Err(ErrorKind::InvalidMessageData(
-				"Refund lock slate doesn't meet required number of confirmations".to_string(),
-			));
-		}
-		// Checking if there is enough time. Expecting that Seller didn't create offer ahead. Let's allow 10 minutes (blocks) for processing
-		let min_block_height = std::cmp::max(
-			offer.mwc_lock_time_seconds / 2 / 60,
-			offer.mwc_lock_time_seconds / 60 - 10,
-		);
-		if refund_slate.lock_height < height + min_block_height {
-			return Err(ErrorKind::InvalidMessageData(
-				"Refund lock slate doesn't meet required mwc_lock_time".to_string(),
-			));
-		}
+		// Lock_height will be verified later
 		if refund_slate.tx.body.kernels.len() != 1 {
 			return Err(ErrorKind::InvalidMessageData(
 				"Refund Slate invalid kernel".to_string(),
@@ -218,19 +201,6 @@ impl BuyApi {
 			context.unwrap_buyer()?.unwrap_btc()?,
 		)?;
 
-		// Let's compare MWC and BTC lock time. It should match the seller_redeem_time. At this step.
-		// We can sacrifice to mining instability 5% at this step
-		let mwc_lock_time = now_ts + (refund_slate.lock_height - height) as i64 * 60;
-		let expected_secondary_lock_time = mwc_lock_time + offer.seller_redeem_time as i64;
-		// 5% will tolerate
-		if (btc_data.lock_time as i64 - expected_secondary_lock_time as i64).abs()
-			> (offer.seller_redeem_time / 20) as i64
-		{
-			return Err(ErrorKind::InvalidMessageData(
-				"Secondary lock time is different from the expected".to_string(),
-			));
-		}
-
 		// Start redeem slate
 		let mut redeem_slate = Slate::blank(2);
 		if test_mode {
@@ -252,7 +222,7 @@ impl BuyApi {
 		);
 
 		let started = if test_mode {
-			Utc.ymd(2019, 9, 4).and_hms_micro(21, 22, 33, 386997)
+			Utc.ymd(2019, 9, 4).and_hms_micro(21, 22, 32, 386997)
 		} else {
 			offer.start_time.clone()
 		};
@@ -279,13 +249,22 @@ impl BuyApi {
 			redeem_slate,
 			redeem_confirmations: None,
 			adaptor_signature: None,
-			required_mwc_lock_confirmations: offer.required_mwc_lock_confirmations,
-			required_secondary_lock_confirmations: offer.required_secondary_lock_confirmations,
-			mwc_lock_time_seconds: offer.mwc_lock_time_seconds,
-			seller_redeem_time: offer.seller_redeem_time,
+			mwc_confirmations: offer.mwc_confirmations,
+			secondary_confirmations: offer.secondary_confirmations,
+			message_exchange_time_sec: offer.message_exchange_time_sec,
+			redeem_time_sec: offer.redeem_time_sec,
 			message1: None,
 			message2: None,
 		};
+
+		// Minimum mwc heights
+		let expected_lock_height = height + (swap.get_time_mwc_lock() - now_ts as u64) / 60;
+
+		if swap.refund_slate.lock_height < expected_lock_height * 9 / 10 {
+			return Err(ErrorKind::InvalidMessageData(
+				"Refund lock slate doesn't meet required number of confirmations".to_string(),
+			));
+		}
 
 		swap.redeem_public = Some(PublicKey::from_secret_key(
 			keychain.secp(),

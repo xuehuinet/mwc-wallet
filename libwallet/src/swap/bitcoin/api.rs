@@ -66,6 +66,7 @@ where
 					"swap.redeem_public value is not defined. Method BtcSwapApi::script"
 						.to_string(),
 				))?,
+			swap.get_time_btc_lock(),
 		)?)
 	}
 
@@ -124,7 +125,7 @@ where
 
 	// Seller specific methods
 
-	/// Seller checks Grin and Bitcoin chains for the locked funds, Statu::Accepted
+	/// Seller checks MWC and Bitcoin chains for the locked funds
 	/// Return Ok(None) if everything is ready. Otherwise it is action.
 	fn seller_check_locks<K: Keychain>(
 		&mut self,
@@ -134,8 +135,9 @@ where
 	) -> Result<Option<Action>, ErrorKind> {
 		//  Check if Lock slate is ready and confirmed.
 		if !swap.seller_lock_first {
-			// Check first if BTC are deposited and have at least 1 or 10% of needed confirmation
-			let need_conf = std::cmp::max(1, swap.required_secondary_lock_confirmations / 10);
+			// Check first if BTC are deposited and have at least 1 confirmation is made
+			// We don't want wait for long time because we don;t want to interrupt the process for a long time
+			let need_conf = 1; //  std::cmp::max(1, swap.secondary_confirmations / 10);
 
 			let (pending_amount, confirmed_amount, mut least_confirmations) =
 				self.btc_balance(keychain, swap, &input_script, need_conf)?;
@@ -152,16 +154,15 @@ where
 			}
 		}
 
-		if !swap.is_locked(swap.required_mwc_lock_confirmations) {
+		if !swap.is_mwc_locked() {
 			match swap.lock_confirmations {
 				None => return Ok(Some(Action::PublishTx)),
 				Some(_) => {
-					let confirmations =
-						swap.update_lock_confirmations(keychain.secp(), &self.node_client)?;
-					if !swap.is_locked(swap.required_mwc_lock_confirmations) {
+					swap.update_mwc_lock_confirmations(keychain.secp(), &self.node_client)?;
+					if !swap.is_mwc_locked() {
 						return Ok(Some(Action::Confirmations {
-							required: swap.required_mwc_lock_confirmations,
-							actual: confirmations,
+							required: swap.mwc_confirmations,
+							actual: swap.lock_confirmations.unwrap(),
 						}));
 					}
 				}
@@ -171,12 +172,8 @@ where
 		// Check Bitcoin chain
 		if !swap.secondary_data.unwrap_btc()?.locked {
 			// Waiting for Btc confirmations
-			let (pending_amount, confirmed_amount, mut least_confirmations) = self.btc_balance(
-				keychain,
-				swap,
-				&input_script,
-				swap.required_secondary_lock_confirmations,
-			)?;
+			let (pending_amount, confirmed_amount, mut least_confirmations) =
+				self.btc_balance(keychain, swap, &input_script, swap.secondary_confirmations)?;
 			if pending_amount + confirmed_amount < swap.secondary_amount {
 				least_confirmations = 0;
 			};
@@ -184,7 +181,7 @@ where
 			if confirmed_amount < swap.secondary_amount {
 				return Ok(Some(Action::ConfirmationsSecondary {
 					currency: swap.secondary_currency,
-					required: swap.required_secondary_lock_confirmations,
+					required: swap.secondary_confirmations,
 					actual: least_confirmations,
 				}));
 			}
@@ -342,9 +339,11 @@ where
 		if !swap.secondary_data.unwrap_btc()?.locked {
 			if swap.seller_lock_first {
 				// Check first if MWC are there. Need at least one or 10% of confirmation
-				let conf = swap.update_lock_confirmations(keychain.secp(), &self.node_client)?;
+				let conf =
+					swap.update_mwc_lock_confirmations(keychain.secp(), &self.node_client)?;
 				confirmations = Some(conf);
-				let need_conf = std::cmp::max(1, swap.required_mwc_lock_confirmations / 10);
+				// Let's wait for a single confirmation.
+				let need_conf = 1; // std::cmp::max(1, swap.required_mwc_lock_confirmations / 10);
 				if conf < need_conf {
 					return Ok(Some(Action::Confirmations {
 						required: need_conf,
@@ -353,12 +352,8 @@ where
 				}
 			}
 
-			let (pending_amount, confirmed_amount, least_confirmations) = self.btc_balance(
-				keychain,
-				swap,
-				&input_script,
-				swap.required_secondary_lock_confirmations,
-			)?;
+			let (pending_amount, confirmed_amount, least_confirmations) =
+				self.btc_balance(keychain, swap, &input_script, swap.secondary_confirmations)?;
 			let chain_amount = pending_amount + confirmed_amount;
 			if chain_amount < swap.secondary_amount {
 				// At this point, user needs to deposit (more) Bitcoin
@@ -384,7 +379,7 @@ where
 				// Wait for enough confirmations
 				return Ok(Some(Action::ConfirmationsSecondary {
 					currency: swap.secondary_currency,
-					required: swap.required_secondary_lock_confirmations,
+					required: swap.secondary_confirmations,
 					actual: least_confirmations,
 				}));
 			}
@@ -394,10 +389,10 @@ where
 
 		// Check Grin chain
 		let confirmations = confirmations
-			.unwrap_or(swap.update_lock_confirmations(keychain.secp(), &self.node_client)?);
-		if !swap.is_locked(swap.required_mwc_lock_confirmations) {
+			.unwrap_or(swap.update_mwc_lock_confirmations(keychain.secp(), &self.node_client)?);
+		if !swap.is_mwc_locked() {
 			return Ok(Some(Action::Confirmations {
-				required: swap.required_mwc_lock_confirmations,
+				required: swap.mwc_confirmations,
 				actual: confirmations,
 			}));
 		}
@@ -463,12 +458,14 @@ where
 			SwitchCommitmentType::None,
 		)?;
 
+		let btc_lock_time = swap.get_time_btc_lock();
 		let btc_data = swap.secondary_data.unwrap_btc_mut()?;
 		let refund_tx = btc_data.refund_tx(
 			keychain.secp(),
 			refund_address,
 			input_script,
 			fee_satoshi_per_byte.unwrap_or(self.get_default_fee_satoshi_per_byte(&swap.network)),
+			btc_lock_time,
 			&refund_key,
 		)?;
 
@@ -629,10 +626,10 @@ where
 		secondary_currency: Currency,
 		secondary_redeem_address: String,
 		seller_lock_first: bool,
-		required_mwc_lock_confirmations: u64,
-		required_secondary_lock_confirmations: u64,
-		mwc_lock_time_seconds: u64,
-		seller_redeem_time: u64,
+		mwc_confirmations: u64,
+		secondary_confirmations: u64,
+		message_exchange_time_sec: u64,
+		redeem_time_sec: u64,
 	) -> Result<(Swap, Action), ErrorKind> {
 		// Checking if address is valid
 		let _redeem_address = Address::from_str(&secondary_redeem_address).map_err(|e| {
@@ -656,26 +653,13 @@ where
 			secondary_redeem_address,
 			height,
 			seller_lock_first,
-			required_mwc_lock_confirmations,
-			required_secondary_lock_confirmations,
-			mwc_lock_time_seconds,
-			seller_redeem_time,
+			mwc_confirmations,
+			secondary_confirmations,
+			message_exchange_time_sec,
+			redeem_time_sec,
 		)?;
 
-		// Lock time value will be checked nicely at Buyer side when script will be created
-		let lock_time: i64 =
-			swap.started.timestamp() + mwc_lock_time_seconds as i64 + seller_redeem_time as i64;
-		if lock_time < 0 || lock_time >= std::u32::MAX as i64 {
-			return Err(ErrorKind::Generic(
-				"lock time intervals are invalid".to_string(),
-			));
-		}
-
-		let btc_data = BtcData::new(
-			keychain,
-			context.unwrap_seller()?.unwrap_btc()?,
-			lock_time as u32,
-		)?;
+		let btc_data = BtcData::new(keychain, context.unwrap_seller()?.unwrap_btc()?)?;
 		swap.secondary_data = btc_data.wrap();
 
 		let action = self.required_action(keychain, &mut swap, context)?;
@@ -822,8 +806,7 @@ where
 							if pending_amount + confirmed_amount == 0 {
 								Action::None
 							} else {
-								let requied_time =
-									swap.secondary_data.unwrap_btc()?.lock_time as u64;
+								let requied_time = swap.get_time_btc_lock();
 								let now = Utc::now().timestamp() as u64;
 								if now < requied_time {
 									Action::WaitingForBtcRefund {

@@ -5,21 +5,20 @@
   "network": "Floonet",
   "role": "Buyer",
   "seller_lock_first": false,
-  "started": "2019-09-04T21:22:33.386997Z",
+  "started": "2019-09-04T21:22:32.386997Z",
   "status": "InitRedeem",
   "primary_amount": "100000000000",
   "secondary_amount": "3000000",
   "secondary_currency": "Btc",
   "secondary_data": {
     "Btc": {
-      "lock_time": 1567678952,
       "cosign": "03b480859d2dcf9cd66f115b685b2847bf3f52f624d069d802e1dc9362be4f5bdf",
       "refund": "03434496eb1554ad47c7ec5c267e902e1b71a03e189cc4fe9c83d9513e3a4e2e5a",
       "refund_tx": null,
       "confirmed_outputs": [
         {
           "out_point": {
-            "txid": "aff0f714cd046948240bc29358ae167c9e80bb939175db7265ea096c73a0a33e",
+            "txid": "8551e10f16d42ace55f16dfdee096f5dab615a1bf92d9a88c2fe94b5270df706",
             "vout": 0
           },
           "value": 1000000,
@@ -27,7 +26,7 @@
         },
         {
           "out_point": {
-            "txid": "0b3e71bbba0607f012ff9dfbced995427ddb32955326aa641aa69bf9c1e5cbe9",
+            "txid": "5f28d9a513b3651f7dbc30a070dff2567ac6380157c72d0afcd54dd4cbd66ec4",
             "vout": 0
           },
           "value": 2000000,
@@ -160,7 +159,7 @@
           {
             "features": "HeightLocked",
             "fee": "4000000",
-            "lock_height": "300720",
+            "lock_height": "300280",
             "excess": "000000000000000000000000000000000000000000000000000000000000000000",
             "excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
           }
@@ -170,7 +169,7 @@
     "amount": "99996000000",
     "fee": "4000000",
     "height": "300000",
-    "lock_height": "300720",
+    "lock_height": "300280",
     "ttl_cutoff_height": null,
     "participant_data": [
       {
@@ -185,7 +184,7 @@
         "id": "1",
         "public_blind_excess": "0229fbb62bc719998c1146fc78955ed210bb5bf474f968cbce230175e2585fb71c",
         "public_nonce": "02c5feea3b4566008a8075f9d16b9259853d7575719d5608a7160f8361a52efa96",
-        "part_sig": "96fa2ea561830f16a708569d7175753d8559926bd1f975808a0066453beafec50702100bc202f6c7b99816079035d7ebb70a9902ac0adf3ccd5d8718c5dbf80e",
+        "part_sig": "96fa2ea561830f16a708569d7175753d8559926bd1f975808a0066453beafec5ad56547ae452ba0abcec4f1d41d21e695dc4b08a984928ca68b7026362a7c9ee",
         "message": null,
         "message_sig": null
       }
@@ -254,10 +253,10 @@
   },
   "redeem_confirmations": null,
   "adaptor_signature": "c243a5a05254a9e99cc69e80851f8566653ae806b8986595fedd057ae2a6b6dd20cea0957af2f764ab045d1177d4fa0a353428dcb8f572a9ca4b3007bcac9a0a",
-  "required_mwc_lock_confirmations": 30,
-  "required_secondary_lock_confirmations": 6,
-  "mwc_lock_time_seconds": 43200,
-  "seller_redeem_time": 3600,
+  "mwc_confirmations": 30,
+  "secondary_confirmations": 6,
+  "message_exchange_time_sec": 3600,
+  "redeem_time_sec": 3600,
   "message1": null,
   "message2": null
 }

@@ -160,13 +160,13 @@ pub struct OfferUpdate {
 	/// Needed info to build step 1 on redeem state (that saving some interaction)
 	pub redeem_participant: TxParticipant,
 	/// Requred confirmations for MWC Locking
-	pub required_mwc_lock_confirmations: u64,
+	pub mwc_confirmations: u64,
 	/// Requred confirmations for BTC Locking
-	pub required_secondary_lock_confirmations: u64,
-	/// Seller MWC funds lock time interval in seconds
-	pub mwc_lock_time_seconds: u64,
-	/// Sellet BTC redeem time interval. BTC expected to be locked for that time as well.
-	pub seller_redeem_time: u64,
+	pub secondary_confirmations: u64,
+	/// Time interval for message exchange session.
+	pub message_exchange_time_sec: u64,
+	/// Time interval needed to redeem or execute a refund transaction.
+	pub redeem_time_sec: u64,
 }
 
 /// Buyer, Status::Offered  Buyer responded for offer

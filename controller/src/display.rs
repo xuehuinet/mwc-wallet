@@ -661,32 +661,50 @@ pub fn swap_trade(
 		swap.secondary_currency
 			.amount_to_hr_string(swap.secondary_amount, true)
 	);
-	println!(
-		"Requied MWC lock confirmations: {}",
-		swap.required_mwc_lock_confirmations
-	);
+	println!("Requied MWC lock confirmations: {}", swap.mwc_confirmations);
 	println!(
 		"Requied {} lock confirmations: {}",
-		swap.secondary_currency, swap.required_secondary_lock_confirmations
+		swap.secondary_currency, swap.secondary_confirmations
+	);
+	println!(
+		"Massages exchange time limit: {} minutes",
+		swap.message_exchange_time_sec / 60
+	);
+	println!(
+		"Redeem/Refund time limit: {} minutes",
+		swap.redeem_time_sec / 60
 	);
 
-	let sel_lock_h = swap.mwc_lock_time_seconds / 3600;
-	let sel_lock_m = (swap.mwc_lock_time_seconds % 3600) / 60;
-	println!(
-		"Seller locking time for MWC: {} hours, {} minutes at block {}",
-		sel_lock_h, sel_lock_m, swap.lock_slate.lock_height
-	);
+	if tx_conf.mwc_tip < swap.refund_slate.lock_height {
+		let mwc_lock_sec = (swap.refund_slate.lock_height - tx_conf.mwc_tip) * 60;
+		let sel_lock_h = mwc_lock_sec / 3600;
+		let sel_lock_m = (mwc_lock_sec % 3600) / 60;
+		println!(
+			"Seller MWC refund wait time: {} hours, {} minutes at block {}",
+			sel_lock_h, sel_lock_m, swap.refund_slate.lock_height
+		);
+	} else {
+		println!("Seller refund is active");
+	}
 
-	let buyer_lock_time = swap.mwc_lock_time_seconds + swap.seller_redeem_time;
-	let buy_lock_h = buyer_lock_time / 3600;
-	let buy_lock_m = (buyer_lock_time % 3600) / 60;
-	let naive_lock_datetime =
-		NaiveDateTime::from_timestamp(swap.secondary_data.unwrap_btc()?.lock_time as i64, 0);
-	let naive_lock_datetime: DateTime<Utc> = DateTime::from_utc(naive_lock_datetime, Utc);
-	println!(
-		"Buyer locking time for {}: {} hours, {} minutes at {}",
-		swap.secondary_currency, buy_lock_h, buy_lock_m, naive_lock_datetime
-	);
+	let now_ts = Utc::now().timestamp() as u64;
+	let btc_lock_time = swap.get_time_btc_lock();
+	if now_ts < btc_lock_time {
+		let buyer_lock_time = btc_lock_time - now_ts;
+		let buy_lock_h = buyer_lock_time / 3600;
+		let buy_lock_m = (buyer_lock_time % 3600) / 60;
+		let naive_lock_datetime = NaiveDateTime::from_timestamp(btc_lock_time as i64, 0);
+		let naive_lock_datetime: DateTime<Utc> = DateTime::from_utc(naive_lock_datetime, Utc);
+		println!(
+			"Buyer {} refund wait time: {} hours, {} minutes at {}",
+			swap.secondary_currency, buy_lock_h, buy_lock_m, naive_lock_datetime
+		);
+	} else {
+		println!(
+			"Buyer locking time for {} is expired",
+			swap.secondary_currency
+		);
+	}
 
 	let mut print_seller = false;
 	let mut print_buyer = false;

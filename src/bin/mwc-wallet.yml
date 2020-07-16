@@ -497,26 +497,26 @@ subcommands:
               - buyer
               - seller
             default_value: buyer
-        - required_mwc_lock_confirmations:
-            help: Number of confirmations required for locked MWC coins
+        - mwc_confirmations:
+            help: Number of confirmations required for MWC coins
             long: mwc_lock_confirmations
             takes_value: true
             default_value: "60"
-        - required_secondary_lock_confirmations:
-            help: Number of confirmations required for locked BTC coins
+        - secondary_confirmations:
+            help: Number of confirmations required for Secondary Coins
             long: secondary_lock_confirmations
             takes_value: true
-            default_value: "6"
-        - mwc_lock_time:
-            help: Time interval (hours) that guarantee needed to finish swap process. Seller will lock MWC funds for this time
-            long: mwc_lock_time
+            default_value: "3"
+        - message_exchange_time:
+            help: How much time (minutes) is reserved for every session of message exchange (Offer exchange and create redeem transaction sessions). Please reserve enough time, if you you go out of time, your swap trade will be cancelled.
+            long: message_exchange_time
             takes_value: true
-            default_value: "24"
-        - seller_redeem_time:
-            help: Time interval (hours) needed for Buyer to redeem BTC. Btc will be locked extra for that interval
-            long: seller_redeem_time
+            default_value: "60"
+        - redeem_time:
+            help: How much time (minutes) is reserved for execution of redeem or refund transaction. Please reserve enough time for this operation, otherwise you become an easy targer for attacks.
+            long: redeem_time
             takes_value: true
-            default_value: "12"
+            default_value: "60"
   - swap_message:
       about: Process incoming swap message written in the file. Note, file base processing is not usual.
       args:

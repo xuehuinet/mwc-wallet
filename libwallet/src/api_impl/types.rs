@@ -336,12 +336,12 @@ pub struct SwapStartArgs {
 	pub seller_lock_first: bool,
 	/// Minimum confirmation number for the inputs to spend
 	pub minimum_confirmations: Option<u64>,
-	/// Needed confirmations for MWC Lock transacition
-	pub required_mwc_lock_confirmations: u64,
-	/// Needed confirmations for BTC Lock transacition
-	pub required_secondary_lock_confirmations: u64,
-	/// MWC lock time interval
-	pub mwc_lock_time_seconds: u64,
-	/// Time interval needed to Buyer to redeem BTC. Btc lock: mwc_lock_time_seconds + seller_redeem_time
-	pub seller_redeem_time: u64,
+	/// Requred confirmations for MWC Locking
+	pub mwc_confirmations: u64,
+	/// Requred confirmations for BTC Locking
+	pub secondary_confirmations: u64,
+	/// Time interval for message exchange session.
+	pub message_exchange_time_sec: u64,
+	/// Time interval needed to redeem or execute a refund transaction.
+	pub redeem_time_sec: u64,
 }

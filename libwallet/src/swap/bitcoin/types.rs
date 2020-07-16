@@ -42,8 +42,6 @@ pub struct BtcTtansaction {
 /// BTC operations context
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcData {
-	/// BTC Lock time in seconds. Expected 24 hours
-	pub lock_time: u32,
 	/// Key owned by seller. Private key: keychain + BtcSellerContext::cosign
 	#[serde(serialize_with = "pubkey_to_hex", deserialize_with = "pubkey_from_hex")]
 	pub cosign: PublicKey,
@@ -70,25 +68,16 @@ impl BtcData {
 	pub(crate) fn new<K>(
 		keychain: &K,               // Private key
 		context: &BtcSellerContext, // Derivarive index
-		lock_time: u32,             // BTC locking duration
 	) -> Result<Self, ErrorKind>
 	where
 		K: Keychain,
 	{
-		// Don't lock for more than 30 days. Even 12 Days is enough to do a swap with 5000 confirmations.
-		if lock_time > (Utc::now().timestamp() + 3600 * 24 * 30) as u32 {
-			return Err(ErrorKind::Generic(
-				"BTC locking time interval is larger than 12 days. Is it a scam?".to_string(),
-			));
-		}
-
 		let cosign = PublicKey::from_secret_key(
 			keychain.secp(),
 			&keychain.derive_key(0, &context.cosign, SwitchCommitmentType::None)?,
 		)?;
 
 		Ok(Self {
-			lock_time: lock_time,
 			cosign,
 			refund: None,
 			refund_tx: None,
@@ -111,7 +100,6 @@ impl BtcData {
 		let key = keychain.derive_key(0, &context.refund, SwitchCommitmentType::None)?;
 
 		Ok(Self {
-			lock_time: offer.lock_time,
 			cosign: offer.cosign,
 			refund: Some(PublicKey::from_secret_key(keychain.secp(), &key)?),
 			refund_tx: None,
@@ -136,18 +124,31 @@ impl BtcData {
 	}
 
 	/// Generate the multisig-with-timelocked-refund script
-	pub fn script(&self, secp: &Secp256k1, redeem: &PublicKey) -> Result<Script, ErrorKind> {
+	pub fn script(
+		&self,
+		secp: &Secp256k1,
+		redeem: &PublicKey,
+		btc_lock_time: u64,
+	) -> Result<Script, ErrorKind> {
 		// Don't lock for more than 4 weeks. 4 weeks + 2 day, because max locking is expecting 2 weeks and 1 day to do the swap and 1 extra day for Byer
-		if self.lock_time > (Utc::now().timestamp() + 3600 * 24 * (7 * 4 + 2)) as u32 {
+		if btc_lock_time > (Utc::now().timestamp() + 3600 * 24 * (7 * 4 + 2)) as u64 {
 			return Err(ErrorKind::Generic(
 				"BTC locking time interval is larger than 4 weeks. Rejecting, looks like a scam."
 					.to_string(),
 			));
 		}
+
+		if btc_lock_time >= u32::MAX as u64 {
+			return Err(ErrorKind::Generic(
+				"BTC locking time is out of range. Rejecting, looks like a scam.".to_string(),
+			));
+		}
+
 		// Locking for the past is very expected. We build this script every time when we need to calculate hash for the address.
 
 		let mut time = [0; 4];
-		LittleEndian::write_u32(&mut time, self.lock_time);
+		let btc_lock_time: u32 = btc_lock_time as u32;
+		LittleEndian::write_u32(&mut time, btc_lock_time);
 
 		let refund = self
 			.refund
@@ -305,12 +306,13 @@ impl BtcData {
 		refund_address: &Address,
 		input_script: &Script,
 		fee_sat_per_byte: f32,
+		btc_lock_time: u64,
 		buyer_btc_secret: &SecretKey,
 	) -> Result<BtcTtansaction, ErrorKind> {
 		let (input, output, total_amount) = self.build_input_outputs(refund_address)?;
 		let mut tx = Transaction {
 			version: 2,
-			lock_time: self.lock_time, // let's make the lock time equal to the script lock.
+			lock_time: btc_lock_time as u32, // let's make the lock time equal to the script lock.
 			input,
 			output,
 		};
@@ -371,7 +373,6 @@ impl BtcData {
 	/// Seller init BTC offer for buyer
 	pub(crate) fn offer_update(&self) -> BtcUpdate {
 		BtcUpdate::Offer(BtcOfferUpdate {
-			lock_time: self.lock_time,   // Offered lock time for BTC coins
 			cosign: self.cosign.clone(), // Buyer part of Schnorr multisig.
 		})
 	}
@@ -442,8 +443,6 @@ impl BtcUpdate {
 /// Seller send offer to Buyer. Here is details about BTC deal
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BtcOfferUpdate {
-	/// BTC lock time in seconds. Expected 24 hours value.
-	pub lock_time: u32,
 	/// Public key to do cosign with Schnorr signature.
 	#[serde(serialize_with = "pubkey_to_hex", deserialize_with = "pubkey_from_hex")]
 	pub cosign: PublicKey,
@@ -482,9 +481,9 @@ mod tests {
 	/// Test vector from the PoC
 	fn test_lock_script() {
 		let secp = Secp256k1::with_caps(ContextFlag::Commit);
+		let lock_time = 1541355813;
 
 		let data = BtcData {
-			lock_time: 1541355813,
 			cosign: PublicKey::from_slice(
 				&secp,
 				&from_hex(
@@ -521,6 +520,7 @@ mod tests {
 					.unwrap(),
 				)
 				.unwrap(),
+				lock_time,
 			)
 			.unwrap();
 		let script_ref = from_hex("63042539df5bb17521022fd8c0455bede249ad3b9a9fb8159829e8cfb2c360863896e5309ea133d122f2ac67522102b4e59070d367a364a31981a71fc5ab6c5034d0e279eecec19287f3c95db84aef2103cf15041579b5fb7accbac2997fb2f3e1001e9a522a19c83ceabe5ae51a596c7c52ae68".into()).unwrap();
@@ -542,8 +542,9 @@ mod tests {
 		let refund = SecretKey::new(&secp, rng);
 		let redeem = SecretKey::new(&secp, rng);
 
+		let lock_time = Utc::now().timestamp() as u64;
+
 		let mut data = BtcData {
-			lock_time: Utc::now().timestamp() as u32,
 			cosign: PublicKey::from_secret_key(&secp, &cosign).unwrap(),
 			refund: Some(PublicKey::from_secret_key(&secp, &refund).unwrap()),
 			refund_tx: None,
@@ -553,7 +554,11 @@ mod tests {
 			redeem_confirmations: None,
 		};
 		let input_script = data
-			.script(&secp, &PublicKey::from_secret_key(&secp, &redeem).unwrap())
+			.script(
+				&secp,
+				&PublicKey::from_secret_key(&secp, &redeem).unwrap(),
+				lock_time,
+			)
 			.unwrap();
 		let lock_address = data.address(&input_script, network).unwrap();
 		let lock_script_pubkey = lock_address.script_pubkey();
@@ -589,7 +594,7 @@ mod tests {
 
 			let tx = Transaction {
 				version: 2,
-				lock_time: data.lock_time - 1,
+				lock_time: lock_time as u32 - 1,
 				input: vec![],
 				output,
 			};

@@ -390,7 +390,7 @@ mod tests {
 				true, // mwc should be publisher first
 				30,
 				3,
-				3600 * 23,
+				3600,
 				3600,
 			)
 			.unwrap();
@@ -443,7 +443,7 @@ mod tests {
 				true, // lock MWC first
 				30,
 				6,
-				3600 * 12,
+				3600,
 				3600,
 			)
 			.unwrap();
@@ -509,10 +509,10 @@ mod tests {
 			.message_sent(&kc_buy, &mut swap_buy, &ctx_buy)
 			.unwrap();
 
-		// Expected to wait for the Seller to deposit MWC and wait for 3 blocks ( 30/10 = 3 )
+		// Expected to wait for the Seller to deposit MWC and wait for 1 block
 		match action {
 			Action::Confirmations { required, actual } => {
-				assert_eq!(required, 3);
+				assert_eq!(required, 1);
 				assert_eq!(actual, 0);
 			}
 			_ => panic!("Invalid action"),
