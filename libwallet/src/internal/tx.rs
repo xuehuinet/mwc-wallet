@@ -482,9 +482,9 @@ pub fn payment_proof_message(
 	let mut message = String::new();
 	debug!("the kernel excess is {:?}", kernel_commitment.0.to_vec());
 	debug!("the sender public key is {}", &sender_address_publickey);
-    message.push_str(&util::to_hex(kernel_commitment.0.to_vec()));
-    message.push_str(&sender_address_publickey);
-    message.push_str(&amount.to_string());
+	message.push_str(&util::to_hex(kernel_commitment.0.to_vec()));
+	message.push_str(&sender_address_publickey);
+	message.push_str(&amount.to_string());
 	Ok(message)
 }
 
@@ -630,6 +630,10 @@ where
 		let signature = Signature::from_der(&secp, &signature_ser).map_err(|e| {
 			ErrorKind::TxProofGenericError(format!("Unable to build signature, {}", e))
 		})?;
+		debug!(
+			"the receiver pubkey is {}",
+			orig_proof_info.receiver_address.clone().public_key
+		);
 		let receiver_pubkey = orig_proof_info.receiver_address.public_key().map_err(|e| {
 			ErrorKind::TxProofGenericError(format!("Unable to get receiver address, {}", e))
 		})?;
