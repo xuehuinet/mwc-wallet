@@ -51,10 +51,10 @@ impl SellApi {
 		secondary_redeem_address: String,
 		height: u64,
 		seller_lock_first: bool,
-		required_mwc_lock_confirmations: u64,
-		required_secondary_lock_confirmations: u64,
-		mwc_lock_time_seconds: u64,
-		seller_redeem_time: u64,
+		mwc_confirmations: u64,
+		secondary_confirmations: u64,
+		message_exchange_time_sec: u64,
+		redeem_time_sec: u64,
 	) -> Result<Swap, ErrorKind> {
 		let test_mode = is_test_mode();
 		let scontext = context.unwrap_seller()?;
@@ -67,8 +67,55 @@ impl SellApi {
 			None,
 		);
 
+		let started = if test_mode {
+			Utc.ymd(2019, 9, 4).and_hms_micro(21, 22, 32, 581245)
+		} else {
+			Utc::now()
+		};
+
+		let ls = Slate::blank(2);
+
+		let id = if test_mode {
+			Uuid::parse_str("4fc16adb-9f32-4441-b0c1-b4de076a1972").unwrap()
+		} else {
+			ls.id.clone()
+		};
+
+		let mut swap = Swap {
+			id,
+			idx: 0,
+			version: CURRENT_VERSION,
+			network: Network::current_network()?,
+			role: Role::Seller("".to_string(), 0), // will be updated later
+			seller_lock_first,
+			started,
+			status: Status::Created,
+			primary_amount,
+			secondary_amount,
+			secondary_currency,
+			secondary_data: SecondaryData::Empty,
+			redeem_public: None,
+			participant_id: 0,
+			multisig,
+			lock_slate: ls,
+			lock_confirmations: None,
+			refund_slate: Slate::blank(2),
+			redeem_slate: Slate::blank(2),
+			redeem_confirmations: None,
+			adaptor_signature: None,
+			mwc_confirmations,
+			secondary_confirmations,
+			message_exchange_time_sec,
+			redeem_time_sec,
+			message1: None,
+			message2: None,
+		};
+
+		let mwc_lock_time = swap.get_time_mwc_lock();
+		let start_time = swap.get_time_start();
+
 		// Lock slate
-		let mut lock_slate = Slate::blank(2);
+		let mut lock_slate = &mut swap.lock_slate;
 		if test_mode {
 			lock_slate.id = Uuid::parse_str("55b79f54-c40d-45e1-9544-a52dcf426db2").unwrap();
 		}
@@ -77,14 +124,14 @@ impl SellApi {
 		lock_slate.height = height;
 
 		// Refund slate
-		let mut refund_slate = Slate::blank(2);
+		let mut refund_slate = &mut swap.refund_slate;
 		if test_mode {
 			refund_slate.id = Uuid::parse_str("703fac15-913c-4e66-a7c2-5f648ca4ca7d").unwrap();
 		}
 		refund_slate.fee = tx_fee(1, 1, 1, None);
 		refund_slate.height = height;
-		// Calculating lock height from seconds. Average mining speed is about 1 minute
-		refund_slate.lock_height = height + mwc_lock_time_seconds / 60;
+		// Calculating lock height from locking time. For MWC the mining speed is about 1 minute
+		refund_slate.lock_height = height + (mwc_lock_time - start_time) / 60 + 1;
 		refund_slate.amount = primary_amount.saturating_sub(refund_slate.fee);
 
 		// Don't lock for more than 30 days.
@@ -97,7 +144,7 @@ impl SellApi {
 		}
 
 		// Redeem slate
-		let mut redeem_slate = Slate::blank(2);
+		let mut redeem_slate = &mut swap.redeem_slate;
 		if test_mode {
 			redeem_slate.id = Uuid::parse_str("fc750aae-035f-4c6c-bb0c-05aabc764f8e").unwrap();
 		}
@@ -120,47 +167,7 @@ impl SellApi {
 		}
 		let change = sum_in - primary_amount - lock_slate.fee;
 
-		let id = if test_mode {
-			Uuid::parse_str("4fc16adb-9f32-4441-b0c1-b4de076a1972").unwrap()
-		} else {
-			lock_slate.id.clone()
-		};
-
-		let started = if test_mode {
-			Utc.ymd(2019, 9, 4).and_hms_micro(21, 22, 32, 581245)
-		} else {
-			Utc::now()
-		};
-
-		let mut swap = Swap {
-			id,
-			idx: 0,
-			version: CURRENT_VERSION,
-			network: Network::current_network()?,
-			role: Role::Seller(secondary_redeem_address, change),
-			seller_lock_first,
-			started,
-			status: Status::Created,
-			primary_amount,
-			secondary_amount,
-			secondary_currency,
-			secondary_data: SecondaryData::Empty,
-			redeem_public: None,
-			participant_id: 0,
-			multisig,
-			lock_slate,
-			lock_confirmations: None,
-			refund_slate,
-			redeem_slate,
-			redeem_confirmations: None,
-			adaptor_signature: None,
-			required_mwc_lock_confirmations,
-			required_secondary_lock_confirmations,
-			mwc_lock_time_seconds,
-			seller_redeem_time,
-			message1: None,
-			message2: None,
-		};
+		swap.role = Role::Seller(secondary_redeem_address, change);
 
 		Self::build_multisig(keychain, &mut swap, context)?;
 		Self::build_lock_slate(keychain, &mut swap, context)?;
@@ -486,10 +493,10 @@ impl SellApi {
 				SlateVersion::V2, // V2 should satify our needs, dont adding extra
 			),
 			redeem_participant: swap.redeem_slate.participant_data[swap.participant_id].clone(),
-			required_mwc_lock_confirmations: swap.required_mwc_lock_confirmations,
-			required_secondary_lock_confirmations: swap.required_secondary_lock_confirmations,
-			mwc_lock_time_seconds: swap.mwc_lock_time_seconds,
-			seller_redeem_time: swap.seller_redeem_time,
+			mwc_confirmations: swap.mwc_confirmations,
+			secondary_confirmations: swap.secondary_confirmations,
+			message_exchange_time_sec: swap.message_exchange_time_sec,
+			redeem_time_sec: swap.redeem_time_sec,
 		}))
 	}
 

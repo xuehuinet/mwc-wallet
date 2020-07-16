@@ -133,6 +133,13 @@ impl Currency {
 		}
 	}
 
+	/// Block period for this coin (seconds)
+	pub fn block_time_period_sec(&self) -> u64 {
+		match self {
+			Currency::Btc => 10 * 60,
+		}
+	}
+
 	/// Print amount in nano coins normally
 	pub fn amount_to_hr_string(&self, amount: u64, truncate: bool) -> String {
 		let exp = self.exponent();

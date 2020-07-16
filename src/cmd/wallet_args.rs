@@ -945,17 +945,17 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 		)));
 	}
 
-	let mwc_lock = parse_required(args, "required_mwc_lock_confirmations")?;
-	let mwc_lock = parse_u64(mwc_lock, "required_mwc_lock_confirmations")?;
+	let mwc_lock = parse_required(args, "mwc_confirmations")?;
+	let mwc_lock = parse_u64(mwc_lock, "mwc_confirmations")?;
 
-	let btc_lock = parse_required(args, "required_secondary_lock_confirmations")?;
-	let btc_lock = parse_u64(btc_lock, "required_secondary_lock_confirmations")?;
+	let btc_lock = parse_required(args, "secondary_confirmations")?;
+	let btc_lock = parse_u64(btc_lock, "secondary_confirmations")?;
 
-	let mwc_lock_time_seconds_hours = parse_required(args, "mwc_lock_time")?;
-	let mwc_lock_time_seconds_hours = parse_u64(mwc_lock_time_seconds_hours, "mwc_lock_time")?;
+	let message_exchange_time = parse_required(args, "message_exchange_time")?;
+	let message_exchange_time = parse_u64(message_exchange_time, "message_exchange_time")?;
 
-	let seller_redeem_time_hours = parse_required(args, "seller_redeem_time")?;
-	let seller_redeem_time_hours = parse_u64(seller_redeem_time_hours, "seller_redeem_time")?;
+	let redeem_time = parse_required(args, "redeem_time")?;
+	let redeem_time = parse_u64(redeem_time, "redeem_time")?;
 
 	Ok(command::SwapStartArgs {
 		mwc_amount,
@@ -964,10 +964,10 @@ pub fn parse_swap_start_args(args: &ArgMatches) -> Result<command::SwapStartArgs
 		secondary_redeem_address: btc_address.to_string(),
 		seller_lock_first: who_lock_first == "seller",
 		minimum_confirmations: Some(min_c),
-		required_mwc_lock_confirmations: mwc_lock,
-		required_secondary_lock_confirmations: btc_lock,
-		mwc_lock_time_seconds: mwc_lock_time_seconds_hours * 3600,
-		seller_redeem_time: seller_redeem_time_hours * 3600,
+		mwc_confirmations: mwc_lock,
+		secondary_confirmations: btc_lock,
+		message_exchange_time_sec: message_exchange_time * 60,
+		redeem_time_sec: redeem_time * 60,
 	})
 }
 

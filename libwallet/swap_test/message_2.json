@@ -21,7 +21,7 @@
         "id": "1",
         "public_blind_excess": "0229fbb62bc719998c1146fc78955ed210bb5bf474f968cbce230175e2585fb71c",
         "public_nonce": "02c5feea3b4566008a8075f9d16b9259853d7575719d5608a7160f8361a52efa96",
-        "part_sig": "96fa2ea561830f16a708569d7175753d8559926bd1f975808a0066453beafec50702100bc202f6c7b99816079035d7ebb70a9902ac0adf3ccd5d8718c5dbf80e",
+        "part_sig": "96fa2ea561830f16a708569d7175753d8559926bd1f975808a0066453beafec5ad56547ae452ba0abcec4f1d41d21e695dc4b08a984928ca68b7026362a7c9ee",
         "message": null,
         "message_sig": null
       }

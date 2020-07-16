@@ -17,7 +17,6 @@
   "secondary_currency": "Btc",
   "secondary_data": {
     "Btc": {
-      "lock_time": 1567678952,
       "cosign": "03b480859d2dcf9cd66f115b685b2847bf3f52f624d069d802e1dc9362be4f5bdf",
       "refund": null,
       "refund_tx": null,
@@ -123,7 +122,7 @@
           {
             "features": "HeightLocked",
             "fee": "4000000",
-            "lock_height": "300720",
+            "lock_height": "300280",
             "excess": "000000000000000000000000000000000000000000000000000000000000000000",
             "excess_sig": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
           }
@@ -133,7 +132,7 @@
     "amount": "99996000000",
     "fee": "4000000",
     "height": "300000",
-    "lock_height": "300720",
+    "lock_height": "300280",
     "ttl_cutoff_height": null,
     "participant_data": [
       {
@@ -182,10 +181,10 @@
   },
   "redeem_confirmations": null,
   "adaptor_signature": null,
-  "required_mwc_lock_confirmations": 30,
-  "required_secondary_lock_confirmations": 6,
-  "mwc_lock_time_seconds": 43200,
-  "seller_redeem_time": 3600,
+  "mwc_confirmations": 30,
+  "secondary_confirmations": 6,
+  "message_exchange_time_sec": 3600,
+  "redeem_time_sec": 3600,
   "message1": null,
   "message2": null
 }

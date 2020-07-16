@@ -100,13 +100,13 @@ pub struct Swap {
 	/// Multisig signature
 	pub(super) adaptor_signature: Option<Signature>,
 	/// Requred confirmations for MWC Locking
-	pub required_mwc_lock_confirmations: u64,
+	pub mwc_confirmations: u64,
 	/// Requred confirmations for BTC Locking
-	pub required_secondary_lock_confirmations: u64,
-	/// Seller MWC funds lock time interval in seconds
-	pub mwc_lock_time_seconds: u64,
-	/// Sellet BTC redeem time interval. BTC expected to be locked for that time as well.
-	pub seller_redeem_time: u64,
+	pub secondary_confirmations: u64,
+	/// Time interval for message exchange session.
+	pub message_exchange_time_sec: u64,
+	/// Time interval needed to redeem or execute a refund transaction.
+	pub redeem_time_sec: u64,
 	/// First message that was sent, keep for retry operations
 	pub message1: Option<String>,
 	/// Second message that was sent, keep for retry operations
@@ -230,7 +230,7 @@ impl Swap {
 		self.primary_amount - self.refund_slate.fee
 	}
 
-	pub(super) fn update_lock_confirmations<C: NodeClient>(
+	pub(super) fn update_mwc_lock_confirmations<C: NodeClient>(
 		&mut self,
 		secp: &Secp256k1,
 		node_client: &C,
@@ -300,8 +300,8 @@ impl Swap {
 	}
 
 	/// Check if MWC funds are available. Checking if lock slate has more confirmation that is needed.
-	pub(super) fn is_locked(&self, confirmations: u64) -> bool {
-		self.lock_confirmations.unwrap_or(0) >= confirmations
+	pub(super) fn is_mwc_locked(&self) -> bool {
+		self.lock_confirmations.unwrap_or(0) >= self.mwc_confirmations
 	}
 
 	pub(super) fn other_participant_id(&self) -> usize {
@@ -324,6 +324,78 @@ impl Swap {
 		let sec_key = secp.blind_sum(hashed_nonces, Vec::new())?;
 
 		Ok(sec_key)
+	}
+
+	// Time management functions
+
+	/// Trade starting time
+	pub fn get_time_start(&self) -> u64 {
+		self.started.timestamp() as u64
+	}
+
+	/// Offer message exchange session time limit
+	pub fn get_time_message_offers(&self) -> u64 {
+		self.get_time_start() + self.message_exchange_time_sec
+	}
+
+	/// Offer message exchange session time limit
+	pub fn get_time_locking(&self) -> u64 {
+		// for confirmation adding 10% for possible network slow down.
+		self.get_time_message_offers()
+			+ std::cmp::max(
+				self.get_timeinterval_mwc_lock(),
+				self.get_timeinterval_btc_lock(),
+			)
+	}
+
+	/// Second period of the message exchange
+	pub fn get_time_message_redeem(&self) -> u64 {
+		self.get_time_locking() + self.message_exchange_time_sec
+	}
+
+	/// MWC redeem time
+	pub fn get_time_mwc_redeem(&self) -> u64 {
+		self.get_time_message_redeem() + self.redeem_time_sec
+	}
+
+	/// MWC locking time
+	pub fn get_time_mwc_lock(&self) -> u64 {
+		// Add 10% for network instability
+		self.get_time_mwc_redeem() + self.get_timeinterval_mwc_lock()
+	}
+
+	/// mwc refund time
+	pub fn get_time_mwc_refund(&self) -> u64 {
+		// Add 10% for network instability
+		self.get_time_mwc_lock() + self.redeem_time_sec
+	}
+
+	/// BTC lock time
+	pub fn get_time_btc_lock(&self) -> u64 {
+		self.get_time_mwc_refund()
+			+ self.redeem_time_sec
+			+ self.get_timeinterval_mwc_lock()
+			+ self.get_timeinterval_btc_lock()
+	}
+
+	/// btc redeem time limit
+	pub fn get_time_btc_redeem_limit(&self) -> u64 {
+		self.get_time_btc_lock() - self.get_timeinterval_btc_lock()
+	}
+
+	////////////////////////////////////////////////////////////
+	// Time periof functions
+
+	/// MWC locking time interval
+	pub fn get_timeinterval_mwc_lock(&self) -> u64 {
+		// adding extra 10% for chain instability
+		self.mwc_confirmations * 60 * 11 / 10
+	}
+
+	/// BTC locking time interval
+	pub fn get_timeinterval_btc_lock(&self) -> u64 {
+		// adding extra 10% for chain instability
+		self.secondary_confirmations * self.secondary_currency.block_time_period_sec() * 11 / 10
 	}
 }
 

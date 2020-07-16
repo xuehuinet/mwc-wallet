@@ -104,10 +104,10 @@ where
 		secondary_currency,
 		params.secondary_redeem_address.clone(),
 		params.seller_lock_first,
-		params.required_mwc_lock_confirmations,
-		params.required_secondary_lock_confirmations,
-		params.mwc_lock_time_seconds,
-		params.seller_redeem_time,
+		params.mwc_confirmations,
+		params.secondary_confirmations,
+		params.message_exchange_time_sec,
+		params.redeem_time_sec,
 	)?;
 
 	// Store swap result into the file.

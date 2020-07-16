@@ -17,14 +17,13 @@
   "secondary_currency": "Btc",
   "secondary_data": {
     "Btc": {
-      "lock_time": 1567678952,
       "cosign": "03b480859d2dcf9cd66f115b685b2847bf3f52f624d069d802e1dc9362be4f5bdf",
       "refund": "03434496eb1554ad47c7ec5c267e902e1b71a03e189cc4fe9c83d9513e3a4e2e5a",
       "refund_tx": null,
       "confirmed_outputs": [
         {
           "out_point": {
-            "txid": "aff0f714cd046948240bc29358ae167c9e80bb939175db7265ea096c73a0a33e",
+            "txid": "8551e10f16d42ace55f16dfdee096f5dab615a1bf92d9a88c2fe94b5270df706",
             "vout": 0
           },
           "value": 1000000,
@@ -32,7 +31,7 @@
         },
         {
           "out_point": {
-            "txid": "0b3e71bbba0607f012ff9dfbced995427ddb32955326aa641aa69bf9c1e5cbe9",
+            "txid": "5f28d9a513b3651f7dbc30a070dff2567ac6380157c72d0afcd54dd4cbd66ec4",
             "vout": 0
           },
           "value": 2000000,
@@ -40,7 +39,7 @@
         }
       ],
       "locked": true,
-      "redeem_tx": "9196ab41df38c878875a1b4e4072c0a24c7f3d3f256df5401e09da8998fae44c",
+      "redeem_tx": "00693579772915f1621656b38287c5bdfc65b173542fb0773ce73023641d1b75",
       "redeem_confirmations": 1
     }
   },
@@ -166,9 +165,9 @@
           {
             "features": "HeightLocked",
             "fee": "4000000",
-            "lock_height": "300720",
+            "lock_height": "300280",
             "excess": "081bd7ccbcc2179ad84777599acf4500ac53a9a348791618d3bc098be85abc9315",
-            "excess_sig": "52a4e4c7b23b15c4d01884efb06495f2d0720a18cb306c6586c175d54d9b12749e64740217a39d7d5d77273f90b7254fbf231a9eb0358eefbf601c192d526c64"
+            "excess_sig": "52a4e4c7b23b15c4d01884efb06495f2d0720a18cb306c6586c175d54d9b12743199d199a15a1a67d6b7f777acd82e95a2dbd77d572d880eecdf778d646daaed"
           }
         ]
       }
@@ -176,14 +175,14 @@
     "amount": "99996000000",
     "fee": "4000000",
     "height": "300000",
-    "lock_height": "300720",
+    "lock_height": "300280",
     "ttl_cutoff_height": null,
     "participant_data": [
       {
         "id": "0",
         "public_blind_excess": "037cdabea8804a6e163c19011cb13d9b87539468a2a41bcc3635f73ae020e408e6",
         "public_nonce": "030807d599117d315ffd92de2f4db0b5e04aa42ee5e71cbc4b7da3ed45ba10f0b9",
-        "part_sig": "b9f010ba45eda37d4bbc1ce7e52ea44ae0b5b04d2fde92fd5f317d1199d50708976264f754a0a7b5a3de103800824e630719819b042bafb2f202950068767355",
+        "part_sig": "b9f010ba45eda37d4bbc1ce7e52ea44ae0b5b04d2fde92fd5f317d1199d50708c583b3ef4966321c566bf00952e3bee6431727f3bee35f448328752a02c6e0fe",
         "message": null,
         "message_sig": null
       },
@@ -191,7 +190,7 @@
         "id": "1",
         "public_blind_excess": "0229fbb62bc719998c1146fc78955ed210bb5bf474f968cbce230175e2585fb71c",
         "public_nonce": "02c5feea3b4566008a8075f9d16b9259853d7575719d5608a7160f8361a52efa96",
-        "part_sig": "96fa2ea561830f16a708569d7175753d8559926bd1f975808a0066453beafec50702100bc202f6c7b99816079035d7ebb70a9902ac0adf3ccd5d8718c5dbf80e",
+        "part_sig": "96fa2ea561830f16a708569d7175753d8559926bd1f975808a0066453beafec5ad56547ae452ba0abcec4f1d41d21e695dc4b08a984928ca68b7026362a7c9ee",
         "message": null,
         "message_sig": null
       }
@@ -260,10 +259,10 @@
   },
   "redeem_confirmations": 1,
   "adaptor_signature": "c243a5a05254a9e99cc69e80851f8566653ae806b8986595fedd057ae2a6b6dd20cea0957af2f764ab045d1177d4fa0a353428dcb8f572a9ca4b3007bcac9a0a",
-  "required_mwc_lock_confirmations": 30,
-  "required_secondary_lock_confirmations": 6,
-  "mwc_lock_time_seconds": 43200,
-  "seller_redeem_time": 3600,
+  "mwc_confirmations": 30,
+  "secondary_confirmations": 6,
+  "message_exchange_time_sec": 3600,
+  "redeem_time_sec": 3600,
   "message1": null,
   "message2": null
 }
