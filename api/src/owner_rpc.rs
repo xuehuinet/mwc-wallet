@@ -31,7 +31,6 @@ use crate::util::Mutex;
 use crate::{Owner, OwnerRpcS};
 use easy_jsonrpc_mw;
 use grin_wallet_libwallet::proof::proofaddress::ProvableAddress;
-use std::convert::TryFrom;
 use std::sync::Arc;
 
 /// Public definition used to generate Owner jsonrpc api.
@@ -413,7 +412,7 @@ pub trait OwnerRpc: Sync + Send {
 						"selection_strategy_is_use_all": false,
 						"message": "my message",
 						"target_slate_version": 3,
-						"payment_proof_recipient_address": "xmgJ11o4rR7jEhUTz2GDrScYoGXtSGB462REcn1egiK7D5Wucgqn",
+						"payment_proof_recipient_address": "xmgceW7Z2phenRwaBeKvTRZkPMJarwLFa8h5LW5bdHKucaKTeuE2",
 						"ttl_blocks": 3,
 						"send_args": null
 					}
@@ -445,7 +444,7 @@ pub trait OwnerRpc: Sync + Send {
 					}
 				  ],
 				  "payment_proof": {
-					"receiver_address": "xmgJ11o4rR7jEhUTz2GDrScYoGXtSGB462REcn1egiK7D5Wucgqn",
+					"receiver_address": "xmgceW7Z2phenRwaBeKvTRZkPMJarwLFa8h5LW5bdHKucaKTeuE2",
 					"receiver_signature": null,
 					"sender_address": "xmgwbyjMEMBojnVadEkwVi1GyL1WPiVE5dziQf3TLedHdrVBPGw5"
 				  },
@@ -1690,8 +1689,11 @@ pub fn run_doctest_owner(
 		assert!(wallet_refreshed);
 	}
 
-	//	let proof_address = api_impl::owner::get_public_proof_address(wallet2.clone(), (&mask2).as_ref(), 0).unwrap();
-	//	println!("Wallet 2 proof_address: {}", proof_address);
+	let proof_address_pubkey =
+		api_impl::owner::get_public_proof_address(wallet2.clone(), (&mask2).as_ref(), 0).unwrap();
+	//println!("owner_rpc Wallet 2 proof_address is ============: {}", proof_address);
+	let public_proof_address = ProvableAddress::from_pub_key(&proof_address_pubkey);
+	println!("public_proof address {}", public_proof_address.public_key);
 
 	if perform_tx {
 		api_impl::owner::update_wallet_state(wallet1.clone(), (&mask1).as_ref(), &None).unwrap();
@@ -1701,8 +1703,8 @@ pub fn run_doctest_owner(
 		let w = w_lock.lc_provider().unwrap().wallet_inst().unwrap();
 		let proof_address = match payment_proof {
 			true => {
-				let address = "xmhon3TaiVEh5dSvvjVsKqxCVVq9WTAbLfZidiAod7aHpd3kNoZ2";
-				Some(ProvableAddress::from_str(address).unwrap())
+				//let address = "xmgceW7Z2phenRwaBeKvTRZkPMJarwLFa8h5LW5bdHKucaKTeuE2";
+				Some(public_proof_address)
 			}
 			false => None,
 		};
