@@ -518,6 +518,13 @@ pub trait ForeignRpc {
 	```
 	*/
 	fn finalize_invoice_tx(&self, slate: VersionedSlate) -> Result<VersionedSlate, ErrorKind>;
+
+	/**
+	Networked version of [Foreign::receive_swap_message](struct.Foreign.html#method.receive_swap_message).
+
+	# Json rpc example
+	*/
+	fn receive_swap_message(&self, message: String) -> Result<(), ErrorKind>;
 }
 
 impl<'a, L, C, K> ForeignRpc for Foreign<'a, L, C, K>
@@ -563,6 +570,13 @@ where
 		let out_slate =
 			Foreign::finalize_invoice_tx(self, &Slate::from(in_slate)).map_err(|e| e.kind())?;
 		Ok(VersionedSlate::into_version(out_slate, version))
+	}
+
+	fn receive_swap_message(&self, message: String) -> Result<(), ErrorKind> {
+		Foreign::receive_swap_message(&self, &message).map_err(|e| {
+			ErrorKind::SwapError(format!("Error encountered receiving swap message, {}", e))
+		})?;
+		Ok(())
 	}
 }
 
@@ -614,7 +628,7 @@ pub fn run_doctest_foreign(
 
 	let rec_phrase_1 = util::ZeroingString::from(
 		"fat twenty mean degree forget shell check candy immense awful \
-		 flame next during february bulb bike sun wink theory day kiwi embrace peace lunch",
+     flame next during february bulb bike sun wink theory day kiwi embrace peace lunch",
 	);
 	let empty_string = util::ZeroingString::from("");
 	let client1 = LocalWalletClient::new("wallet1", wallet_proxy.tx.clone());
@@ -657,7 +671,7 @@ pub fn run_doctest_foreign(
 
 	let rec_phrase_2 = util::ZeroingString::from(
 		"hour kingdom ripple lunch razor inquiry coyote clay stamp mean \
-		 sell finish magic kid tiny wage stand panther inside settle feed song hole exile",
+     sell finish magic kid tiny wage stand panther inside settle feed song hole exile",
 	);
 	let client2 = LocalWalletClient::new("wallet2", wallet_proxy.tx.clone());
 	let mut wallet2 =

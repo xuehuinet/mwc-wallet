@@ -593,9 +593,8 @@ subcommands:
             short: m
             long: method
             possible_values:
-              - http
+              - tor
               - file
-              - keybase
               - mwcmqs
             default_value: file
             takes_value: true

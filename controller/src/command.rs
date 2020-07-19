@@ -1509,15 +1509,6 @@ where
 
 				let method = args.method.clone().unwrap_or("file".to_string());
 				match method.as_str() {
-					"keybase" => {
-						let _ = controller::init_start_keybase_listener(
-							config.clone(),
-							wallet_inst.clone(),
-							Arc::new(Mutex::new(km)),
-							false,
-						)?;
-						thread::sleep(Duration::from_millis(2000));
-					}
 					"mwcmqs" => {
 						//start the listener finalize tx
 						let _ = controller::init_start_mwcmqs_listener(
@@ -1530,7 +1521,7 @@ where
 						)?;
 						thread::sleep(Duration::from_millis(2000));
 					}
-					"http" => {
+					"tor" => {
 						let config = config.clone();
 						let g_args = g_args.clone();
 						let tor_config = tor_config.clone();
@@ -1559,26 +1550,30 @@ where
 						ErrorKind::ArgumentError(format!("Unable to parse {}", retry_action)),
 					)?;
 
-					let result = api.swap_retry(
-						keychain_mask,
-						&swap_id,
-						retry_action,
-						args.method,
-						args.destination,
-						args.fee_satoshi_per_byte,
-					);
+					let retry_action_str =
+						retry_action.clone().to_cmd().unwrap_or("none".to_string());
+					if retry_action_str.as_str() != "msg1" && retry_action_str.as_str() != "msg2" {
+						let result = api.swap_retry(
+							keychain_mask,
+							&swap_id,
+							retry_action,
+							args.method,
+							args.destination,
+							args.fee_satoshi_per_byte,
+						);
 
-					return match result {
-						Ok(_) => Ok(()),
-						Err(e) => {
-							error!("Unable to process Swap {}: {}", swap_id, e);
-							Err(ErrorKind::LibWallet(format!(
-								"Unable to process Swap {}: {}",
-								swap_id, e
-							))
-							.into())
-						}
-					};
+						return match result {
+							Ok(_) => Ok(()),
+							Err(e) => {
+								error!("Unable to process Swap {}: {}", swap_id, e);
+								Err(ErrorKind::LibWallet(format!(
+									"Unable to process Swap {}: {}",
+									swap_id, e
+								))
+								.into())
+							}
+						};
+					}
 				}
 
 				let swap_action_str = swap_action.to_cmd().unwrap_or("none".to_string());
@@ -1613,7 +1608,7 @@ where
 
 				// Some action is expected, let's perform if
 				if (action == "msg1" || action == "msg2")
-					&& (method == "keybase" || method == "mwcmqs" || method == "http")
+					&& (method == "keybase" || method == "mwcmqs" || method == "tor")
 				{
 					let destination = args.destination.clone();
 					let dest = destination.ok_or(ErrorKind::ArgumentError(
