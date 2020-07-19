@@ -50,7 +50,7 @@ pub use crate::adapters::{
 	get_mwcmqs_brocker, init_mwcmqs_access_data,
 	get_keybase_brocker, init_keybase_access_data, TOPIC_SLATE_NEW,
 	Address, AddressType, CloseReason,
-	HttpSlateSender, HttpsAddress, KeybaseAddress, KeybasePublisher, KeybaseSubscriber,
+	HttpDataSender, HttpsAddress, KeybaseAddress, KeybasePublisher, KeybaseSubscriber,
 	MWCMQPublisher, MWCMQSAddress, MWCMQSubscriber, MwcMqsChannel, PathToSlate, Publisher,
 	SlateGetter, SlatePutter, SlateReceiver, SlateSender, Subscriber, SubscriptionHandler,
 	SwapMessageSender,
