@@ -32,6 +32,14 @@ use crate::proof::tx_proof::{push_proof_for_slate, TxProof};
 use crate::slate::Slate;
 use crate::types::{Context, NodeClient, StoredProofInfo, TxLogEntryType, WalletBackend};
 use crate::{address, Error, ErrorKind};
+use ed25519_dalek::Keypair as DalekKeypair;
+use ed25519_dalek::PublicKey as DalekPublicKey;
+use ed25519_dalek::SecretKey as DalekSecretKey;
+use ed25519_dalek::Signature as DalekSignature;
+use grin_wallet_util::OnionV3Address;
+use std::convert::From;
+use std::convert::TryFrom;
+//use std::convert::TryInto;
 
 // static for incrementing test UUIDs
 lazy_static! {
@@ -422,6 +430,7 @@ where
 			slate.amount,
 			&excess,
 			p.sender_address.clone(),
+			p.receiver_address.clone(),
 			sender_address_secret_key,
 		)?;
 		tx.payment_proof = Some(StoredProofInfo {
@@ -517,16 +526,35 @@ pub fn create_payment_proof_signature(
 	amount: u64,
 	kernel_commitment: &pedersen::Commitment,
 	sender_address: ProvableAddress,
+	receiver_address: ProvableAddress,
 	sec_key: SecretKey,
 ) -> Result<String, Error> {
 	let message_ser = payment_proof_message(amount, kernel_commitment, sender_address.public_key)?;
-
-	let mut challenge = String::new();
-	//todo check if this is the correct way.
-	challenge.push_str(&message_ser);
-	let signature = crypto::sign_challenge(&challenge, &sec_key)?;
-	let signature = signature.to_hex();
-	Ok(signature)
+	if (receiver_address.public_key.len() == 52) {
+		//this is mqs address
+		let mut challenge = String::new();
+		challenge.push_str(&message_ser);
+		let signature = crypto::sign_challenge(&challenge, &sec_key)?;
+		let signature = signature.to_hex();
+		Ok(signature)
+	} else {
+		//this is tor oninion address and the length should be 56
+		let d_skey = match DalekSecretKey::from_bytes(&sec_key.0) {
+			Ok(k) => k,
+			Err(e) => {
+				return Err(ErrorKind::ED25519Key(format!("{}", e)).into());
+			}
+		};
+		let pub_key: DalekPublicKey = (&d_skey).into();
+		let keypair = DalekKeypair {
+			public: pub_key,
+			secret: d_skey,
+		};
+		let signature = keypair.sign(&message_ser.as_bytes());
+		//let signature_string = util::to_hex(signature.to_bytes());
+		let signature_vec = signature.to_bytes().to_vec();
+		Ok(util::to_hex(signature_vec))
+	}
 }
 
 /// Verify all aspects of a completed payment proof on the current slate
@@ -589,7 +617,9 @@ where
 				.into());
 			}
 		};
-		let orig_sender_a = proofaddress::payment_proof_address(&keychain, &parent_key_id, index)?;
+		let mut orig_sender_a =
+			proofaddress::payment_proof_address(&keychain, &parent_key_id, index)?;
+
 		if p.sender_address.public_key != orig_sender_a.public_key {
 			return Err(ErrorKind::PaymentProof(
 				"Sender address on slate does not match original sender address".to_owned(),
@@ -619,26 +649,60 @@ where
 				.into());
 			}
 		};
+		//verify the proof signature
+		if orig_proof_info.receiver_address.public_key.len() == 52 {
+			let secp = Secp256k1::new();
+			let signature_ser = util::from_hex(&sig).map_err(|e| {
+				ErrorKind::TxProofGenericError(format!(
+					"Unable to build signature from HEX {}, {}",
+					&sig, e
+				))
+			})?;
+			let signature = Signature::from_der(&secp, &signature_ser).map_err(|e| {
+				ErrorKind::TxProofGenericError(format!("Unable to build signature, {}", e))
+			})?;
+			debug!(
+				"the receiver pubkey is {}",
+				orig_proof_info.receiver_address.clone().public_key
+			);
+			let receiver_pubkey = orig_proof_info.receiver_address.public_key().map_err(|e| {
+				ErrorKind::TxProofGenericError(format!("Unable to get receiver address, {}", e))
+			})?;
+			crypto::verify_signature(&msg, &signature, &receiver_pubkey)
+				.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+		} else {
+			//the signature is generated using Dalek public key
 
-		let secp = Secp256k1::new();
-		let signature_ser = util::from_hex(&sig).map_err(|e| {
-			ErrorKind::TxProofGenericError(format!(
-				"Unable to build signature from HEX {}, {}",
-				&sig, e
-			))
-		})?;
-		let signature = Signature::from_der(&secp, &signature_ser).map_err(|e| {
-			ErrorKind::TxProofGenericError(format!("Unable to build signature, {}", e))
-		})?;
-		debug!(
-			"the receiver pubkey is {}",
-			orig_proof_info.receiver_address.clone().public_key
-		);
-		let receiver_pubkey = orig_proof_info.receiver_address.public_key().map_err(|e| {
-			ErrorKind::TxProofGenericError(format!("Unable to get receiver address, {}", e))
-		})?;
-		crypto::verify_signature(&msg, &signature, &receiver_pubkey)
-			.map_err(|e| ErrorKind::TxProofVerifySignature(format!("{}", e)))?;
+			let dalek_sig_vec = util::from_hex(&sig).map_err(|e| {
+				ErrorKind::TxProofGenericError(format!(
+					"Unable to deserialize tor payment proof signature, {}",
+					e
+				))
+			})?;
+
+			let dalek_sig =
+				ed25519_dalek::Signature::from_bytes(dalek_sig_vec.as_ref()).map_err(|e| {
+					ErrorKind::TxProofGenericError(format!(
+						"Unable to deserialize tor payment proof receiver signature, {}",
+						e
+					))
+				})?;
+
+			println!("==========the signature generated by dalek public key is being verified");
+
+			let receiver_dalek_pub_key = p.receiver_address.tor_public_key().map_err(|e| {
+				ErrorKind::TxProofGenericError(format!(
+					"Unable to deserialize tor payment proof receiver address, {}",
+					e
+				))
+			})?;
+			if let Err(e) = receiver_dalek_pub_key.verify(&msg.as_bytes(), &dalek_sig) {
+				return Err(ErrorKind::PaymentProof(format!(
+					"Invalid proof signature, {}",
+					e
+				)))?;
+			};
+		}
 
 		////add an extra step of generating and save proof.
 		//generate the sender secret key
