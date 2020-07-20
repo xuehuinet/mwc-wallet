@@ -14,15 +14,18 @@
 
 //! Generic implementation of owner API functions
 use crate::api_impl::owner::check_ttl;
+use crate::api_impl::owner_swap;
 use crate::grin_keychain::Keychain;
 use crate::grin_util::secp::key::SecretKey;
+use crate::grin_util::Mutex;
 use crate::internal::{tx, updater};
 use crate::slate_versions::SlateVersion;
 use crate::{
 	address, BlockFees, CbData, Error, ErrorKind, NodeClient, Slate, TxLogEntryType, VersionInfo,
-	WalletBackend,
+	WalletBackend, WalletInst, WalletLCProvider,
 };
 use grin_core::core::amount_to_hr_string;
+use std::sync::Arc;
 use std::sync::RwLock;
 use strum::IntoEnumIterator;
 
@@ -238,4 +241,24 @@ where
 		batch.commit()?;
 	}
 	Ok(sl)
+}
+
+/// Process the incoming swap message received from TOR
+pub fn receive_swap_message<'a, L, C, K>(
+	wallet_inst: Arc<Mutex<Box<dyn WalletInst<'a, L, C, K>>>>,
+	keychain_mask: Option<&SecretKey>,
+	message: &String,
+) -> Result<(), Error>
+where
+	L: WalletLCProvider<'a, C, K>,
+	C: NodeClient + 'a,
+	K: Keychain + 'a,
+{
+	owner_swap::swap_income_message(wallet_inst, keychain_mask, &message).map_err(|e| {
+		ErrorKind::SwapError(format!(
+			"Error occurred in receiving the swap message by TOR, {}",
+			e
+		))
+	})?;
+	Ok(())
 }

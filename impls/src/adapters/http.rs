@@ -16,8 +16,9 @@
 use crate::client_utils::{Client, ClientError};
 use crate::error::{Error, ErrorKind};
 use crate::libwallet::slate_versions::{SlateVersion, VersionedSlate};
+use crate::libwallet::swap::message::Message;
 use crate::libwallet::Slate;
-use crate::SlateSender;
+use crate::{SlateSender, SwapMessageSender};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::net::SocketAddr;
@@ -29,7 +30,7 @@ use crate::tor::process as tor_process;
 const TOR_CONFIG_PATH: &str = "tor/sender";
 
 #[derive(Clone)]
-pub struct HttpSlateSender {
+pub struct HttpDataSender {
 	base_url: String,
 	apisecret: Option<String>,
 	pub use_socks: bool,
@@ -38,18 +39,18 @@ pub struct HttpSlateSender {
 	socks_running: bool,
 }
 
-impl HttpSlateSender {
+impl HttpDataSender {
 	/// Create, return Err if scheme is not "http"
 	pub fn new(
 		base_url: &str,
 		apisecret: Option<String>,
 		tor_config_dir: Option<String>,
 		socks_running: bool,
-	) -> Result<HttpSlateSender, Error> {
+	) -> Result<HttpDataSender, Error> {
 		if !base_url.starts_with("http") && !base_url.starts_with("https") {
 			Err(ErrorKind::GenericError(format!("Invalid http url: {}", base_url)).into())
 		} else {
-			Ok(HttpSlateSender {
+			Ok(HttpDataSender {
 				base_url: base_url.to_owned(),
 				apisecret,
 				use_socks: false,
@@ -67,7 +68,7 @@ impl HttpSlateSender {
 		proxy_addr: &str,
 		tor_config_dir: Option<String>,
 		socks_running: bool,
-	) -> Result<HttpSlateSender, Error> {
+	) -> Result<HttpDataSender, Error> {
 		let mut ret = Self::new(base_url, apisecret, tor_config_dir.clone(), socks_running)?;
 		ret.use_socks = true;
 		let addr = proxy_addr.parse().map_err(|e| {
@@ -240,10 +241,8 @@ impl HttpSlateSender {
 
 		Ok(tor)
 	}
-}
 
-impl SlateSender for HttpSlateSender {
-	fn send_tx(&self, slate: &Slate) -> Result<Slate, Error> {
+	fn set_up_tor_send_process(&self) -> Result<String, Error> {
 		let trailing = match self.base_url.ends_with('/') {
 			true => "",
 			false => "/",
@@ -285,6 +284,13 @@ impl SlateSender for HttpSlateSender {
 					))
 				})?;
 		}
+		Ok(url_str)
+	}
+}
+
+impl SlateSender for HttpDataSender {
+	fn send_tx(&self, slate: &Slate) -> Result<Slate, Error> {
+		let url_str = self.set_up_tor_send_process()?;
 
 		let slate_send = match self.check_other_version(&url_str, None)? {
 			SlateVersion::V3 => VersionedSlate::into_version(slate.clone(), SlateVersion::V3),
@@ -372,5 +378,62 @@ impl SlateSender for HttpSlateSender {
 			})?;
 
 		Ok(slate)
+	}
+}
+
+impl SwapMessageSender for HttpDataSender {
+	fn send_swap_message(&self, swap_message: &Message) -> Result<(), Error> {
+		let url_str = self.set_up_tor_send_process()?;
+		let message_ser = &serde_json::to_string(&swap_message).map_err(|e| {
+			ErrorKind::SwapMessageGenericError(format!(
+				"Failed to convert swap message to json in preparation for tor request, {}",
+				e
+			))
+		})?;
+		let res_str: String;
+		let start_time = std::time::Instant::now();
+
+		loop {
+			let req = json!({
+				"jsonrpc": "2.0",
+				"method": "receive_swap_message",
+				"id": 1,
+				"params": [
+							message_ser,
+						]
+			});
+			trace!("Sending receive_swap_message request: {}", req);
+
+			let res = self.post(&url_str, self.apisecret.clone(), req);
+
+			let diff_time = start_time.elapsed().as_millis();
+			if !res.is_err() {
+				res_str = res.unwrap();
+				break;
+			} else if diff_time <= 30_000 {
+				continue;
+			}
+
+			res.map_err(|e| {
+				let report = format!("Posting swap message (is recipient listening?): {}", e);
+				error!("{}", report);
+				ErrorKind::ClientCallback(report)
+			})?;
+		}
+
+		let res: Value = serde_json::from_str(&res_str).map_err(|e| {
+			ErrorKind::GenericError(format!("Unable to parse respond {}, {}", res_str, e))
+		})?;
+
+		if res["error"] != json!(null) {
+			let report = format!(
+				"Posting transaction slate: Error: {}, Message: {}",
+				res["error"]["code"], res["error"]["message"]
+			);
+			error!("{}", report);
+			return Err(ErrorKind::ClientCallback(report).into());
+		}
+
+		Ok(())
 	}
 }

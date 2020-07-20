@@ -464,6 +464,14 @@ where
 		}
 		foreign::finalize_invoice_tx(&mut **w, (&self.keychain_mask).as_ref(), slate, true)
 	}
+
+	pub fn receive_swap_message(&self, swap_message: &String) -> Result<(), Error> {
+		foreign::receive_swap_message(
+			self.wallet_inst.clone(),
+			(&self.keychain_mask).as_ref(),
+			swap_message,
+		)
+	}
 }
 
 #[doc(hidden)]

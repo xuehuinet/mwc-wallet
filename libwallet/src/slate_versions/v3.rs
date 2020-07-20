@@ -72,9 +72,9 @@ pub struct SlateV3 {
 	pub payment_proof: Option<PaymentInfoV3>,
 }
 
-fn default_payment_none() -> Option<PaymentInfoV3> {
-	None
-}
+//fn default_payment_none() -> Option<PaymentInfoV3> {
+//	None
+//}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VersionCompatInfoV3 {

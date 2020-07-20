@@ -19,7 +19,7 @@ mod mwcmq;
 mod types;
 
 pub use self::file::PathToSlate;
-pub use self::http::HttpSlateSender;
+pub use self::http::HttpDataSender;
 pub use self::keybase::{
 	get_keybase_brocker, init_keybase_access_data, KeybaseChannel, KeybasePublisher,
 	KeybaseSubscriber, TOPIC_SLATE_NEW,
@@ -94,7 +94,7 @@ pub fn create_sender(
 
 	Ok(match method.as_str() {
 		"http" => Box::new(
-			HttpSlateSender::new(&dest, apisecret.clone(), None, false).map_err(|e| invalid(e))?,
+			HttpDataSender::new(&dest, apisecret.clone(), None, false).map_err(|e| invalid(e))?,
 		),
 		"tor" => match tor_config {
 			None => {
@@ -103,7 +103,7 @@ pub fn create_sender(
 				);
 			}
 			Some(tc) => Box::new(
-				HttpSlateSender::with_socks_proxy(
+				HttpDataSender::with_socks_proxy(
 					&dest,
 					apisecret.clone(),
 					&tc.socks_proxy_addr,
@@ -125,22 +125,36 @@ pub fn create_sender(
 pub fn create_swap_message_sender(
 	method: &str,
 	dest: &str,
-	_apisecret: &Option<String>,
-	_tor_config: Option<TorConfig>,
+	apisecret: &Option<String>,
+	tor_config: Option<TorConfig>,
 ) -> Result<Box<dyn SwapMessageSender>, Error> {
-	/*let invalid = |e| {
+	let invalid = |e| {
 		ErrorKind::WalletComms(format!(
 			"Invalid wallet comm type and destination. method: {}, dest: {}, error: {}",
 			method, dest, e
 		))
-	}; */
+	};
 
 	let (method, dest) = validate_tor_address(method, dest)?;
 
 	Ok(match method.as_str() {
-		//"http" => Box::new(),
-		//"tor" => Box::new(),
-		//"keybase" => Box::new(),
+		"tor" => match tor_config {
+			None => {
+				return Err(
+					ErrorKind::WalletComms("Tor Configuration required".to_string()).into(),
+				);
+			}
+			Some(tc) => Box::new(
+				HttpDataSender::with_socks_proxy(
+					&dest,
+					apisecret.clone(),
+					&tc.socks_proxy_addr,
+					Some(tc.send_config_dir),
+					tc.socks_running,
+				)
+				.map_err(|e| invalid(e))?,
+			),
+		},
 		"mwcmqs" => Box::new(MwcMqsChannel::new(dest)),
 		_ => {
 			return Err(handle_unsupported_types(method.as_str()));
