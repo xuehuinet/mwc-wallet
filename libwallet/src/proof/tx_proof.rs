@@ -164,7 +164,7 @@ impl TxProof {
 		}
 
 		// TODO: at some point, make this check required
-		let destination = &encrypted_message.destination;
+		let destination = &encrypted_message.destination; //sender address
 
 		if expected_destination.is_some()
 			&& destination.public_key != expected_destination.clone().unwrap().public_key
@@ -185,8 +185,18 @@ impl TxProof {
 				e
 			))
 		})?;
-
-		Ok((destination.clone(), slate))
+		//for mwc713 display purpose. the destination needs to be onion address
+		if let Some(onion_addr) = self.tor_sender_address.clone() {
+			let tor_sender = ProvableAddress::from_str(&onion_addr).map_err(|e| {
+				ErrorKind::TxProofGenericError(format!(
+					"Unable to create sender onion address, {}",
+					e
+				))
+			})?;
+			Ok((tor_sender, slate))
+		} else {
+			Ok((destination.clone(), slate))
+		}
 	}
 
 	/// Build proof data. massage suppose to be slate.
@@ -257,13 +267,13 @@ impl TxProof {
 		slate: &Slate,
 		secret_key: &SecretKey,
 		expected_destination: &ProvableAddress, //sender address
+		tor_destination: Option<String>,        //tor onion address
 	) -> Result<TxProof, ErrorKind> {
 		if let Some(p) = slate.payment_proof.clone() {
 			if let Some(signature) = p.receiver_signature {
 				//build the signature from signature string:
 				if p.receiver_address.public_key.len() == 56 {
 					let address = p.receiver_address;
-					println!("==========get the dalek signature in from_slate");
 
 					let _public_key = address.tor_public_key().map_err(|e| {
 						ErrorKind::TxProofGenericError(format!(
@@ -326,7 +336,7 @@ impl TxProof {
 						version: Some("tor".to_string()),
 						slate_message: Some(message_ser.to_string()),
 						tor_proof_signature: Some(signature),
-						tor_sender_address: None,
+						tor_sender_address: tor_destination,
 					};
 					proof.verify_extract(Some(expected_destination))?;
 					Ok(proof)
