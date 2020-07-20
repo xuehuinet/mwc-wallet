@@ -29,6 +29,7 @@ use crate::proof::crypto::Hex;
 use crate::proof::proofaddress;
 use crate::proof::proofaddress::ProvableAddress;
 use crate::proof::tx_proof::{push_proof_for_slate, TxProof};
+use crate::signature::Signature as otherSignature;
 use crate::slate::Slate;
 use crate::types::{Context, NodeClient, StoredProofInfo, TxLogEntryType, WalletBackend};
 use crate::{address, Error, ErrorKind};
@@ -36,10 +37,8 @@ use ed25519_dalek::Keypair as DalekKeypair;
 use ed25519_dalek::PublicKey as DalekPublicKey;
 use ed25519_dalek::SecretKey as DalekSecretKey;
 use ed25519_dalek::Signature as DalekSignature;
+use ed25519_dalek::{Signer, Verifier};
 use grin_wallet_util::OnionV3Address;
-use std::convert::From;
-use std::convert::TryFrom;
-//use std::convert::TryInto;
 
 // static for incrementing test UUIDs
 lazy_static! {
@@ -530,7 +529,7 @@ pub fn create_payment_proof_signature(
 	sec_key: SecretKey,
 ) -> Result<String, Error> {
 	let message_ser = payment_proof_message(amount, kernel_commitment, sender_address.public_key)?;
-	if (receiver_address.public_key.len() == 52) {
+	if receiver_address.public_key.len() == 52 {
 		//this is mqs address
 		let mut challenge = String::new();
 		challenge.push_str(&message_ser);
@@ -679,13 +678,12 @@ where
 				))
 			})?;
 
-			let dalek_sig =
-				ed25519_dalek::Signature::from_bytes(dalek_sig_vec.as_ref()).map_err(|e| {
-					ErrorKind::TxProofGenericError(format!(
-						"Unable to deserialize tor payment proof receiver signature, {}",
-						e
-					))
-				})?;
+			let dalek_sig = DalekSignature::from_bytes(dalek_sig_vec.as_ref()).map_err(|e| {
+				ErrorKind::TxProofGenericError(format!(
+					"Unable to deserialize tor payment proof receiver signature, {}",
+					e
+				))
+			})?;
 
 			let receiver_dalek_pub_key = p.receiver_address.tor_public_key().map_err(|e| {
 				ErrorKind::TxProofGenericError(format!(

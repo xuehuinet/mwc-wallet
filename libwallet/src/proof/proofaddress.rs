@@ -14,7 +14,7 @@
 
 use super::base58::Base58;
 use crate::address;
-use crate::error::{Error, ErrorKind};
+use crate::error::Error;
 use crate::grin_util::secp::key::PublicKey;
 use crate::proof::crypto;
 use ed25519_dalek::PublicKey as DalekPublicKey;

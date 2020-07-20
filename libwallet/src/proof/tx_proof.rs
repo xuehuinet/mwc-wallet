@@ -15,14 +15,17 @@
 use crate::grin_util as util;
 use crate::grin_util::secp::key::SecretKey;
 use crate::grin_util::secp::pedersen::Commitment;
-use crate::grin_util::secp::{Secp256k1, Signature};
+use crate::grin_util::secp::Secp256k1;
+use crate::grin_util::secp::Signature;
 
 use super::crypto;
 use super::message::EncryptedMessage;
 use super::proofaddress::ProvableAddress;
 use crate::error::{Error, ErrorKind};
+use crate::signature::Signature as otherSignature;
 use crate::slate_versions::VersionedSlate;
 use crate::Slate;
+use ed25519_dalek::Verifier;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
